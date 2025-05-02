@@ -105,9 +105,9 @@ _G.AutoFarm = false
 local AutoFarm = Instance.new("TextButton", BG)
 AutoFarm.Size = UDim2.new(0, 200, 0, 40)
 AutoFarm.Position = UDim2.new(0, 20, 0, 60)
-AutoFarm.BackgroundTransparency = 0.5 -- 0.0 (tidak transparan) s/d 1.0 (benar-benar transparan)
-AutoFarm.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
-AutoFarm.TextColor3 = Color3.fromRGB(255, 255, 255)
+AutoFarm.BackgroundTransparency = 0.4 -- 0 = solid, 1 = full transparan
+AutoFarm.BackgroundColor3 = Color3.fromRGB(255, 255, 255) -- warna putih
+AutoFarm.TextColor3 = Color3.fromRGB(0, 0, 0) -- teks hitam agar kontras
 AutoFarm.Font = Enum.Font.SourceSansBold
 AutoFarm.TextSize = 20
 AutoFarm.Text = "Auto Farm: OFF"
