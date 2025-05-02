@@ -11,7 +11,7 @@ local player = Players.LocalPlayer
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "GMON_MainUI"
 ScreenGui.ResetOnSpawn = false
-ScreenGui.Parent = CoreGui
+ScreenGui.Parent = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
 
 -- Toggle Button
 local Toggle = Instance.new("ImageButton")
@@ -253,7 +253,9 @@ AutoFarm.MouseButton1Click:Connect(function()
 									char.HumanoidRootPart.CFrame = mob.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
 									VIM:SendKeyEvent(true, "Z", false, game)
 								until mob.Humanoid.Health <= 0 or not farming
-
+							end, 
+						end) 
+                                                        
 -- Logic utama
 task.spawn(function()
 	while task.wait(3) do
@@ -287,4 +289,4 @@ task.spawn(function()
 			end
 		end
 	end
-end)											
+end)										
