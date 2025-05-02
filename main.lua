@@ -125,7 +125,7 @@ seaEventsTab.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 seaEventsTab.BackgroundTransparency = 0.4
 seaEventsTab.BorderSizePixel = 0
 seaEventsTab.Visible = true
-seaEventsTab.Parent = BG -- Ganti sesuai parent kamu
+seaEventsTab.Parent = Tabcontent -- Ganti sesuai parent kamu
 
 local title = Instance.new("TextLabel", seaEventsTab)
 title.Size = UDim2.new(1, 0, 0, 40)
@@ -330,7 +330,6 @@ if bestMatch then
 	-- lanjut ke proses quest, teleport, dll
 						end
 	                                
-							
 					if char and char:FindFirstChild("HumanoidRootPart") and mob:FindFirstChild("HumanoidRootPart") then
 								char.HumanoidRootPart.CFrame = mob.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
 							end
