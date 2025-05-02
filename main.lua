@@ -117,6 +117,60 @@ AutoFarm.MouseButton1Click:Connect(function()
 	AutoFarm.Text = _G.AutoFarm and "Auto Farm: ON" or "Auto Farm: OFF"
 end)
 
+-- Buat tombol toggle
+local meleeButton = Instance.new("TextButton")
+meleeButton.Size = UDim2.new(0, 200, 0, 40)
+meleeButton.Position = UDim2.new(0, 20, 0, 120)
+meleeButton.Text = "Use Melee: OFF"
+meleeButton.Parent = yourGuiFrame -- ganti dengan frame kamu
+meleeButton.BackgroundColor3 = Color3.fromRGB(170, 85, 255)
+
+-- Fungsi equip melee
+local function equipMelee()
+    local player = game.Players.LocalPlayer
+    local Backpack = player:WaitForChild("Backpack")
+    local Character = player.Character or player.CharacterAdded:Wait()
+
+    for _, tool in pairs(Backpack:GetChildren()) do
+        if tool:IsA("Tool") and tool.ToolTip == "Melee" then
+            tool.Parent = Character
+            break
+        end
+    end
+end
+
+-- Tombol Use Melee
+local isMeleeEnabled = false
+local meleeButton = Instance.new("TextButton")
+meleeButton.Size = UDim2.new(0, 200, 0, 40)
+meleeButton.Position = UDim2.new(0, 20, 0, 110) -- tepat di bawah Auto Farm
+meleeButton.Text = "Use Melee: OFF"
+meleeButton.Parent = yourGuiFrame
+meleeButton.BackgroundColor3 = Color3.fromRGB(170, 85, 255)
+
+-- Fungsi equip Melee
+local function equipMelee()
+    local player = game.Players.LocalPlayer
+    local Backpack = player:WaitForChild("Backpack")
+    local Character = player.Character or player.CharacterAdded:Wait()
+
+    for _, tool in pairs(Backpack:GetChildren()) do
+        if tool:IsA("Tool") and tool.ToolTip == "Melee" then
+            tool.Parent = Character
+            break
+        end
+    end
+end
+
+-- Toggle Melee
+meleeButton.MouseButton1Click:Connect(function()
+    isMeleeEnabled = not isMeleeEnabled
+    meleeButton.Text = isMeleeEnabled and "Use Melee: ON" or "Use Melee: OFF"
+    if isMeleeEnabled then
+        equipMelee()
+    end
+end)
+
 -- Setting Tab UI
 local SettingFrame = Instance.new("Frame")
 SettingFrame.Size = UDim2.new(0, 200, 0, 200)
@@ -172,60 +226,6 @@ createToggleButton("Use Skill F", 210, function(enabled)
 end)
 
 local isMeleeEnabled = false
-
--- Buat tombol toggle
-local meleeButton = Instance.new("TextButton")
-meleeButton.Size = UDim2.new(0, 200, 0, 40)
-meleeButton.Position = UDim2.new(0, 20, 0, 120)
-meleeButton.Text = "Use Melee: OFF"
-meleeButton.Parent = yourGuiFrame -- ganti dengan frame kamu
-meleeButton.BackgroundColor3 = Color3.fromRGB(170, 85, 255)
-
--- Fungsi equip melee
-local function equipMelee()
-    local player = game.Players.LocalPlayer
-    local Backpack = player:WaitForChild("Backpack")
-    local Character = player.Character or player.CharacterAdded:Wait()
-
-    for _, tool in pairs(Backpack:GetChildren()) do
-        if tool:IsA("Tool") and tool.ToolTip == "Melee" then
-            tool.Parent = Character
-            break
-        end
-    end
-end
-
--- Tombol Use Melee
-local isMeleeEnabled = false
-local meleeButton = Instance.new("TextButton")
-meleeButton.Size = UDim2.new(0, 200, 0, 40)
-meleeButton.Position = UDim2.new(0, 20, 0, 110) -- tepat di bawah Auto Farm
-meleeButton.Text = "Use Melee: OFF"
-meleeButton.Parent = yourGuiFrame
-meleeButton.BackgroundColor3 = Color3.fromRGB(170, 85, 255)
-
--- Fungsi equip Melee
-local function equipMelee()
-    local player = game.Players.LocalPlayer
-    local Backpack = player:WaitForChild("Backpack")
-    local Character = player.Character or player.CharacterAdded:Wait()
-
-    for _, tool in pairs(Backpack:GetChildren()) do
-        if tool:IsA("Tool") and tool.ToolTip == "Melee" then
-            tool.Parent = Character
-            break
-        end
-    end
-end
-
--- Toggle Melee
-meleeButton.MouseButton1Click:Connect(function()
-    isMeleeEnabled = not isMeleeEnabled
-    meleeButton.Text = isMeleeEnabled and "Use Melee: ON" or "Use Melee: OFF"
-    if isMeleeEnabled then
-        equipMelee()
-    end
-end)
 
 --===[ Auto Farm Logic GMON ]===--
 local player = game.Players.LocalPlayer
