@@ -111,7 +111,7 @@ AutoFarm.TextColor3 = Color3.fromRGB(255, 255, 255)
 local SettingFrame = Instance.new("Frame")
 SettingFrame.Size = UDim2.new(0, 200, 0, 200)
 SettingFrame.Position = UDim2.new(1, -210, 0, 60)
-SettingFrame.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+SettingFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
 SettingFrame.Visible = true
 SettingFrame.Parent = BG
 
