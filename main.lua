@@ -286,7 +286,9 @@ task.spawn(function()
 			if (item.Name == "DragonEgg" and isAutoEgg()) or (item.Name == "DinosaurBone" and isAutoBone()) then
 				player.Character.HumanoidRootPart.CFrame = item.CFrame + Vector3.new(0, 2, 0)
 				task.wait(0.5)
-			end
+BG.Visible = true
+_G.GMON_UI_Loaded = true												
+			end									
 		end
 	end
 end)										
