@@ -125,7 +125,7 @@ seaEventsTab.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 seaEventsTab.BackgroundTransparency = 0.4
 seaEventsTab.BorderSizePixel = 0
 seaEventsTab.Visible = true
-seaEventsTab.Parent = Tabcontent -- Ganti sesuai parent kamu
+seaEventsTab.Parent = BG -- Ganti sesuai parent kamu
 
 local title = Instance.new("TextLabel", seaEventsTab)
 title.Size = UDim2.new(1, 0, 0, 40)
@@ -251,12 +251,76 @@ _G.UseSkillF = false
 
 -- GMON Hub AutoFarm Full QuestData (Level 5 - 2650) local player = game.Players.LocalPlayer local ReplicatedStorage = game:GetService("ReplicatedStorage") local VIM = game:GetService("VirtualInputManager")
 
-spawn(function()
-	while true do wait(1)
-		if _G.AutoFarm then
-			pcall(function()
-				local char = player.Character
-				local lvl = player.Data.Level.Value
+spawn(function() while true do wait(1) 
+			if _G.AutoFarm then
+				pcall(function() 
+						local char = player.Character
+						local lvl = player.Data.Level.Value
+
+                                                local questData = {
+				-- First Sea (Level 5 - 700)
+				[5] = {QuestName = "BanditQuest1", MobName = "Bandit", MobPos = CFrame.new(1039, 17, 1560)},
+				[10] = {QuestName = "JungleQuest", MobName = "Monkey", MobPos = CFrame.new(-1611, 36, 152)},
+				[15] = {QuestName = "JungleQuest", MobName = "Gorilla", MobPos = CFrame.new(-1237, 6, -530)},
+				[30] = {QuestName = "BuggyQuest1", MobName = "Pirate", MobPos = CFrame.new(-1120, 14, 3850)},
+				[40] = {QuestName = "BuggyQuest1", MobName = "Brute", MobPos = CFrame.new(-1193, 14, 4275)},
+				[60] = {QuestName = "BuggyQuest2", MobName = "Desert Bandit", MobPos = CFrame.new(933, 7, 4482)},
+				[75] = {QuestName = "DesertQuest", MobName = "Desert Officer", MobPos = CFrame.new(1572, 10, 4373)},
+				[90] = {QuestName = "SnowQuest", MobName = "Snow Bandit", MobPos = CFrame.new(1389, 87, -1297)},
+				[105] = {QuestName = "SnowQuest", MobName = "Snowman", MobPos = CFrame.new(1355, 87, -1410)},
+				[120] = {QuestName = "MarineQuest1", MobName = "Chief Petty Officer", MobPos = CFrame.new(-4855, 20, 4326)},
+				[150] = {QuestName = "SkyQuest", MobName = "Sky Bandit", MobPos = CFrame.new(-4951, 295, -2723)},
+				[175] = {QuestName = "SkyQuest", MobName = "Dark Master", MobPos = CFrame.new(-5250, 389, -2293)},
+				[190] = {QuestName = "PrisonerQuest", MobName = "Prisoner", MobPos = CFrame.new(4943, 42, -3123)},
+				[210] = {QuestName = "PrisonerQuest", MobName = "Dangerous Prisoner", MobPos = CFrame.new(5011, 42, -3025)},
+				[250] = {QuestName = "ColosseumQuest", MobName = "Toga Warrior", MobPos = CFrame.new(-1772, 7, -2742)},
+				[275] = {QuestName = "ColosseumQuest", MobName = "Gladiator", MobPos = CFrame.new(-1501, 7, -2832)},
+				[300] = {QuestName = "MagmaQuest", MobName = "Military Soldier", MobPos = CFrame.new(-5428, 78, -2890)},
+				[325] = {QuestName = "MagmaQuest", MobName = "Military Spy", MobPos = CFrame.new(-5802, 78, -2914)},
+				[375] = {QuestName = "FishmanQuest", MobName = "Fishman Warrior", MobPos = CFrame.new(61163, 19, 1569)},
+				[400] = {QuestName = "FishmanQuest", MobName = "Fishman Commando", MobPos = CFrame.new(61753, 19, 1442)},
+				[450] = {QuestName = "SkyExpQuest", MobName = "God's Guard", MobPos = CFrame.new(-4700, 900, -1912)},
+				[475] = {QuestName = "SkyExpQuest", MobName = "Shanda", MobPos = CFrame.new(-4560, 875, -2025)},
+				[500] = {QuestName = "SkyExpQuest", MobName = "Royal Squad", MobPos = CFrame.new(-4372, 755, -2126)},
+				[525] = {QuestName = "SkyExpQuest", MobName = "Royal Soldier", MobPos = CFrame.new(-4472, 785, -2176)},
+				[550] = {QuestName = "FountainQuest", MobName = "Galley Pirate", MobPos = CFrame.new(5550, 77, 3933)},
+				[625] = {QuestName = "FountainQuest", MobName = "Galley Captain", MobPos = CFrame.new(5700, 77, 4200)},
+
+				-- Second Sea (Level 700 - 1450)
+				[700] = {QuestName = "Area1Quest", MobName = "Raider", MobPos = CFrame.new(-4984, 314, -2831)},
+				[725] = {QuestName = "Area1Quest", MobName = "Mercenary", MobPos = CFrame.new(-4900, 314, -2820)},
+				[775] = {QuestName = "Area2Quest", MobName = "Swan Pirate", MobPos = CFrame.new(878, 122, 1235)},
+				[800] = {QuestName = "Area2Quest", MobName = "Factory Staff", MobPos = CFrame.new(295, 73, 1360)},
+				[875] = {QuestName = "ZombieQuest", MobName = "Zombie", MobPos = CFrame.new(-5736, 94, -6937)},
+				[900] = {QuestName = "ZombieQuest", MobName = "Vampire", MobPos = CFrame.new(-5775, 94, -7038)},
+				[950] = {QuestName = "SnowMountainQuest", MobName = "Snow Trooper", MobPos = CFrame.new(5804, 50, -5386)},
+				[975] = {QuestName = "SnowMountainQuest", MobName = "Winter Warrior", MobPos = CFrame.new(6020, 50, -5500)},
+				[1000] = {QuestName = "ShipQuest1", MobName = "Ship Deckhand", MobPos = CFrame.new(1217, 125, 33020)},
+				[1050] = {QuestName = "ShipQuest1", MobName = "Ship Engineer", MobPos = CFrame.new(1257, 125, 33260)},
+				[1100] = {QuestName = "ShipQuest2", MobName = "Ship Steward", MobPos = CFrame.new(1449, 125, 33460)},
+				[1125] = {QuestName = "ShipQuest2", MobName = "Ship Officer", MobPos = CFrame.new(1520, 125, 33790)},
+				[1150] = {QuestName = "FogQuest", MobName = "Arctic Warrior", MobPos = CFrame.new(-6500, 70, -9200)},
+				[1175] = {QuestName = "FogQuest", MobName = "Snow Lurker", MobPos = CFrame.new(-6700, 70, -9400)},
+				[1200] = {QuestName = "GhostShipQuest", MobName = "Shipwright", MobPos = CFrame.new(-5900, 150, -7500)},
+				[1250] = {QuestName = "GhostShipQuest", MobName = "Arctic Ensign", MobPos = CFrame.new(-6000, 150, -7600)},
+				[1300] = {QuestName = "CursedShipQuest", MobName = "Living Zombie", MobPos = CFrame.new(-6125, 90, -7920)},
+				[1325] = {QuestName = "CursedShipQuest", MobName = "Demonic Soul", MobPos = CFrame.new(-6200, 90, -8025)},
+				[1350] = {QuestName = "IceQuest", MobName = "Arctic Admiral", MobPos = CFrame.new(-6400, 100, -8600)},
+				[1400] = {QuestName = "IslandQuest", MobName = "Jungle Pirate", MobPos = CFrame.new(-6800, 100, -8800)},
+				[1450] = {QuestName = "IslandQuest", MobName = "Musketeer Pirate", MobPos = CFrame.new(-6900, 100, -8900)},
+
+				-- Third Sea up to 2650 (sudah tersedia di versi sebelumnya)
+				[1500] = {QuestName = "PiratePortQuest", MobName = "Pirate Millionaire", MobPos = CFrame.new(-289, 44, 5589)},
+				[1575] = {QuestName = "GreatTreeQuest", MobName = "Marine Commodore", MobPos = CFrame.new(2364, 25, -6864)},
+				[1650] = {QuestName = "GreatTreeQuest", MobName = "Marine Rear Admiral", MobPos = CFrame.new(2354, 25, -6984)},
+				[1700] = {QuestName = "HydraQuest", MobName = "Water Fighter", MobPos = CFrame.new(5229, 66, -11354)},
+				[1750] = {QuestName = "HydraQuest", MobName = "Sea Soldier", MobPos = CFrame.new(5130, 66, -11454)},
+				[2300] = {QuestName = "TikiQuest1", MobName = "Island Boy", MobPos = CFrame.new(-14540, 334, -7630)},
+				[2400] = {QuestName = "TikiQuest2", MobName = "Shark Tooth", MobPos = CFrame.new(-14590, 334, -7900)},
+				[2500] = {QuestName = "TikiQuest3", MobName = "Sun-kissed Warrior", MobPos = CFrame.new(-14620, 334, -8100)},
+				[2625] = {QuestName = "GravityQuest", MobName = "Gravity Bandit", MobPos = CFrame.new(-14700, 334, -8400)},
+				[2650] = {QuestName = "GravityQuest", MobName = "Gravity Warrior", MobPos = CFrame.new(-14750, 334, -8500)}
+				}
 
 				local bestMatch = nil
 				for levelReq, quest in pairs(questData) do
