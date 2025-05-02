@@ -66,7 +66,7 @@ CheckKey.MouseButton1Click:Connect(function()
     if KeyBox.Text == ValidKey then
         Notify("Valid Key!")
         wait(1)
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/gomlet674/gmonhub-script/main/main.lua"))()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/main.lua"))()
         ScreenGui:Destroy()
     else
         Notify("Wrong Key!")
@@ -74,6 +74,6 @@ CheckKey.MouseButton1Click:Connect(function()
 end)
 
 GetKey.MouseButton1Click:Connect(function()
-    setclipboard("https://linkvertise.com/XXXXXXXX/gmonkey")
-    Notify("Link copied! Use browser to get your key.")
+    setclipboard("https://link-target.net/1209226/g-mon-hub-op-script-in-rb")
+    Notify("Link copied! Open browser to get your key.")
 end)
