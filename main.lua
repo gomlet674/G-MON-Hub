@@ -195,14 +195,6 @@ local function equipMelee()
     end
 end
 
--- Tombol Auto Farm (asumsi kamu sudah punya ini)
-local autoFarmButton = Instance.new("TextButton")
-autoFarmButton.Size = UDim2.new(0, 200, 0, 40)
-autoFarmButton.Position = UDim2.new(0, 20, 0, 60)
-autoFarmButton.Text = "Auto Farm: OFF"
-autoFarmButton.Parent = yourGuiFrame
-autoFarmButton.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
-
 -- Tombol Use Melee
 local isMeleeEnabled = false
 local meleeButton = Instance.new("TextButton")
