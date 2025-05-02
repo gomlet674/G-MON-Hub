@@ -154,18 +154,21 @@ createToggleButton("Auto Click", 50, function(enabled)
 	_G.AutoClick = enabled
 end)
 
--- Toggle Skill X/Y/Z/V
+-- Toggle Skill X/C/Z/V/F
 createToggleButton("Use Skill X", 90, function(enabled)
 	_G.UseSkillX = enabled
 end)
-createToggleButton("Use Skill Y", 130, function(enabled)
-	_G.UseSkillY = enabled
+createToggleButton("Use Skill C", 130, function(enabled)
+	_G.UseSkillC = enabled
 end)
 createToggleButton("Use Skill Z", 170, function(enabled)
 	_G.UseSkillZ = enabled
 end)
 createToggleButton("Use Skill V", 210, function(enabled)
 	_G.UseSkillV = enabled
+end)
+createToggleButton("Use Skill F", 210, function(enabled)
+	_G.UseSkillF = enabled
 end)
 
 local isMeleeEnabled = false
@@ -215,12 +218,117 @@ AutoFarm.MouseButton1Click:Connect(function()
 					local char = player.Character
 					local lvl = player.Data.Level.Value
 					local questData = {
-						[1] = {
-							QuestName = "BanditQuest1",
-							MobName = "Bandit",
-							MobPos = CFrame.new(1039, 17, 1560)
-						},
-					}
+    [5] = {
+        QuestName = "BanditQuest1",
+        MobName = "Bandit",
+        MobPos = CFrame.new(1039, 17, 1560)
+    },
+    [10] = {
+        QuestName = "MonkeyQuest",
+        MobName = "Monkey",
+        MobPos = CFrame.new(-1601, 8, 145)
+    },
+    [15] = {
+        QuestName = "GorillaQuest",
+        MobName = "Gorilla",
+        MobPos = CFrame.new(-1322, 6, -511)
+    },
+    [30] = {
+        QuestName = "BuggyQuest1",
+        MobName = "Pirate",
+        MobPos = CFrame.new(-1122, 5, 3850)
+    },
+    [40] = {
+        QuestName = "BuggyQuest2",
+        MobName = "Brute",
+        MobPos = CFrame.new(-1144, 14, 4320)
+    },
+    [60] = {
+        QuestName = "BuggyQuest3",
+        MobName = "Bobby",
+        MobPos = CFrame.new(-1155, 18, 4305)
+    },
+    [75] = {
+        QuestName = "DesertQuest",
+        MobName = "Desert Bandit",
+        MobPos = CFrame.new(932, 6, 4480)
+    },
+    [90] = {
+        QuestName = "DesertQuest2",
+        MobName = "Desert Officer",
+        MobPos = CFrame.new(1593, 6, 4363)
+    },
+    [120] = {
+        QuestName = "SnowQuest",
+        MobName = "Snow Bandit",
+        MobPos = CFrame.new(1358, 87, -1290)
+    },
+    [150] = {
+        QuestName = "MarineQuest3",
+        MobName = "Vice Admiral",
+        MobPos = CFrame.new(-5105, 88, 3961)
+    },
+    [190] = {
+        QuestName = "SkyQuest1",
+        MobName = "Sky Bandit",
+        MobPos = CFrame.new(-4960, 278, -2626)
+    },
+    [250] = {
+        QuestName = "SkyQuest3",
+        MobName = "Dark Master",
+        MobPos = CFrame.new(-5254, 389, -2359)
+    },
+    [375] = {
+        QuestName = "MagmaQuest",
+        MobName = "Military Soldier",
+        MobPos = CFrame.new(-5422, 11, 8467)
+    },
+    [625] = {
+        QuestName = "FishmanQuest",
+        MobName = "Fishman Warrior",
+        MobPos = CFrame.new(61123, 19, 1500)
+    },
+    [950] = {
+        QuestName = "ZombieQuest",
+        MobName = "Zombie",
+        MobPos = CFrame.new(-5566, 102, -7155)
+    },
+    [1250] = {
+        QuestName = "FactoryStaffQuest",
+        MobName = "Factory Staff",
+        MobPos = CFrame.new(2950, 84, -6990)
+    },
+    [1500] = {
+        QuestName = "PiratePortQuest",
+        MobName = "Pirate",
+        MobPos = CFrame.new(-4682, 845, 8723)
+    },
+    [1750] = {
+        QuestName = "HauntedQuest1",
+        MobName = "Reborn Skeleton",
+        MobPos = CFrame.new(-9492, 142, 6064)
+    },
+    [2000] = {
+        QuestName = "IceCreamQuest1",
+        MobName = "Snow Demon",
+        MobPos = CFrame.new(-899, 65, -11063)
+    },
+    [2250] = {
+        QuestName = "PeanutQuest1",
+        MobName = "Peanut Scout",
+        MobPos = CFrame.new(-2060, 90, -10368)
+    },
+    [2450] = {
+        QuestName = "MansionQuest",
+        MobName = "Island Empress",
+        MobPos = CFrame.new(-11865, 334, -8761)
+    },
+    [2650] = {
+        QuestName = "TikiQuest1",
+        MobName = "Tiki Warrior",
+        MobPos = CFrame.new(-14493, 334, -7262)
+    },
+								}
 					local data = questData[1]
 					if data then
 						if not player.PlayerGui:FindFirstChild("QuestTitle") then
@@ -229,16 +337,25 @@ AutoFarm.MouseButton1Click:Connect(function()
 						end
 						for _, mob in pairs(workspace.Enemies:GetChildren()) do
 							if mob.Name == data.MobName and mob:FindFirstChild("Humanoid") and mob.Humanoid.Health > 0 then
-								repeat wait()	
+								repeat wait()
 									char.HumanoidRootPart.CFrame = mob.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
-									VIM:SendKeyEvent(true, "Z", false, game)
-									char.HumanoidRootPart.CFrame = mob.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
-									VIM:SendKeyEvent(true, "C", false, game)
-                                                                        char.HumanoidRootPart.CFrame = mob.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
-									VIM:SendKeyEvent(true, "X", false, game)
-                                                                        char.HumanoidRootPart.CFrame = mob.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
-									VIM:SendKeyEvent(true, "F", false, game)
 
+									if _G.UseSkillZ then
+										VIM:SendKeyEvent(true, "Z", false, game)
+									end
+									if _G.UseSkillX then
+										VIM:SendKeyEvent(true, "X", false, game)
+									end
+									if _G.UseSkillC then
+										VIM:SendKeyEvent(true, "C", false, game)
+									end
+									if _G.UseSkillV then
+										VIM:SendKeyEvent(true, "V", false, game)
+									end
+									if _G.UseSkillF then
+										VIM:SendKeyEvent(true, "F", false, game)
+									end			
+                                                                        
 								until mob.Humanoid.Health <= 0 or not farming
 							end
 						end
