@@ -66,12 +66,12 @@ CheckKey.MouseButton1Click:Connect(function()
     if KeyBox.Text == ValidKey then
         Notify("Valid Key!")
         wait(1)
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/main.lua"))()
-        ScreenGui:Destroy()
+        ScreenGui:Destroy() -- Hapus UI get key
+
         if not _G.GMON_UI_Loaded then
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main.lua"))()
-    _G.GMON_UI_Loaded = true
-            end
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/main.lua"))()
+            _G.GMON_UI_Loaded = true
+        end
     else
         Notify("Wrong Key!")
     end
