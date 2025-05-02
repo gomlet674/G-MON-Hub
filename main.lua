@@ -63,6 +63,35 @@ Toggle.MouseButton1Click:Connect(function()
 	BG.Visible = not BG.Visible
 end)
 
+-- Tambahkan ke atas sebelum Title GMON Hub
+local RGBFrame = Instance.new("Frame", BG)
+RGBFrame.Size = UDim2.new(1, 0, 1, 0)
+RGBFrame.Position = UDim2.new(0, 0, 0, 0)
+RGBFrame.BackgroundTransparency = 1
+RGBFrame.BorderSizePixel = 4
+RGBFrame.ZIndex = 2
+
+-- Ubah properti untuk efek RGB
+local border = Instance.new("UIStroke", RGBFrame)
+border.Thickness = 4
+border.Transparency = 0
+border.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+border.LineJoinMode = Enum.LineJoinMode.Round
+border.Color = Color3.fromRGB(255, 0, 0)
+
+-- Efek Rainbow RGB
+spawn(function()
+	local hue = 0
+	while wait(0.03) do
+		hue = hue + 1
+		if hue >= 360 then hue = 0 end
+		local color = Color3.fromHSV(hue / 360, 1, 1)
+		pcall(function()
+			border.Color = color
+		end)
+	end
+end)
+
 -- Label GMON Hub
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, 0, 0, 40)
