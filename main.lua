@@ -126,7 +126,7 @@ seaEventsTab.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 seaEventsTab.BackgroundTransparency = 0.4
 seaEventsTab.BorderSizePixel = 0
 seaEventsTab.Visible = true
-seaEventsTab.Parent = BG -- Ganti sesuai parent kamu
+seaEventsTab.Parent = SettingTab -- Ganti sesuai parent kamu
 
 local title = Instance.new("TextLabel", seaEventsTab)
 title.Size = UDim2.new(1, 0, 0, 40)
@@ -215,24 +215,24 @@ createToggleButton("Fast Attack", 10, function(enabled)
 end)
 
 -- Toggle Auto Click
-createToggleButton("Auto Click", 50, function(enabled)
+createToggleButton("Auto Click", 40, function(enabled)
 	_G.AutoClick = enabled
 end)
 
 -- Toggle Skill X/C/Z/V/F
-createToggleButton("Use Skill X", 90, function(enabled)
+createToggleButton("Use Skill X", 80, function(enabled)
 	_G.UseSkillX = enabled
 end)
-createToggleButton("Use Skill C", 130, function(enabled)
+createToggleButton("Use Skill C", 120, function(enabled)
 	_G.UseSkillC = enabled
 end)
-createToggleButton("Use Skill Z", 170, function(enabled)
+createToggleButton("Use Skill Z", 150, function(enabled)
 	_G.UseSkillZ = enabled
 end)
-createToggleButton("Use Skill V", 190, function(enabled)
+createToggleButton("Use Skill V", 180, function(enabled)
 	_G.UseSkillV = enabled
 end)
-createToggleButton("Use Skill F", 210, function(enabled)
+createToggleButton("Use Skill F", 220, function(enabled)
 	_G.UseSkillF = enabled
 end)
 
@@ -354,7 +354,7 @@ spawn(function() while true do wait(1)
 				-- Teleport ke lokasi umum (kalau ingin, kamu bisa tambah data.IslandPos)
 			if char and char:FindFirstChild("HumanoidRootPart") then
                                    local targetCFrame = data.MobPos + Vector3.new(0, 10, 0)
-                                   tweenToPosition(char.HumanoidRootPart, targetCFrame, 4) -- durasi 2 detik
+                                   tweenToPosition(char.HumanoidRootPart, targetCFrame, 20) -- durasi 20 detik
 						end
 
 				-- Serang mob
