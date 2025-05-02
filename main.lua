@@ -4,6 +4,7 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local VIM = game:GetService("VirtualInputManager")
+local TweenService = game:GetService("TweenService")
 
 local player = Players.LocalPlayer
 
@@ -251,6 +252,18 @@ _G.UseSkillF = false
 
 -- GMON Hub AutoFarm Full QuestData (Level 5 - 2650) local player = game.Players.LocalPlayer local ReplicatedStorage = game:GetService("ReplicatedStorage") local VIM = game:GetService("VirtualInputManager")
 
+local function tweenToPosition(part, targetPos, duration)
+	local tweenInfo = TweenInfo.new(
+		duration,
+		Enum.EasingStyle.Linear,
+		Enum.EasingDirection.InOut
+	)
+	local goal = { CFrame = targetPos }
+	local tween = TweenService:Create(part, tweenInfo, goal)
+	tween:Play()
+	tween.Completed:Wait()
+end
+
 spawn(function() while true do wait(1) 
 			if _G.AutoFarm then
 				pcall(function() 
@@ -339,10 +352,10 @@ spawn(function() while true do wait(1)
 				end
 
 				-- Teleport ke lokasi umum (kalau ingin, kamu bisa tambah data.IslandPos)
-				if char and char:FindFirstChild("HumanoidRootPart") then
-					char.HumanoidRootPart.CFrame = data.MobPos + Vector3.new(0, 10, 0)
-					wait(1)
-				end
+			if char and char:FindFirstChild("HumanoidRootPart") then
+                            	local targetCFrame = data.MobPos + Vector3.new(0, 10, 0)
+                          	tweenToPosition(char.HumanoidRootPart, targetCFrame, 2) -- 2 detik durasi
+		       	end
 
 				-- Serang mob
 				for _, mob in pairs(workspace.Enemies:GetChildren()) do
