@@ -111,7 +111,7 @@ AutoFarm.TextColor3 = Color3.fromRGB(255, 255, 255)
 local SettingFrame = Instance.new("Frame")
 SettingFrame.Size = UDim2.new(0, 200, 0, 200)
 SettingFrame.Position = UDim2.new(1, -210, 0, 60)
-SettingFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+SettingFrame.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
 SettingFrame.Visible = true
 SettingFrame.Parent = BG
 
@@ -184,12 +184,17 @@ AutoFarm.MouseButton1Click:Connect(function()
 						for _, mob in pairs(workspace.Enemies:GetChildren()) do
 							if mob.Name == data.MobName and mob:FindFirstChild("Humanoid") and mob.Humanoid.Health > 0 then
 								repeat wait()
+								if run("_G.UseSkillZ") = enabled then 		
 									char.HumanoidRootPart.CFrame = mob.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
 									VIM:SendKeyEvent(true, "Z", false, game)
+								if run!"_G.UseSkillC") = enabled then 
 									char.HumanoidRootPart.CFrame = mob.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
-									VIM:SendKeyEvent(true, "Y", false, game)
+									VIM:SendKeyEvent(true, "C", false, game)
                                                                         char.HumanoidRootPart.CFrame = mob.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
 									VIM:SendKeyEvent(true, "X", false, game)
+                                                                        char.HumanoidRootPart.CFrame = mob.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
+									VIM:SendKeyEvent(true, "F", false, game)
+
 
 								until mob.Humanoid.Health <= 0 or not farming
 							end
