@@ -129,5 +129,11 @@ local BodyAttack = AutoLevi:Clone() BodyAttack.Position = UDim2.new(0, 20, 0, 12
 -- SETTING TAB 
 local SetTab = Pages["Setting"] local FastAttack = Instance.new("TextButton") FastAttack.Size = UDim2.new(0, 180, 0, 40) FastAttack.Position = UDim2.new(0, 20, 0, 20) FastAttack.Text = "Fast Attack: OFF" FastAttack.BackgroundColor3 = Color3.fromRGB(50, 200, 120) FastAttack.TextColor3 = Color3.fromRGB(255, 255, 255) FastAttack.Parent = SetTab
 
-local SkillToggle = Instance.new("TextLabel") SkillToggle.Size = UDim2.new(0, 250, 0, 25) SkillToggle.Position = UDim2.new(0, 20, 0, 70) SkillToggle.Text = "Skill Active: [Z, X, C]" SkillToggle.TextColor3 = Color3.fromRGB(255, 255, 255) SkillToggle.BackgroundTransparency = 1 SkillToggle.Parent = SetTab
+local SkillToggle = Instance.new("TextLabel") 
+	SkillToggle.Size = UDim2.new(0, 250, 0, 25) 
+	SkillToggle.Position = UDim2.new(0, 20, 0, 70)
+	SkillToggle.Text = "Skill Active: [Z, X, C]" 
+	SkillToggle.TextColor3 = Color3.fromRGB(255, 255, 255) 
+	SkillToggle.BackgroundTransparency = 1 
+	SkillToggle.Parent = SetTab
 
