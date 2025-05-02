@@ -16,7 +16,9 @@ local RayfieldFolder = "Rayfield"
 local ConfigurationFolder = RayfieldFolder.."/Configurations"
 local ConfigurationExtension = ".rfld"
 
-
+-- Background Anime --
+local BackgroundImageID = 88817335071002
+local ToggleImageID = 94747801090737
 
 local RayfieldLibrary = {
 	Flags = {},
@@ -87,6 +89,9 @@ local RayfieldLibrary = {
 			SliderProgress = Color3.fromRGB(31, 159, 71),
 			SliderStroke = Color3.fromRGB(42, 216, 94),
 
+                     local ToggleImage = Instance.new("ImageLabel") 
+			ToggleImage.Name = "ToggleBackground"
+			ToggleImage.image = "rbxassetid://" .. ToggleImageID
 			ToggleBackground = Color3.fromRGB(170, 203, 60),
 			ToggleEnabled = Color3.fromRGB(32, 214, 29),
 			ToggleDisabled = Color3.fromRGB(100, 22, 23),
@@ -154,6 +159,17 @@ local Topbar = Main.Topbar
 local Elements = Main.Elements
 local LoadingFrame = Main.LoadingFrame
 local TabList = Main.TabList
+
+-- Menambahkan background image dari variabel BackgroundImageID 
+local BackgroundImage = Instance.new("ImageLabel")
+BackgroundImage.Name = "Background"
+BackgroundImage.Image = "rbxassetid://" .. BackgroundImageID 
+BackgroundImage.Size = UDim2.new(1, 0, 1, 0) 
+BackgroundImage.Position = UDim2.new(0, 0, 0, 0) 
+BackgroundImage.BackgroundTransparency = 1 
+BackgroundImage.ImageTransparency = 0 
+BackgroundImage.ZIndex = 0
+BackgroundImage.Parent = Main
 
 Rayfield.DisplayOrder = 100
 LoadingFrame.Version.Text = Release
