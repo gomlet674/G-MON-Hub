@@ -68,6 +68,10 @@ CheckKey.MouseButton1Click:Connect(function()
         wait(1)
         loadstring(game:HttpGet("https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/main.lua"))()
         ScreenGui:Destroy()
+        if not _G.GMON_UI_Loaded then
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main.lua"))()
+    _G.GMON_UI_Loaded = true
+            end
     else
         Notify("Wrong Key!")
     end
