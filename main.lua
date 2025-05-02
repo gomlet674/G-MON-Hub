@@ -108,41 +108,92 @@ AutoFarm.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
 AutoFarm.TextColor3 = Color3.fromRGB(255, 255, 255)
 
 -- Auto Farm Logic
-local farming = false
-AutoFarm.MouseButton1Click:Connect(function()
-	farming = not farming
-	AutoFarm.Text = farming and "Auto Farm: ON" or "Auto Farm: OFF"
-
-	if farming then
-		spawn(function()
-			while farming and wait(1) do
-				pcall(function()
-					local char = player.Character
-					local lvl = player.Data.Level.Value
-					local questData = {
-						[1] = {
-							QuestName = "BanditQuest1",
-							MobName = "Bandit",
-							MobPos = CFrame.new(1039, 17, 1560)
-						},
-					}
-					local data = questData[1]
-					if data then
-						if not player.PlayerGui:FindFirstChild("QuestTitle") then
-							ReplicatedStorage.Remotes.CommF_:InvokeServer("StartQuest", data.QuestName, 1)
-							wait(1)
-						end
-						for _, mob in pairs(workspace.Enemies:GetChildren()) do
-							if mob.Name == data.MobName and mob:FindFirstChild("Humanoid") and mob.Humanoid.Health > 0 then
-								repeat wait()
-									char.HumanoidRootPart.CFrame = mob.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
-									VIM:SendKeyEvent(true, "Z", false, game)
-								until mob.Humanoid.Health <= 0 or not farming
-							end
-						end
-					end
-				end)
-			end
-		end)
+local data = getQuestInfo(lvl) 
+local function getQuestInfo(level)
+	if level <= 10 then
+		return {
+			QuestName = "BanditQuest1",
+			MobName = "Bandit",
+			MobPos = CFrame.new(1039, 17, 1560)
+		}
+	elseif level <= 50 then
+		return {
+			QuestName = "MonkeyQuest",
+			MobName = "Monkey",
+			MobPos = CFrame.new(-1602, 10, 152)
+		}
+	elseif level <= 150 then
+		return {
+			QuestName = "BuggyQuest1",
+			MobName = "Pirate",
+			MobPos = CFrame.new(-1123, 14, 3890)
+		}
+	elseif level <= 700 then
+		return {
+			QuestName = "FountainQuest",
+			MobName = "Galley Pirate",
+			MobPos = CFrame.new(5694, 38, 2430)
+		}
+	elseif level <= 1000 then
+		return {
+			QuestName = "ZombieQuest",
+			MobName = "Zombie",
+			MobPos = CFrame.new(-5736, 93, -7263)
+		}
+	elseif level <= 1500 then
+		return {
+			QuestName = "ShipQuest1",
+			MobName = "Ship Deckhand",
+			MobPos = CFrame.new(12152, 150, -6535)
+		}
+	elseif level <= 2000 then
+		return {
+			QuestName = "MarineTreeIsland",
+			MobName = "Marine Captain",
+			MobPos = CFrame.new(2323, 50, -9583)
+		}
+	else
+		return {
+			QuestName = "WaterMonsterQuest",
+			MobName = "Water Fighter",
+			MobPos = CFrame.new(-3000, 20, -13300)
+		}
 	end
+end
+
+-- GMON Hub Auto Farm Full Logic -- Untuk level 5 sampai 2650 termasuk Tiki Outpost
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage") local Players = game:GetService("Players") local Workspace = game:GetService("Workspace") local VIM = game:GetService("VirtualInputManager")
+
+local player = Players.LocalPlayer local character = player.Character or player.CharacterAdded:Wait() local HRP = character:WaitForChild("HumanoidRootPart")
+
+local farming = true -- toggle dengan tombol nantinya
+
+-- Tabel data level dan mob 
+local FarmData = { {Level = 5, Max = 14, Quest = "BanditQuest1", Mob = "Bandit", Pos = CFrame.new(1039, 17, 1560)}, {Level = 15, Max = 29, Quest = "MonkeyQuest", Mob = "Monkey", Pos = CFrame.new(-1602, 39, 152)} -- Tambahkan semua level di sini hingga 2650 termasuk Tiki Outpost -- Format sama: Level, Max, Quest, Mob, Pos }
+
+local function getCurrentFarmData(level) for _, data in ipairs(FarmData) do if level >= data.Level and level <= data.Max then return data end end return nil end
+
+-- Auto Farm Loop 
+	spawn(function() while farming do pcall(function() local level = player.Data.Level.Value local farmInfo = getCurrentFarmData(level) if not farmInfo then return end
+
+if not player.PlayerGui:FindFirstChild("QuestTitle") then
+            ReplicatedStorage.Remotes.CommF_:InvokeServer("StartQuest", farmInfo.Quest, 1)
+            wait(1)
+        end
+
+        for _, mob in pairs(Workspace.Enemies:GetChildren()) do
+            if mob.Name == farmInfo.Mob and mob:FindFirstChild("Humanoid") and mob.Humanoid.Health > 0 then
+                repeat
+                    wait()
+                    HRP.CFrame = mob.HumanoidRootPart.CFrame * CFrame.new(0, 10, 8) -- posisi aman
+                    VIM:SendKeyEvent(true, "Z", false, game)
+                until mob.Humanoid.Health <= 0 or not farming
+            end
+        end
+    end)
+    wait(1)
+end
+
 end)
+
