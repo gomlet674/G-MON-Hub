@@ -107,6 +107,55 @@ AutoFarm.Text = "Auto Farm"
 AutoFarm.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
 AutoFarm.TextColor3 = Color3.fromRGB(255, 255, 255)
 
+-- Setting Tab UI
+local SettingFrame = Instance.new("Frame")
+SettingFrame.Size = UDim2.new(0, 200, 0, 200)
+SettingFrame.Position = UDim2.new(1, -210, 0, 60)
+SettingFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+SettingFrame.Visible = true
+SettingFrame.Parent = BG
+
+local function createToggleButton(name, posY, callback)
+	local btn = Instance.new("TextButton")
+	btn.Size = UDim2.new(1, -10, 0, 30)
+	btn.Position = UDim2.new(0, 5, 0, posY)
+	btn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+	btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+	btn.Text = name .. ": OFF"
+	btn.Parent = SettingFrame
+
+	local enabled = false
+	btn.MouseButton1Click:Connect(function()
+		enabled = not enabled
+		btn.Text = name .. (enabled and ": ON" or ": OFF")
+		callback(enabled)
+	end)
+end
+
+-- Toggle Fast Attack
+createToggleButton("Fast Attack", 10, function(enabled)
+	_G.FastAttack = enabled
+end)
+
+-- Toggle Auto Click
+createToggleButton("Auto Click", 50, function(enabled)
+	_G.AutoClick = enabled
+end)
+
+-- Toggle Skill X/Y/Z/V
+createToggleButton("Use Skill X", 90, function(enabled)
+	_G.UseSkillX = enabled
+end)
+createToggleButton("Use Skill Y", 130, function(enabled)
+	_G.UseSkillY = enabled
+end)
+createToggleButton("Use Skill Z", 170, function(enabled)
+	_G.UseSkillZ = enabled
+end)
+createToggleButton("Use Skill V", 210, function(enabled)
+	_G.UseSkillV = enabled
+end)
+
 -- Auto Farm Logic
 local farming = false
 AutoFarm.MouseButton1Click:Connect(function()
@@ -137,6 +186,11 @@ AutoFarm.MouseButton1Click:Connect(function()
 								repeat wait()
 									char.HumanoidRootPart.CFrame = mob.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
 									VIM:SendKeyEvent(true, "Z", false, game)
+									char.HumanoidRootPart.CFrame = mob.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
+									VIM:SendKeyEvent(true, "Y", false, game)
+                                                                        char.HumanoidRootPart.CFrame = mob.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
+									VIM:SendKeyEvent(true, "X", false, game)
+
 								until mob.Humanoid.Health <= 0 or not farming
 							end
 						end
