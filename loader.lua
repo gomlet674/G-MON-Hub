@@ -43,7 +43,7 @@ notif.Text = ""
 
 -- Key System
 local validKey = "Bcd127aLt94dcp"
-local mainScriptURL = "https://raw.githubusercontent.com/gomlet674/gmonhub-script/main/main.lua"
+local mainScriptURL = "https://raw.githubusercontent.com/gomlet674/G-MON-HUB/main/main.lua"
 
 checkBtn.MouseButton1Click:Connect(function()
     if keyBox.Text == validKey then
