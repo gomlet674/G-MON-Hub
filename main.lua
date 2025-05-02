@@ -164,10 +164,10 @@ end)
 createToggleButton("Use Skill Z", 170, function(enabled)
 	_G.UseSkillZ = enabled
 end)
-createToggleButton("Use Skill V", 210, function(enabled)
+createToggleButton("Use Skill V", 190, function(enabled)
 	_G.UseSkillV = enabled
 end)
-createToggleButton("Use Skill F"100, , function(enabled)
+createToggleButton("Use Skill F", 210, function(enabled)
 	_G.UseSkillF = enabled
 end)
 
