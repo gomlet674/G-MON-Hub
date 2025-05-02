@@ -359,7 +359,12 @@ AutoFarm.MouseButton1Click:Connect(function()
         MobPos = CFrame.new(-14493, 334, -7262)
     },
 								}
-					local data = questData[1]
+					local data
+                                              for levelReq, quest in pairs(questData) do
+                                                  if lvl >= levelReq then
+                                                    data = quest
+                                               end
+					end
 					if data then
 						if not player.PlayerGui:FindFirstChild("QuestTitle") then
 							ReplicatedStorage.Remotes.CommF_:InvokeServer("StartQuest", data.QuestName, 1)
