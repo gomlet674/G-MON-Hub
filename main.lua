@@ -252,14 +252,17 @@ _G.UseSkillF = false
 
 -- GMON Hub AutoFarm Full QuestData (Level 5 - 2650) local player = game.Players.LocalPlayer local ReplicatedStorage = game:GetService("ReplicatedStorage") local VIM = game:GetService("VirtualInputManager")
 
-local goalCFrame = data.MobPos + Vector3.new(0, 10, 0)
-local distance = (char.HumanoidRootPart.Position - goalCFrame.Position).Magnitude
-local speed = 50 -- Kecepatan dalam satuan stud per detik
-local duration = distance / speed
-
-local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut)
-local tween = TweenService:Create(char.HumanoidRootPart, tweenInfo, {CFrame = goalCFrame})
-tween:Play()
+local function tweenToPosition(part, targetPos, duration)
+    local tweenInfo = TweenInfo.new(
+        duration,
+        Enum.EasingStyle.Linear,
+        Enum.EasingDirection.InOut
+    )
+    local goal = { CFrame = targetPos }
+    local tween = TweenService:Create(part, tweenInfo, goal)
+    tween:Play()
+    tween.Completed:Wait()
+end
 
 spawn(function() while true do wait(1) 
 			if _G.AutoFarm then
@@ -350,9 +353,9 @@ spawn(function() while true do wait(1)
 
 				-- Teleport ke lokasi umum (kalau ingin, kamu bisa tambah data.IslandPos)
 			if char and char:FindFirstChild("HumanoidRootPart") then
-                            	local targetCFrame = data.MobPos + Vector3.new(0, 10, 0)
-                          	tweenToPosition(char.HumanoidRootPart, targetCFrame, 2) -- 2 detik durasi
-		       	end
+                                   local targetCFrame = data.MobPos + Vector3.new(0, 10, 0)
+                                   tweenToPosition(char.HumanoidRootPart, targetCFrame, 4) -- durasi 2 detik
+						end
 
 				-- Serang mob
 				for _, mob in pairs(workspace.Enemies:GetChildren()) do
