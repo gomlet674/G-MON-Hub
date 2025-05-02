@@ -8,17 +8,19 @@ local VIM = game:GetService("VirtualInputManager")
 local player = Players.LocalPlayer
 
 -- UI Setup
-local ScreenGui = Instance.new("ScreenGui", CoreGui)
+local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "GMON_MainUI"
 ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = CoreGui
 
 -- Toggle Button
-local Toggle = Instance.new("ImageButton", ScreenGui)
+local Toggle = Instance.new("ImageButton")
 Toggle.Size = UDim2.new(0, 40, 0, 40)
 Toggle.Position = UDim2.new(0, 10, 0.5, -100)
 Toggle.BackgroundTransparency = 1
 Toggle.Image = "rbxassetid://94747801090737"
 Toggle.Name = "GMON_Toggle"
+Toggle.Parent = ScreenGui
 
 -- Drag toggle
 local dragging, dragInput, dragStart, startPos
@@ -48,20 +50,21 @@ RunService.Heartbeat:Connect(function()
 end)
 
 -- Background Panel
-local BG = Instance.new("ImageLabel", ScreenGui)
+local BG = Instance.new("ImageLabel")
 BG.Name = "Background"
 BG.Size = UDim2.new(0, 480, 0, 320)
 BG.Position = UDim2.new(0.5, -240, 0.5, -160)
 BG.BackgroundTransparency = 1
 BG.Image = "rbxassetid://88817335071002"
 BG.Visible = true
+BG.Parent = ScreenGui
 
 Toggle.MouseButton1Click:Connect(function()
 	BG.Visible = not BG.Visible
 end)
 
 -- Label GMON Hub
-local Title = Instance.new("TextLabel", BG)
+local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, 0, 0, 40)
 Title.Position = UDim2.new(0, 0, 0, 0)
 Title.BackgroundTransparency = 1
@@ -69,14 +72,16 @@ Title.Text = "GMON Hub"
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 24
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.Parent = BG
 
--- Tab Auto Farm Button
-local AutoFarm = Instance.new("TextButton", BG)
+-- Auto Farm Button
+local AutoFarm = Instance.new("TextButton")
 AutoFarm.Size = UDim2.new(0, 200, 0, 40)
 AutoFarm.Position = UDim2.new(0, 20, 0, 60)
 AutoFarm.Text = "Auto Farm"
 AutoFarm.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
 AutoFarm.TextColor3 = Color3.fromRGB(255, 255, 255)
+AutoFarm.Parent = BG
 
 -- Auto Farm Logic
 local farming = false
@@ -85,11 +90,11 @@ AutoFarm.MouseButton1Click:Connect(function()
 	AutoFarm.Text = farming and "Auto Farm: ON" or "Auto Farm: OFF"
 
 	if farming then
-		spawn(function()
-			while farming and wait(1) do
+		task.spawn(function()
+			while farming and task.wait(1) do
 				pcall(function()
 					local char = player.Character
-					local lvl = player.Data.Level.Value
+					local lvl = player:FindFirstChild("Data") and player.Data:FindFirstChild("Level") and player.Data.Level.Value or 1
 					local questData = {
 						[1] = {
 							QuestName = "BanditQuest1",
@@ -101,11 +106,11 @@ AutoFarm.MouseButton1Click:Connect(function()
 					if data then
 						if not player.PlayerGui:FindFirstChild("QuestTitle") then
 							ReplicatedStorage.Remotes.CommF_:InvokeServer("StartQuest", data.QuestName, 1)
-							wait(1)
+							task.wait(1)
 						end
 						for _, mob in pairs(workspace.Enemies:GetChildren()) do
 							if mob.Name == data.MobName and mob:FindFirstChild("Humanoid") and mob.Humanoid.Health > 0 then
-								repeat wait()
+								repeat task.wait()
 									char.HumanoidRootPart.CFrame = mob.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
 									VIM:SendKeyEvent(true, "Z", false, game)
 								until mob.Humanoid.Health <= 0 or not farming
