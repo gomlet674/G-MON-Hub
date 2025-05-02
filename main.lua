@@ -99,15 +99,14 @@ Title.Font = Enum.Font.GothamBold
 Title.TextSize = 24
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 
--- Tab Auto Farm Button
+-- Tombol Auto Farm
 _G.AutoFarm = false
-
 local AutoFarm = Instance.new("TextButton", BG)
 AutoFarm.Size = UDim2.new(0, 200, 0, 40)
 AutoFarm.Position = UDim2.new(0, 20, 0, 60)
-AutoFarm.BackgroundTransparency = 0.4 -- 0 = solid, 1 = full transparan
-AutoFarm.BackgroundColor3 = Color3.fromRGB(255, 255, 255) -- warna putih
-AutoFarm.TextColor3 = Color3.fromRGB(0, 0, 0) -- teks hitam agar kontras
+AutoFarm.BackgroundTransparency = 0.4
+AutoFarm.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+AutoFarm.TextColor3 = Color3.fromRGB(0, 0, 0)
 AutoFarm.Font = Enum.Font.SourceSansBold
 AutoFarm.TextSize = 20
 AutoFarm.Text = "Auto Farm: OFF"
@@ -115,60 +114,6 @@ AutoFarm.Text = "Auto Farm: OFF"
 AutoFarm.MouseButton1Click:Connect(function()
 	_G.AutoFarm = not _G.AutoFarm
 	AutoFarm.Text = _G.AutoFarm and "Auto Farm: ON" or "Auto Farm: OFF"
-end)
-
--- Buat tombol toggle
-local meleeButton = Instance.new("TextButton")
-meleeButton.Size = UDim2.new(0, 200, 0, 40)
-meleeButton.Position = UDim2.new(0, 20, 0, 120)
-meleeButton.Text = "Use Melee: OFF"
-meleeButton.Parent = yourGuiFrame -- ganti dengan frame kamu
-meleeButton.BackgroundColor3 = Color3.fromRGB(170, 85, 255)
-
--- Fungsi equip melee
-local function equipMelee()
-    local player = game.Players.LocalPlayer
-    local Backpack = player:WaitForChild("Backpack")
-    local Character = player.Character or player.CharacterAdded:Wait()
-
-    for _, tool in pairs(Backpack:GetChildren()) do
-        if tool:IsA("Tool") and tool.ToolTip == "Melee" then
-            tool.Parent = Character
-            break
-        end
-    end
-end
-
--- Tombol Use Melee
-local isMeleeEnabled = false
-local meleeButton = Instance.new("TextButton")
-meleeButton.Size = UDim2.new(0, 200, 0, 40)
-meleeButton.Position = UDim2.new(0, 20, 0, 110) -- tepat di bawah Auto Farm
-meleeButton.Text = "Use Melee: OFF"
-meleeButton.Parent = yourGuiFrame
-meleeButton.BackgroundColor3 = Color3.fromRGB(170, 85, 255)
-
--- Fungsi equip Melee
-local function equipMelee()
-    local player = game.Players.LocalPlayer
-    local Backpack = player:WaitForChild("Backpack")
-    local Character = player.Character or player.CharacterAdded:Wait()
-
-    for _, tool in pairs(Backpack:GetChildren()) do
-        if tool:IsA("Tool") and tool.ToolTip == "Melee" then
-            tool.Parent = Character
-            break
-        end
-    end
-end
-
--- Toggle Melee
-meleeButton.MouseButton1Click:Connect(function()
-    isMeleeEnabled = not isMeleeEnabled
-    meleeButton.Text = isMeleeEnabled and "Use Melee: ON" or "Use Melee: OFF"
-    if isMeleeEnabled then
-        equipMelee()
-    end
 end)
 
 -- Setting Tab UI
@@ -239,73 +184,104 @@ _G.UseSkillC = false
 _G.UseSkillV = false
 _G.UseSkillF = false
 
-local farming = false
+-- GMON Hub AutoFarm Full QuestData (Level 5 - 2650) local player = game.Players.LocalPlayer local ReplicatedStorage = game:GetService("ReplicatedStorage") local VIM = game:GetService("VirtualInputManager")
 
-AutoFarm.MouseButton1Click:Connect(function()
-	farming = not farming
-	AutoFarm.Text = farming and "Auto Farm: ON" or "Auto Farm: OFF"
+spawn(function() while true do wait(1) if _G.AutoFarm then pcall(function() local char = player.Character local lvl = player.Data.Level.Value
 
-	if farming then
-		spawn(function()
-			while farming and task.wait(1) do
-				pcall(function()
-					local char = player.Character or player.CharacterAdded:Wait()
-					local lvl = player:WaitForChild("Data"):WaitForChild("Level").Value
+local questData = {
+				-- First Sea (Level 5 - 700)
+				[5] = {QuestName = "BanditQuest1", MobName = "Bandit", MobPos = CFrame.new(1039, 17, 1560)},
+				[10] = {QuestName = "JungleQuest", MobName = "Monkey", MobPos = CFrame.new(-1611, 36, 152)},
+				[15] = {QuestName = "JungleQuest", MobName = "Gorilla", MobPos = CFrame.new(-1237, 6, -530)},
+				[30] = {QuestName = "BuggyQuest1", MobName = "Pirate", MobPos = CFrame.new(-1120, 14, 3850)},
+				[40] = {QuestName = "BuggyQuest1", MobName = "Brute", MobPos = CFrame.new(-1193, 14, 4275)},
+				[60] = {QuestName = "BuggyQuest2", MobName = "Desert Bandit", MobPos = CFrame.new(933, 7, 4482)},
+				[75] = {QuestName = "DesertQuest", MobName = "Desert Officer", MobPos = CFrame.new(1572, 10, 4373)},
+				[90] = {QuestName = "SnowQuest", MobName = "Snow Bandit", MobPos = CFrame.new(1389, 87, -1297)},
+				[105] = {QuestName = "SnowQuest", MobName = "Snowman", MobPos = CFrame.new(1355, 87, -1410)},
+				[120] = {QuestName = "MarineQuest1", MobName = "Chief Petty Officer", MobPos = CFrame.new(-4855, 20, 4326)},
+				[150] = {QuestName = "SkyQuest", MobName = "Sky Bandit", MobPos = CFrame.new(-4951, 295, -2723)},
+				[175] = {QuestName = "SkyQuest", MobName = "Dark Master", MobPos = CFrame.new(-5250, 389, -2293)},
+				[190] = {QuestName = "PrisonerQuest", MobName = "Prisoner", MobPos = CFrame.new(4943, 42, -3123)},
+				[210] = {QuestName = "PrisonerQuest", MobName = "Dangerous Prisoner", MobPos = CFrame.new(5011, 42, -3025)},
+				[250] = {QuestName = "ColosseumQuest", MobName = "Toga Warrior", MobPos = CFrame.new(-1772, 7, -2742)},
+				[275] = {QuestName = "ColosseumQuest", MobName = "Gladiator", MobPos = CFrame.new(-1501, 7, -2832)},
+				[300] = {QuestName = "MagmaQuest", MobName = "Military Soldier", MobPos = CFrame.new(-5428, 78, -2890)},
+				[325] = {QuestName = "MagmaQuest", MobName = "Military Spy", MobPos = CFrame.new(-5802, 78, -2914)},
+				[375] = {QuestName = "FishmanQuest", MobName = "Fishman Warrior", MobPos = CFrame.new(61163, 19, 1569)},
+				[400] = {QuestName = "FishmanQuest", MobName = "Fishman Commando", MobPos = CFrame.new(61753, 19, 1442)},
+				[450] = {QuestName = "SkyExpQuest", MobName = "God's Guard", MobPos = CFrame.new(-4700, 900, -1912)},
+				[475] = {QuestName = "SkyExpQuest", MobName = "Shanda", MobPos = CFrame.new(-4560, 875, -2025)},
+				[500] = {QuestName = "SkyExpQuest", MobName = "Royal Squad", MobPos = CFrame.new(-4372, 755, -2126)},
+				[525] = {QuestName = "SkyExpQuest", MobName = "Royal Soldier", MobPos = CFrame.new(-4472, 785, -2176)},
+				[550] = {QuestName = "FountainQuest", MobName = "Galley Pirate", MobPos = CFrame.new(5550, 77, 3933)},
+				[625] = {QuestName = "FountainQuest", MobName = "Galley Captain", MobPos = CFrame.new(5700, 77, 4200)},
 
-					local questData = {
-						[5] = {QuestName = "BanditQuest1", MobName = "Bandit", MobPos = CFrame.new(1039, 17, 1560)},
-						[10] = {QuestName = "MonkeyQuest", MobName = "Monkey", MobPos = CFrame.new(-1601, 8, 145)},
-						[15] = {QuestName = "GorillaQuest", MobName = "Gorilla", MobPos = CFrame.new(-1322, 6, -511)},
-						[30] = {QuestName = "BuggyQuest1", MobName = "Pirate", MobPos = CFrame.new(-1122, 5, 3850)},
-						[40] = {QuestName = "BuggyQuest2", MobName = "Brute", MobPos = CFrame.new(-1144, 14, 4320)},
-						[60] = {QuestName = "BuggyQuest3", MobName = "Bobby", MobPos = CFrame.new(-1155, 18, 4305)},
-						[75] = {QuestName = "DesertQuest", MobName = "Desert Bandit", MobPos = CFrame.new(932, 6, 4480)},
-						[90] = {QuestName = "DesertQuest2", MobName = "Desert Officer", MobPos = CFrame.new(1593, 6, 4363)},
-						[120] = {QuestName = "SnowQuest", MobName = "Snow Bandit", MobPos = CFrame.new(1358, 87, -1290)},
-						[150] = {QuestName = "MarineQuest3", MobName = "Vice Admiral", MobPos = CFrame.new(-5105, 88, 3961)},
-						[190] = {QuestName = "SkyQuest1", MobName = "Sky Bandit", MobPos = CFrame.new(-4960, 278, -2626)},
-						[250] = {QuestName = "SkyQuest3", MobName = "Dark Master", MobPos = CFrame.new(-5254, 389, -2359)},
-						[375] = {QuestName = "MagmaQuest", MobName = "Military Soldier", MobPos = CFrame.new(-5422, 11, 8467)},
-						[625] = {QuestName = "FishmanQuest", MobName = "Fishman Warrior", MobPos = CFrame.new(61123, 19, 1500)},
-						[950] = {QuestName = "ZombieQuest", MobName = "Zombie", MobPos = CFrame.new(-5566, 102, -7155)},
-						[1250] = {QuestName = "FactoryStaffQuest", MobName = "Factory Staff", MobPos = CFrame.new(2950, 84, -6990)},
-						[1500] = {QuestName = "PiratePortQuest", MobName = "Pirate", MobPos = CFrame.new(-4682, 845, 8723)},
-						[1750] = {QuestName = "HauntedQuest1", MobName = "Reborn Skeleton", MobPos = CFrame.new(-9492, 142, 6064)},
-						[2000] = {QuestName = "IceCreamQuest1", MobName = "Snow Demon", MobPos = CFrame.new(-899, 65, -11063)},
-						[2250] = {QuestName = "PeanutQuest1", MobName = "Peanut Scout", MobPos = CFrame.new(-2060, 90, -10368)},
-						[2450] = {QuestName = "MansionQuest", MobName = "Island Empress", MobPos = CFrame.new(-11865, 334, -8761)},
-						[2650] = {QuestName = "TikiQuest1", MobName = "Tiki Warrior", MobPos = CFrame.new(-14493, 334, -7262)},
-					}
+				-- Second Sea (Level 700 - 1450)
+				[700] = {QuestName = "Area1Quest", MobName = "Raider", MobPos = CFrame.new(-4984, 314, -2831)},
+				[725] = {QuestName = "Area1Quest", MobName = "Mercenary", MobPos = CFrame.new(-4900, 314, -2820)},
+				[775] = {QuestName = "Area2Quest", MobName = "Swan Pirate", MobPos = CFrame.new(878, 122, 1235)},
+				[800] = {QuestName = "Area2Quest", MobName = "Factory Staff", MobPos = CFrame.new(295, 73, 1360)},
+				[875] = {QuestName = "ZombieQuest", MobName = "Zombie", MobPos = CFrame.new(-5736, 94, -6937)},
+				[900] = {QuestName = "ZombieQuest", MobName = "Vampire", MobPos = CFrame.new(-5775, 94, -7038)},
+				[950] = {QuestName = "SnowMountainQuest", MobName = "Snow Trooper", MobPos = CFrame.new(5804, 50, -5386)},
+				[975] = {QuestName = "SnowMountainQuest", MobName = "Winter Warrior", MobPos = CFrame.new(6020, 50, -5500)},
+				[1000] = {QuestName = "ShipQuest1", MobName = "Ship Deckhand", MobPos = CFrame.new(1217, 125, 33020)},
+				[1050] = {QuestName = "ShipQuest1", MobName = "Ship Engineer", MobPos = CFrame.new(1257, 125, 33260)},
+				[1100] = {QuestName = "ShipQuest2", MobName = "Ship Steward", MobPos = CFrame.new(1449, 125, 33460)},
+				[1125] = {QuestName = "ShipQuest2", MobName = "Ship Officer", MobPos = CFrame.new(1520, 125, 33790)},
+				[1150] = {QuestName = "FogQuest", MobName = "Arctic Warrior", MobPos = CFrame.new(-6500, 70, -9200)},
+				[1175] = {QuestName = "FogQuest", MobName = "Snow Lurker", MobPos = CFrame.new(-6700, 70, -9400)},
+				[1200] = {QuestName = "GhostShipQuest", MobName = "Shipwright", MobPos = CFrame.new(-5900, 150, -7500)},
+				[1250] = {QuestName = "GhostShipQuest", MobName = "Arctic Ensign", MobPos = CFrame.new(-6000, 150, -7600)},
+				[1300] = {QuestName = "CursedShipQuest", MobName = "Living Zombie", MobPos = CFrame.new(-6125, 90, -7920)},
+				[1325] = {QuestName = "CursedShipQuest", MobName = "Demonic Soul", MobPos = CFrame.new(-6200, 90, -8025)},
+				[1350] = {QuestName = "IceQuest", MobName = "Arctic Admiral", MobPos = CFrame.new(-6400, 100, -8600)},
+				[1400] = {QuestName = "IslandQuest", MobName = "Jungle Pirate", MobPos = CFrame.new(-6800, 100, -8800)},
+				[1450] = {QuestName = "IslandQuest", MobName = "Musketeer Pirate", MobPos = CFrame.new(-6900, 100, -8900)},
 
-					local selected
-					for levelReq, quest in pairs(questData) do
-						if lvl >= levelReq then
-							selected = quest
-						end
-					end
+				-- Third Sea up to 2650 (sudah tersedia di versi sebelumnya)
+				[1500] = {QuestName = "PiratePortQuest", MobName = "Pirate Millionaire", MobPos = CFrame.new(-289, 44, 5589)},
+				[1575] = {QuestName = "GreatTreeQuest", MobName = "Marine Commodore", MobPos = CFrame.new(2364, 25, -6864)},
+				[1650] = {QuestName = "GreatTreeQuest", MobName = "Marine Rear Admiral", MobPos = CFrame.new(2354, 25, -6984)},
+				[1700] = {QuestName = "HydraQuest", MobName = "Water Fighter", MobPos = CFrame.new(5229, 66, -11354)},
+				[1750] = {QuestName = "HydraQuest", MobName = "Sea Soldier", MobPos = CFrame.new(5130, 66, -11454)},
+				[2300] = {QuestName = "TikiQuest1", MobName = "Island Boy", MobPos = CFrame.new(-14540, 334, -7630)},
+				[2400] = {QuestName = "TikiQuest2", MobName = "Shark Tooth", MobPos = CFrame.new(-14590, 334, -7900)},
+				[2500] = {QuestName = "TikiQuest3", MobName = "Sun-kissed Warrior", MobPos = CFrame.new(-14620, 334, -8100)},
+				[2625] = {QuestName = "GravityQuest", MobName = "Gravity Bandit", MobPos = CFrame.new(-14700, 334, -8400)},
+				[2650] = {QuestName = "GravityQuest", MobName = "Gravity Warrior", MobPos = CFrame.new(-14750, 334, -8500)}
+			}
 
-					if selected then
-						if not player.PlayerGui:FindFirstChild("QuestTitle") then
-							ReplicatedStorage.Remotes.CommF_:InvokeServer("StartQuest", selected.QuestName, 1)
-							task.wait(1)
-						end
-
-						for _, mob in pairs(workspace.Enemies:GetChildren()) do
-							if mob.Name == selected.MobName and mob:FindFirstChild("Humanoid") and mob.Humanoid.Health > 0 then
-								repeat task.wait()
-									char.HumanoidRootPart.CFrame = mob.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
-
-									if _G.UseSkillZ then VIM:SendKeyEvent(true, "Z", false, game) end
-									if _G.UseSkillX then VIM:SendKeyEvent(true, "X", false, game) end
-									if _G.UseSkillC then VIM:SendKeyEvent(true, "C", false, game) end
-									if _G.UseSkillV then VIM:SendKeyEvent(true, "V", false, game) end
-									if _G.UseSkillF then VIM:SendKeyEvent(true, "F", false, game) end
-								until mob.Humanoid.Health <= 0 or not farming
-							end
-						end
-					end
-				end)
+			local data
+			for levelReq, quest in pairs(questData) do
+				if lvl >= levelReq then
+					data = quest
+				end
 			end
-		end)
+
+			if data then
+				if not player.PlayerGui:FindFirstChild("QuestTitle") then
+					ReplicatedStorage.Remotes.CommF_:InvokeServer("StartQuest", data.QuestName, 1)
+					wait(1)
+				end
+
+				for _, mob in pairs(workspace.Enemies:GetChildren()) do
+					if mob.Name == data.MobName and mob:FindFirstChild("Humanoid") and mob.Humanoid.Health > 0 then
+						repeat wait()
+							char.HumanoidRootPart.CFrame = mob.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
+							if _G.UseSkillZ then VIM:SendKeyEvent(true, "Z", false, game) end
+							if _G.UseSkillX then VIM:SendKeyEvent(true, "X", false, game) end
+							if _G.UseSkillC then VIM:SendKeyEvent(true, "C", false, game) end
+							if _G.UseSkillV then VIM:SendKeyEvent(true, "V", false, game) end
+							if _G.UseSkillF then VIM:SendKeyEvent(true, "F", false, game) end
+					until mob.Humanoid.Health <= 0 or not _G.AutoFarm
+				end
+			end
+		end
+	end)
 	end
+end
+
 end)
+
