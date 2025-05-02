@@ -167,7 +167,7 @@ end)
 createToggleButton("Use Skill V", 210, function(enabled)
 	_G.UseSkillV = enabled
 end)
-createToggleButton("Use Skill F", 210, function(enabled)
+createToggleButton("Use Skill F"100, , function(enabled)
 	_G.UseSkillF = enabled
 end)
 
@@ -195,11 +195,41 @@ local function equipMelee()
     end
 end
 
--- Saat tombol diklik
+-- Tombol Auto Farm (asumsi kamu sudah punya ini)
+local autoFarmButton = Instance.new("TextButton")
+autoFarmButton.Size = UDim2.new(0, 200, 0, 40)
+autoFarmButton.Position = UDim2.new(0, 20, 0, 60)
+autoFarmButton.Text = "Auto Farm: OFF"
+autoFarmButton.Parent = yourGuiFrame
+autoFarmButton.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+
+-- Tombol Use Melee
+local isMeleeEnabled = false
+local meleeButton = Instance.new("TextButton")
+meleeButton.Size = UDim2.new(0, 200, 0, 40)
+meleeButton.Position = UDim2.new(0, 20, 0, 110) -- tepat di bawah Auto Farm
+meleeButton.Text = "Use Melee: OFF"
+meleeButton.Parent = yourGuiFrame
+meleeButton.BackgroundColor3 = Color3.fromRGB(170, 85, 255)
+
+-- Fungsi equip Melee
+local function equipMelee()
+    local player = game.Players.LocalPlayer
+    local Backpack = player:WaitForChild("Backpack")
+    local Character = player.Character or player.CharacterAdded:Wait()
+
+    for _, tool in pairs(Backpack:GetChildren()) do
+        if tool:IsA("Tool") and tool.ToolTip == "Melee" then
+            tool.Parent = Character
+            break
+        end
+    end
+end
+
+-- Toggle Melee
 meleeButton.MouseButton1Click:Connect(function()
     isMeleeEnabled = not isMeleeEnabled
     meleeButton.Text = isMeleeEnabled and "Use Melee: ON" or "Use Melee: OFF"
-
     if isMeleeEnabled then
         equipMelee()
     end
