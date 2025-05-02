@@ -183,18 +183,15 @@ AutoFarm.MouseButton1Click:Connect(function()
 						end
 						for _, mob in pairs(workspace.Enemies:GetChildren()) do
 							if mob.Name == data.MobName and mob:FindFirstChild("Humanoid") and mob.Humanoid.Health > 0 then
-								repeat wait()
-								if run("_G.UseSkillZ") = enabled then 		
+								repeat wait()	
 									char.HumanoidRootPart.CFrame = mob.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
 									VIM:SendKeyEvent(true, "Z", false, game)
-								if run!"_G.UseSkillC") = enabled then 
 									char.HumanoidRootPart.CFrame = mob.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
 									VIM:SendKeyEvent(true, "C", false, game)
                                                                         char.HumanoidRootPart.CFrame = mob.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
 									VIM:SendKeyEvent(true, "X", false, game)
                                                                         char.HumanoidRootPart.CFrame = mob.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
 									VIM:SendKeyEvent(true, "F", false, game)
-
 
 								until mob.Humanoid.Health <= 0 or not farming
 							end
