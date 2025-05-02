@@ -354,7 +354,7 @@ spawn(function() while true do wait(1)
 				-- Teleport ke lokasi umum (kalau ingin, kamu bisa tambah data.IslandPos)
 			if char and char:FindFirstChild("HumanoidRootPart") then
                                    local targetCFrame = data.MobPos + Vector3.new(0, 10, 0)
-                                   tweenToPosition(char.HumanoidRootPart, targetCFrame, 20) -- durasi 20 detik
+                                   tweenToPosition(char.HumanoidRootPart, targetCFrame, 40) -- durasi 40 detik
 						end
 
 				-- Serang mob
