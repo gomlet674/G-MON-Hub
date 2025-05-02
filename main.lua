@@ -119,21 +119,14 @@ AutoFarm.MouseButton1Click:Connect(function()
 				pcall(function()
 					local char = player.Character
 					local lvl = player.Data.Level.Value
-					local questdata = {
+					local questData = {
 						[1] = {
 							QuestName = "BanditQuest1",
 							MobName = "Bandit",
 							MobPos = CFrame.new(1039, 17, 1560)
-						},
-
-						-- Farm Data
-local FarmData = {
-	{Level = 5, Max = 14, Quest = "BanditQuest1", Mob = "Bandit", Pos = CFrame.new(1039, 17, 1560)},
-	{Level = 15, Max = 29, Quest = "MonkeyQuest", Mob = "Monkey", Pos = CFrame.new(-1602, 39, 152)},
-	{Level = 30, Max = 59, Quest = "GorillaQuest", Mob = "Gorilla", Pos = CFrame.new(-1220, 60, -545)},
-	-- Tambahkan lebih banyak data level hingga 2650			
+						},		
 					}
-					local data = getQuestInfo(lvl)
+					local data = questData[1]
 					if data then
 						if not player.PlayerGui:FindFirstChild("QuestTitle") then
 							ReplicatedStorage.Remotes.CommF_:InvokeServer("StartQuest", data.QuestName, 1)
