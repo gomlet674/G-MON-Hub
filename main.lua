@@ -33,13 +33,49 @@ Title.Font = Enum.Font.GothamBold
 Title.TextSize = 24
 Title.TextColor3 = Color3.fromRGB(255,255,255)
 
--- Sample Tab: Auto Farm
-local AutoFarm = Instance.new("TextButton", BG)
+-- Auto Farm Tab 
+local AutoFarm = Instance.new("TextButton", Frame)
 AutoFarm.Size = UDim2.new(0, 200, 0, 40)
 AutoFarm.Position = UDim2.new(0, 20, 0, 60)
 AutoFarm.Text = "Auto Farm"
 AutoFarm.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
 AutoFarm.TextColor3 = Color3.fromRGB(255, 255, 255)
+
+local farming = false
 AutoFarm.MouseButton1Click:Connect(function()
-    print("Auto Farm Activated")
+    farming = not farming
+    AutoFarm.Text = farming and "Auto Farm: ON" or "Auto Farm: OFF"
+    if farming then
+        spawn(function()
+            while farming and wait(1) do
+                pcall(function()
+                    local plr = game.Players.LocalPlayer
+                    local char = plr.Character
+                    local lvl = plr.Data.Level.Value
+                    local questData = {
+                        [1] = {
+                            QuestName = "BanditQuest1",
+                            MobName = "Bandit",
+                            MobPos = CFrame.new(1039, 17, 1560)
+                        },
+                    }
+                    local data = questData[1]
+                    if data then
+                        if not plr.PlayerGui:FindFirstChild("QuestTitle") then
+                            game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("StartQuest", data.QuestName, 1)
+                            wait(1)
+                        end
+                        for i,v in pairs(game:GetService("Workspace").Enemies:GetChildren()) do
+                            if v.Name == data.MobName and v:FindFirstChild("Humanoid") and v.Humanoid.Health > 0 then
+                                repeat wait()
+                                    char.HumanoidRootPart.CFrame = v.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
+                                    game:GetService("VirtualInputManager"):SendKeyEvent(true, "Z", false, game)
+                                until v.Humanoid.Health <= 0 or not farming
+                            end
+                        end
+                    end
+                end)
+            end
+        end)
+    end
 end)
