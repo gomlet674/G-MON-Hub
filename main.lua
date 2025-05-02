@@ -125,7 +125,7 @@ seaEventsTab.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 seaEventsTab.BackgroundTransparency = 0.4
 seaEventsTab.BorderSizePixel = 0
 seaEventsTab.Visible = true
-seaEventsTab.Parent = TabContent -- Ganti sesuai parent kamu
+seaEventsTab.Parent = BG -- Ganti sesuai parent kamu
 
 local title = Instance.new("TextLabel", seaEventsTab)
 title.Size = UDim2.new(1, 0, 0, 40)
@@ -318,35 +318,48 @@ local questData = {
 				[2650] = {QuestName = "GravityQuest", MobName = "Gravity Warrior", MobPos = CFrame.new(-14750, 334, -8500)}
 			}
 
-			local data
-			for levelReq, quest in pairs(questData) do
-				if lvl >= levelReq then
+			local bestMatch = nil
+                                for levelReq, quest in pairs(questData) do
+                                	if lvl >= levelReq and (not bestMatch or levelReq > bestMatch.LevelReq) then
+	                               	bestMatch = { LevelReq = levelReq, Data = quest }
+                               	end
+                     end
+
+                   if bestMatch then
+	                 local data = bestMatch.Data
+	                                -- lanjut ke quest...
 					data = quest
 				end
 			end
 
-			if data then
+							-- Ambil quest jika belum
 				if not player.PlayerGui:FindFirstChild("QuestTitle") then
 					ReplicatedStorage.Remotes.CommF_:InvokeServer("StartQuest", data.QuestName, 1)
 					wait(1)
 				end
 
+				-- Teleport ke pulau dulu
+				if char and char:FindFirstChild("HumanoidRootPart") then
+					char.HumanoidRootPart.CFrame = data.IslandPos
+					wait(2)
+				end
+
+				-- Serang NPC
 				for _, mob in pairs(workspace.Enemies:GetChildren()) do
 					if mob.Name == data.MobName and mob:FindFirstChild("Humanoid") and mob.Humanoid.Health > 0 then
 						repeat wait()
-							char.HumanoidRootPart.CFrame = mob.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
+							if char and char:FindFirstChild("HumanoidRootPart") and mob:FindFirstChild("HumanoidRootPart") then
+								char.HumanoidRootPart.CFrame = mob.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
+							end
 							if _G.UseSkillZ then VIM:SendKeyEvent(true, "Z", false, game) end
 							if _G.UseSkillX then VIM:SendKeyEvent(true, "X", false, game) end
 							if _G.UseSkillC then VIM:SendKeyEvent(true, "C", false, game) end
 							if _G.UseSkillV then VIM:SendKeyEvent(true, "V", false, game) end
 							if _G.UseSkillF then VIM:SendKeyEvent(true, "F", false, game) end
-					until mob.Humanoid.Health <= 0 or not _G.AutoFarm
+						until mob.Humanoid.Health <= 0 or not _G.AutoFarm
+					end
 				end
-			end
+			end)
 		end
-	end)
 	end
-end
-
 end)
-
