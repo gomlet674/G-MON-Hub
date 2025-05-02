@@ -111,7 +111,8 @@ AutoFarm.TextColor3 = Color3.fromRGB(255, 255, 255)
 local SettingFrame = Instance.new("Frame")
 SettingFrame.Size = UDim2.new(0, 200, 0, 200)
 SettingFrame.Position = UDim2.new(1, -210, 0, 60)
-SettingFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+SettingFrame.BackgroundColor3 = Color3.fromRGB(255, 255, 255) -- putih
+SettingFrame.BackgroundTransparency = 0.4 -- transparansi 60%
 SettingFrame.Visible = true
 SettingFrame.Parent = BG
 
@@ -119,16 +120,17 @@ local function createToggleButton(name, posY, callback)
 	local btn = Instance.new("TextButton")
 	btn.Size = UDim2.new(1, -10, 0, 30)
 	btn.Position = UDim2.new(0, 5, 0, posY)
-	btn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-	btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+	btn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+	btn.BackgroundTransparency = 0.4
+	btn.TextColor3 = Color3.fromRGB(0, 0, 0) -- teks jadi hitam agar kontras
 	btn.Text = name .. ": OFF"
 	btn.Parent = SettingFrame
 
-	local enabled = false
+	local state = false
 	btn.MouseButton1Click:Connect(function()
-		enabled = not enabled
-		btn.Text = name .. (enabled and ": ON" or ": OFF")
-		callback(enabled)
+		state = not state
+		btn.Text = name .. ": " .. (state and "ON" or "OFF")
+		if callback then callback(state) end
 	end)
 end
 
