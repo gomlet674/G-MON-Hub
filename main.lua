@@ -156,6 +156,40 @@ createToggleButton("Use Skill V", 210, function(enabled)
 	_G.UseSkillV = enabled
 end)
 
+local isMeleeEnabled = false
+
+-- Buat tombol toggle
+local meleeButton = Instance.new("TextButton")
+meleeButton.Size = UDim2.new(0, 200, 0, 40)
+meleeButton.Position = UDim2.new(0, 20, 0, 120)
+meleeButton.Text = "Use Melee: OFF"
+meleeButton.Parent = yourGuiFrame -- ganti dengan frame kamu
+meleeButton.BackgroundColor3 = Color3.fromRGB(170, 85, 255)
+
+-- Fungsi equip melee
+local function equipMelee()
+    local player = game.Players.LocalPlayer
+    local Backpack = player:WaitForChild("Backpack")
+    local Character = player.Character or player.CharacterAdded:Wait()
+
+    for _, tool in pairs(Backpack:GetChildren()) do
+        if tool:IsA("Tool") and tool.ToolTip == "Melee" then
+            tool.Parent = Character
+            break
+        end
+    end
+end
+
+-- Saat tombol diklik
+meleeButton.MouseButton1Click:Connect(function()
+    isMeleeEnabled = not isMeleeEnabled
+    meleeButton.Text = isMeleeEnabled and "Use Melee: ON" or "Use Melee: OFF"
+
+    if isMeleeEnabled then
+        equipMelee()
+    end
+end)
+
 -- Auto Farm Logic
 local farming = false
 AutoFarm.MouseButton1Click:Connect(function()
