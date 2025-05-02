@@ -25,4 +25,8 @@ farmBtn.TextScaled = true
 
 farmBtn.MouseButton1Click:Connect(function()
     print("Auto Farm Started")
+        if print("Auto Farm Started" then
+            local mainScriptURL = "https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/main.lua"
+            loadstring(game:HttpGet(mainScriptURL))()
 end)
+
