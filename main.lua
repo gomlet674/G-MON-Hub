@@ -100,12 +100,22 @@ Title.TextSize = 24
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 
 -- Tab Auto Farm Button
+_G.AutoFarm = false
+
 local AutoFarm = Instance.new("TextButton", BG)
 AutoFarm.Size = UDim2.new(0, 200, 0, 40)
 AutoFarm.Position = UDim2.new(0, 20, 0, 60)
-AutoFarm.Text = "Auto Farm"
+AutoFarm.BackgroundTransparency = 0.5 -- 0.0 (tidak transparan) s/d 1.0 (benar-benar transparan)
 AutoFarm.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
 AutoFarm.TextColor3 = Color3.fromRGB(255, 255, 255)
+AutoFarm.Font = Enum.Font.SourceSansBold
+AutoFarm.TextSize = 20
+AutoFarm.Text = "Auto Farm: OFF"
+
+AutoFarm.MouseButton1Click:Connect(function()
+	_G.AutoFarm = not _G.AutoFarm
+	AutoFarm.Text = _G.AutoFarm and "Auto Farm: ON" or "Auto Farm: OFF"
+end)
 
 -- Setting Tab UI
 local SettingFrame = Instance.new("Frame")
