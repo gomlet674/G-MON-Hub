@@ -116,6 +116,71 @@ AutoFarm.MouseButton1Click:Connect(function()
 	AutoFarm.Text = _G.AutoFarm and "Auto Farm: ON" or "Auto Farm: OFF"
 end)
 
+--===[ GMON Sea Events Tab Mentahan Berdasarkan Gambar ]===--
+
+local seaEventsTab = Instance.new("Frame")
+seaEventsTab.Name = "SeaEventsTab"
+seaEventsTab.Size = UDim2.new(1, 0, 1, 0)
+seaEventsTab.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+seaEventsTab.BackgroundTransparency = 0.4
+seaEventsTab.BorderSizePixel = 0
+seaEventsTab.Visible = true
+seaEventsTab.Parent = TabContent -- Ganti sesuai parent kamu
+
+local title = Instance.new("TextLabel", seaEventsTab)
+title.Size = UDim2.new(1, 0, 0, 40)
+title.Position = UDim2.new(0, 0, 0, 0)
+title.Text = "Sea Events"
+title.Font = Enum.Font.GothamBold
+title.TextSize = 20
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.BackgroundTransparency = 1
+
+local function createToggleRow(parent, yPos, labelText)
+	local row = Instance.new("Frame", parent)
+	row.Size = UDim2.new(1, -20, 0, 35)
+	row.Position = UDim2.new(0, 10, 0, yPos)
+	row.BackgroundTransparency = 1
+
+	local label = Instance.new("TextLabel", row)
+	label.Size = UDim2.new(1, -50, 1, 0)
+	label.Position = UDim2.new(0, 0, 0, 0)
+	label.Text = labelText
+	label.Font = Enum.Font.Gotham
+	label.TextSize = 14
+	label.TextColor3 = Color3.fromRGB(255, 255, 255)
+	label.BackgroundTransparency = 1
+	label.TextXAlignment = Enum.TextXAlignment.Left
+
+	local toggle = Instance.new("TextButton", row)
+	toggle.Size = UDim2.new(0, 40, 0, 22)
+	toggle.Position = UDim2.new(1, -45, 0.5, -11)
+	toggle.BackgroundColor3 = Color3.fromRGB(70, 170, 255)
+	toggle.Text = ""
+	toggle.BorderSizePixel = 0
+	toggle.AutoButtonColor = false
+
+	local enabled = false
+	local function updateColor()
+		toggle.BackgroundColor3 = enabled and Color3.fromRGB(70, 170, 255) or Color3.fromRGB(100, 100, 100)
+	end
+	toggle.MouseButton1Click:Connect(function()
+		enabled = not enabled
+		updateColor()
+		print(labelText .. ": " .. (enabled and "ON" or "OFF"))
+	end)
+	updateColor()
+end
+
+local y = 50
+createToggleRow(seaEventsTab, y, "View Sea Events") y += 40
+createToggleRow(seaEventsTab, y, "Auto Sea Beast") y += 40
+createToggleRow(seaEventsTab, y, "Auto Sink Ship") y += 40
+createToggleRow(seaEventsTab, y, "Ignore Sea Beast") y += 40
+createToggleRow(seaEventsTab, y, "Ignore Ship") y += 40
+createToggleRow(seaEventsTab, y, "Custom Distance") y += 40
+createToggleRow(seaEventsTab, y, "Auto Target")
+
 -- Setting Tab UI
 local SettingFrame = Instance.new("Frame")
 SettingFrame.Size = UDim2.new(0, 200, 0, 200)
