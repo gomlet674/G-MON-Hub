@@ -319,18 +319,17 @@ local questData = {
 			}
 
 			local bestMatch = nil
-                                for levelReq, quest in pairs(questData) do
-                                	if lvl >= levelReq and (not bestMatch or levelReq > bestMatch.LevelReq) then
-	                               	bestMatch = { LevelReq = levelReq, Data = quest }
-                               	end
-                     end
+for levelReq, quest in pairs(questData) do
+	if lvl >= levelReq and (not bestMatch or levelReq > bestMatch.LevelReq) then
+		bestMatch = { LevelReq = levelReq, Data = quest }
+	end
+end
 
-                   if bestMatch then
-	                 local data = bestMatch.Data
-	                                -- lanjut ke quest...
-					data = quest
-				end
-			end
+if bestMatch then
+	local data = bestMatch.Data
+	-- lanjut ke proses quest, teleport, dll
+						end
+	                                
 							
 					if char and char:FindFirstChild("HumanoidRootPart") and mob:FindFirstChild("HumanoidRootPart") then
 								char.HumanoidRootPart.CFrame = mob.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
