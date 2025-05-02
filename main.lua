@@ -63,35 +63,6 @@ Toggle.MouseButton1Click:Connect(function()
 	BG.Visible = not BG.Visible
 end)
 
--- Tambahkan ke atas sebelum Title GMON Hub
-local RGBFrame = Instance.new("Frame", BG)
-RGBFrame.Size = UDim2.new(1, 0, 1, 0)
-RGBFrame.Position = UDim2.new(0, 0, 0, 0)
-RGBFrame.BackgroundTransparency = 1
-RGBFrame.BorderSizePixel = 4
-RGBFrame.ZIndex = 2
-
--- Ubah properti untuk efek RGB
-local border = Instance.new("UIStroke", RGBFrame)
-border.Thickness = 4
-border.Transparency = 0
-border.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-border.LineJoinMode = Enum.LineJoinMode.Round
-border.Color = Color3.fromRGB(255, 0, 0)
-
--- Efek Rainbow RGB
-spawn(function()
-	local hue = 0
-	while wait(0.03) do
-		hue = hue + 1
-		if hue >= 360 then hue = 0 end
-		local color = Color3.fromHSV(hue / 360, 1, 1)
-		pcall(function()
-			border.Color = color
-		end)
-	end
-end)
-
 -- Label GMON Hub
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, 0, 0, 40)
@@ -141,126 +112,11 @@ AutoFarm.MouseButton1Click:Connect(function()
 							if mob.Name == data.MobName and mob:FindFirstChild("Humanoid") and mob.Humanoid.Health > 0 then
 								repeat task.wait()
 									char.HumanoidRootPart.CFrame = mob.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
-									VIM:SendKeyEvent(true, "Z", "X", "Y", false, game)
+									VIM:SendKeyEvent(true, "Z", false, game)
 								until mob.Humanoid.Health <= 0 or not farming
 							end
 						end
 					end
-							-- GMON Hub Tabs and Features
-local VIM = game:GetService("VirtualInputManager")
-local player = game.Players.LocalPlayer
-
--- UI Setup
-local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
-ScreenGui.Name = "GMON_Hub"
-local BG = Instance.new("Frame")
-BG.Size = UDim2.new(0, 600, 0, 400)
-BG.Position = UDim2.new(0.5, -300, 0.5, -200)
-BG.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-BG.BorderSizePixel = 0
-BG.Parent = ScreenGui
-
--- Tabs
-local TabContainer = Instance.new("Frame")
-TabContainer.Size = UDim2.new(0, 120, 1, -40)
-TabContainer.Position = UDim2.new(0, 0, 0, 40)
-TabContainer.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-TabContainer.Parent = BG
-
-local Tabs = {"Main", "Prehistoric", "Leviathan", "Setting"}
-local Pages = {}
-
-for i, name in ipairs(Tabs) do
-	local btn = Instance.new("TextButton")
-	btn.Size = UDim2.new(1, 0, 0, 30)
-	btn.Position = UDim2.new(0, 0, 0, (i - 1) * 32)
-	btn.Text = name
-	btn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-	btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-	btn.Parent = TabContainer
-
-	local page = Instance.new("Frame")
-	page.Size = UDim2.new(1, -120, 1, -40)
-	page.Position = UDim2.new(0, 120, 0, 40)
-	page.BackgroundTransparency = 1
-	page.Visible = i == 1
-	page.Parent = BG
-	Pages[name] = page
-
-	btn.MouseButton1Click:Connect(function()
-		for _, pg in pairs(Pages) do pg.Visible = false end
-		page.Visible = true
-	end)
-end
-
--- MAIN TAB (Auto Farm, Farm Nearest)
-local MainTab = Pages["Main"]
-local AutoFarmBtn = Instance.new("TextButton")
-AutoFarmBtn.Size = UDim2.new(0, 180, 0, 40)
-AutoFarmBtn.Position = UDim2.new(0, 20, 0, 20)
-AutoFarmBtn.Text = "Auto Farm"
-AutoFarmBtn.BackgroundColor3 = Color3.fromRGB(100, 150, 255)
-AutoFarmBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-AutoFarmBtn.Parent = MainTab
-
--- PREHISTORIC ISLAND TAB
-local PreTab = Pages["Prehistoric"]
-local AutoPreFarm = Instance.new("TextButton")
-AutoPreFarm.Size = UDim2.new(0, 180, 0, 40)
-AutoPreFarm.Position = UDim2.new(0, 20, 0, 20)
-AutoPreFarm.Text = "Auto Prehistoric Farm"
-AutoPreFarm.BackgroundColor3 = Color3.fromRGB(255, 170, 0)
-AutoPreFarm.TextColor3 = Color3.fromRGB(255, 255, 255)
-AutoPreFarm.Parent = PreTab
-
-local AutoPreBoss = AutoPreFarm:Clone()
-AutoPreBoss.Position = UDim2.new(0, 20, 0, 70)
-AutoPreBoss.Text = "Auto Prehistoric Boss"
-AutoPreBoss.Parent = PreTab
-
-local AutoPreItem = AutoPreFarm:Clone()
-AutoPreItem.Position = UDim2.new(0, 20, 0, 120)
-AutoPreItem.Text = "Auto Collect Items"
-AutoPreItem.Parent = PreTab
-
--- LEVIATHAN TAB
-local LeviTab = Pages["Leviathan"]
-local AutoLevi = Instance.new("TextButton")
-AutoLevi.Size = UDim2.new(0, 180, 0, 40)
-AutoLevi.Position = UDim2.new(0, 20, 0, 20)
-AutoLevi.Text = "Auto Kill Leviathan"
-AutoLevi.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
-AutoLevi.TextColor3 = Color3.fromRGB(255, 255, 255)
-AutoLevi.Parent = LeviTab
-
-local AutoHeart = AutoLevi:Clone()
-AutoHeart.Position = UDim2.new(0, 20, 0, 70)
-AutoHeart.Text = "Auto Take Heart"
-AutoHeart.Parent = LeviTab
-
-local BodyAttack = AutoLevi:Clone()
-BodyAttack.Position = UDim2.new(0, 20, 0, 120)
-BodyAttack.Text = "Body Part Attack"
-BodyAttack.Parent = LeviTab
-
--- SETTING TAB
-local SetTab = Pages["Setting"]
-local FastAttack = Instance.new("TextButton")
-FastAttack.Size = UDim2.new(0, 180, 0, 40)
-FastAttack.Position = UDim2.new(0, 20, 0, 20)
-FastAttack.Text = "Fast Attack: OFF"
-FastAttack.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
-FastAttack.TextColor3 = Color3.fromRGB(255, 255, 255)
-FastAttack.Parent = SetTab
-
-local SkillToggle = Instance.new("TextLabel")
-SkillToggle.Size = UDim2.new(0, 250, 0, 25)
-SkillToggle.Position = UDim2.new(0, 20, 0, 70)
-SkillToggle.Text = "Skill Active: [Z, X, C]"
-SkillToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
-SkillToggle.BackgroundTransparency = 1
-SkillToggle.Parent = SetTab
-	
 				end)
 			end
 		end)
