@@ -383,7 +383,6 @@ spawn(function()
                 if _G.UseSkillV then VIM:SendKeyEvent(true, "V", false, game) end
                 if _G.UseSkillF then VIM:SendKeyEvent(true, "F", false, game) end
             until mob.Humanoid.Health <= 0 or not _G.AutoFarm
-        end
-    end	
+		end	
+	end			
 end
-											end
