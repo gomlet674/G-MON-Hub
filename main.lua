@@ -335,12 +335,31 @@ spawn(function() while true do wait(1)
 				[2650] = {QuestName = "GravityQuest", MobName = "Gravity Warrior", MobPos = CFrame.new(-14750, 334, -8500)}
 				}
 
-				local maxLevelPerSea = {
+				-- Deklarasi variabel dan layanan
+local player = game.Players.LocalPlayer
+local char = player.Character or player.CharacterAdded:Wait()
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local VIM = game:GetService("VirtualInputManager")
+local TweenService = game:GetService("TweenService")
+
+-- Fungsi tween ke posisi tertentu
+local function tweenToPosition(part, position, speed)
+    local distance = (part.Position - position).Magnitude
+    local time = distance / speed
+    local tweenInfo = TweenInfo.new(time, Enum.EasingStyle.Linear)
+    local goal = {CFrame = CFrame.new(position)}
+    local tween = TweenService:Create(part, tweenInfo, goal)
+    tween:Play()
+end
+
+-- Data batas level per lautan
+local maxLevelPerSea = {
     FirstSea = 700,
     SecondSea = 1500,
     ThirdSea = 2450
 }
 
+-- Data quest berdasarkan sea
 local questData = {
     FirstSea = {
         {Level = 625, QuestName = "GalleyCaptainQuest", MobName = "Galley Captain", MobPos = Vector3.new(5552, 72, 4932)},
@@ -353,6 +372,7 @@ local questData = {
     }
 }
 
+-- Fungsi menentukan sea saat ini berdasarkan PlaceId
 local function getCurrentSea()
     local placeId = game.PlaceId
     if placeId == 2753915549 then
@@ -366,6 +386,7 @@ local function getCurrentSea()
     end
 end
 
+-- Fungsi mendapatkan quest berdasarkan level
 local function getTargetQuest(level)
     local sea = getCurrentSea()
     if not sea then return nil end
@@ -380,23 +401,22 @@ local function getTargetQuest(level)
         end
     end
     return target
-	end
-    -- return { QuestName = "BanditQuest1", MobName = "Bandit", MobPos = Vector3.new(...) }
 end
 
+-- Loop utama autofarm
 spawn(function()
     while wait(1) do
         if _G.AutoFarm then
             local level = player.Data.Level.Value
             local quest = getTargetQuest(level)
             if quest then
-                -- Ambil quest jika belum
+                -- Ambil quest jika belum ada
                 if not player.PlayerGui:FindFirstChild("QuestTitle") then
                     ReplicatedStorage.Remotes.CommF_:InvokeServer("StartQuest", quest.QuestName, 1)
                     wait(1)
                 end
 
-                -- Teleport ke mob
+                -- Pindah ke lokasi mob
                 if char and char:FindFirstChild("HumanoidRootPart") then
                     local targetCFrame = quest.MobPos + Vector3.new(0, 10, 0)
                     tweenToPosition(char.HumanoidRootPart, targetCFrame, 40)
