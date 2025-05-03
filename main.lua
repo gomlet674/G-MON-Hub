@@ -342,11 +342,54 @@ spawn(function() while true do wait(1)
 }
 
 local function getCurrentSea()
-    ...
+    local placeId = game.PlaceId
+    if placeId == 2753915549 then
+        return "FirstSea"
+    elseif placeId == 4442272183 then
+        return "SecondSea"
+    elseif placeId == 7449423635 then
+        return "ThirdSea"
+    else
+        return nil
+    end						end
+    -- isi logika menentukan sea (misalnya berdasarkan tempat player)
 end
 
 local function getTargetQuest(level)
-    ...
+    -- isi logika memilih quest berdasarkan level
+      local questData = {
+    FirstSea = {
+        {Level = 625, QuestName = "GalleyCaptainQuest", MobName = "Galley Captain", MobPos = Vector3.new(5552, 72, 4932)},
+        -- Tambahkan quest lainnya jika mau dari level bawah
+    },
+    SecondSea = {
+        {Level = 1425, QuestName = "WaterFighterQuest", MobName = "Water Fighter", MobPos = Vector3.new(5689, 92, -7174)},
+        -- Tambahkan quest lainnya jika mau dari level bawah
+    },
+    ThirdSea = {
+        {Level = 2650, QuestName = "SerpentHunterQuest", MobName = "Serpent Hunter", MobPos = Vector3.new(-9500, 94, 6200)},
+        -- Tambahkan quest lainnya jika mau dari level bawah
+    }
+}
+
+local function getTargetQuest(level)
+    local sea = getCurrentSea()
+    if not sea then return nil end
+
+    local availableQuests = questData[sea]
+    if not availableQuests then return nil end
+
+    -- Cari quest tertinggi yang masih di bawah atau sama dengan level player
+    local target = nil
+    for _, quest in ipairs(availableQuests) do
+        if level >= quest.Level then
+            target = quest
+        end
+    end
+
+    return target
+end
+    -- return { QuestName = "BanditQuest1", MobName = "Bandit", MobPos = Vector3.new(...) }
 end
 
 spawn(function()
@@ -355,34 +398,34 @@ spawn(function()
             local level = player.Data.Level.Value
             local quest = getTargetQuest(level)
             if quest then
-                -- Teleport dan farming di quest.MobPos
-            
-				if quest then
-    -- Ambil quest jika belum
-    if not player.PlayerGui:FindFirstChild("QuestTitle") then
-        ReplicatedStorage.Remotes.CommF_:InvokeServer("StartQuest", quest.QuestName, 1)
-        wait(1)
-    end
-
-    -- Teleport ke mob
-    if char and char:FindFirstChild("HumanoidRootPart") then
-        local targetCFrame = quest.MobPos + Vector3.new(0, 10, 0)
-        tweenToPosition(char.HumanoidRootPart, targetCFrame, 40)
-    end
-
-    -- Serang mob
-    for _, mob in pairs(workspace.Enemies:GetChildren()) do
-        if mob.Name == quest.MobName and mob:FindFirstChild("Humanoid") and mob.Humanoid.Health > 0 then
-            repeat wait()
-                if char and char:FindFirstChild("HumanoidRootPart") and mob:FindFirstChild("HumanoidRootPart") then
-                    char.HumanoidRootPart.CFrame = mob.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
+                -- Ambil quest jika belum
+                if not player.PlayerGui:FindFirstChild("QuestTitle") then
+                    ReplicatedStorage.Remotes.CommF_:InvokeServer("StartQuest", quest.QuestName, 1)
+                    wait(1)
                 end
-                if _G.UseSkillZ then VIM:SendKeyEvent(true, "Z", false, game) end
-                if _G.UseSkillX then VIM:SendKeyEvent(true, "X", false, game) end
-                if _G.UseSkillC then VIM:SendKeyEvent(true, "C", false, game) end
-                if _G.UseSkillV then VIM:SendKeyEvent(true, "V", false, game) end
-                if _G.UseSkillF then VIM:SendKeyEvent(true, "F", false, game) end
-            until mob.Humanoid.Health <= 0 or not _G.AutoFarm
-		end	
-	end			
-end
+
+                -- Teleport ke mob
+                if char and char:FindFirstChild("HumanoidRootPart") then
+                    local targetCFrame = quest.MobPos + Vector3.new(0, 10, 0)
+                    tweenToPosition(char.HumanoidRootPart, targetCFrame, 40)
+                end
+
+                -- Serang mob
+                for _, mob in pairs(workspace.Enemies:GetChildren()) do
+                    if mob.Name == quest.MobName and mob:FindFirstChild("Humanoid") and mob.Humanoid.Health > 0 then
+                        repeat wait()
+                            if char and char:FindFirstChild("HumanoidRootPart") and mob:FindFirstChild("HumanoidRootPart") then
+                                char.HumanoidRootPart.CFrame = mob.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
+                            end
+                            if _G.UseSkillZ then VIM:SendKeyEvent(true, "Z", false, game) end
+                            if _G.UseSkillX then VIM:SendKeyEvent(true, "X", false, game) end
+                            if _G.UseSkillC then VIM:SendKeyEvent(true, "C", false, game) end
+                            if _G.UseSkillV then VIM:SendKeyEvent(true, "V", false, game) end
+                            if _G.UseSkillF then VIM:SendKeyEvent(true, "F", false, game) end
+                        until mob.Humanoid.Health <= 0 or not _G.AutoFarm
+                    end
+                end
+            end
+        end
+    end
+end)
