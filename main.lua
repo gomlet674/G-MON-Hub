@@ -341,6 +341,18 @@ spawn(function() while true do wait(1)
     ThirdSea = 2450
 }
 
+local questData = {
+    FirstSea = {
+        {Level = 625, QuestName = "GalleyCaptainQuest", MobName = "Galley Captain", MobPos = Vector3.new(5552, 72, 4932)},
+    },
+    SecondSea = {
+        {Level = 1425, QuestName = "WaterFighterQuest", MobName = "Water Fighter", MobPos = Vector3.new(5689, 92, -7174)},
+    },
+    ThirdSea = {
+        {Level = 2650, QuestName = "SerpentHunterQuest", MobName = "Serpent Hunter", MobPos = Vector3.new(-9500, 94, 6200)},
+    }
+}
+
 local function getCurrentSea()
     local placeId = game.PlaceId
     if placeId == 2753915549 then
@@ -351,26 +363,8 @@ local function getCurrentSea()
         return "ThirdSea"
     else
         return nil
-    end						end
-    -- isi logika menentukan sea (misalnya berdasarkan tempat player)
+    end
 end
-
-local function getTargetQuest(level)
-    -- isi logika memilih quest berdasarkan level
-      local questData = {
-    FirstSea = {
-        {Level = 625, QuestName = "GalleyCaptainQuest", MobName = "Galley Captain", MobPos = Vector3.new(5552, 72, 4932)},
-        -- Tambahkan quest lainnya jika mau dari level bawah
-    },
-    SecondSea = {
-        {Level = 1425, QuestName = "WaterFighterQuest", MobName = "Water Fighter", MobPos = Vector3.new(5689, 92, -7174)},
-        -- Tambahkan quest lainnya jika mau dari level bawah
-    },
-    ThirdSea = {
-        {Level = 2650, QuestName = "SerpentHunterQuest", MobName = "Serpent Hunter", MobPos = Vector3.new(-9500, 94, 6200)},
-        -- Tambahkan quest lainnya jika mau dari level bawah
-    }
-}
 
 local function getTargetQuest(level)
     local sea = getCurrentSea()
@@ -379,16 +373,14 @@ local function getTargetQuest(level)
     local availableQuests = questData[sea]
     if not availableQuests then return nil end
 
-    -- Cari quest tertinggi yang masih di bawah atau sama dengan level player
     local target = nil
     for _, quest in ipairs(availableQuests) do
         if level >= quest.Level then
             target = quest
         end
     end
-
     return target
-end
+	end
     -- return { QuestName = "BanditQuest1", MobName = "Bandit", MobPos = Vector3.new(...) }
 end
 
