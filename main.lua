@@ -335,15 +335,60 @@ spawn(function() while true do wait(1)
 				[2650] = {QuestName = "GravityQuest", MobName = "Gravity Warrior", MobPos = CFrame.new(-14750, 334, -8500)}
 				}
 
-				local bestMatch = nil
-				for levelReq, quest in pairs(questData) do
-					if lvl >= levelReq and (not bestMatch or levelReq > bestMatch.LevelReq) then
-						bestMatch = { LevelReq = levelReq, Data = quest }
-					end
-				end
+				local maxLevelPerSea = {
+    FirstSea = 700,
+    SecondSea = 1500,
+    ThirdSea = 2650 -- Atur ini sesuai data terbaru game jika berubah
+}
 
-				if not bestMatch then return end
-				local data = bestMatch.Data
+local function getCurrentSea()
+    local pos = player.Character.HumanoidRootPart.Position
+    if pos.X > 30000 then
+        return "ThirdSea"
+    elseif pos.X > 1000 or pos.Z < -5000 then
+        return "SecondSea"
+    else
+        return "FirstSea"
+    end
+end
+
+local function getTargetQuest(level)
+    local sea = getCurrentSea()
+    local maxLevel = maxLevelPerSea[sea]
+
+    local target = nil
+    for lvl, data in pairs(questData) do
+        if lvl <= level and lvl <= maxLevel then
+            if not target or lvl > target.Level then
+                target = {
+                    Level = lvl,
+                    QuestName = data.QuestName,
+                    MobName = data.MobName,
+                    MobPos = data.MobPos
+                }
+            end
+        end
+    end
+    return target
+end
+
+spawn(function()
+    while true do wait(1)
+        if _G.AutoFarm then
+            pcall(function()
+                local char = player.Character
+                local level = player.Data.Level.Value
+
+                local quest = getTargetQuest(level)
+                if quest then
+                    -- Tambahkan fungsi untuk menjalankan farm ke quest.MobPos
+                    print("Auto farming:", quest.MobName, "di", quest.QuestName)
+                    -- Teleport ke quest.MobPos atau jalankan logika serang
+                end
+            end)
+        end
+    end
+end)
 
 				-- Ambil quest jika belum
 				if not player.PlayerGui:FindFirstChild("QuestTitle") then
