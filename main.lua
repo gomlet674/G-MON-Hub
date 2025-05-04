@@ -1,5 +1,3 @@
-
--- GMON Hub Main Script (main.lua)
 repeat wait() until game:IsLoaded()
 
 local uis = game:GetService("UserInputService")
@@ -9,7 +7,7 @@ local plr = game.Players.LocalPlayer
 local library = loadstring(game:HttpGet("https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/source.lua"))()
 
 -- Create Window
-local win = library:CreateWindow("GMON HUB", "Mukuro Styled UI", Color3.fromRGB(255,0,0), "rbxassetid://15275852420")
+local win = library:CreateWindow("GMON HUB", "Mukuro Styled UI", Color3.fromRGB(255, 0, 0), "rbxassetid://15275852420")
 
 -- Main Tab
 local Main = win:CreateTab("Main")
@@ -72,3 +70,73 @@ Setting:CreateToggle("Skill V", nil, function(v) _G.SkillV = v end)
 local Info = win:CreateTab("Info")
 Info:CreateLabel("Full Moon: " .. tostring(game:GetService("Lighting").ClockTime))
 Info:CreateButton("Copy Discord", function() setclipboard("https://discord.gg/gmonhub") end)
+
+-- Background Anime Transparency (20%)
+win.MainFrame.BackgroundTransparency = 0.8
+local bg = Instance.new("ImageLabel", win.MainFrame)
+bg.Size = UDim2.new(1, 0, 1, 0)
+bg.BackgroundTransparency = 1
+bg.Image = "rbxassetid://88817335071002"
+bg.ZIndex = -1
+
+-- RGB/Glow Effect for the Entire UI (Window + Background)
+local tweenService = game:GetService("TweenService")
+local function applyRGBGlowEffect(frame)
+    while true do
+        -- Create RGB animation for the entire UI background (Glow effect)
+        for i = 0, 360, 20 do
+            local color = Color3.fromHSV(i / 360, 1, 1)
+            tweenService:Create(frame, TweenInfo.new(1, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1, true), {BackgroundColor3 = color}):Play()
+            wait(1)
+        end
+    end
+end
+
+-- Start the RGB/Glow animation for the entire window
+coroutine.wrap(applyRGBGlowEffect)(win.MainFrame)
+
+-- RGB Effect for Toggle Button (Glow Effect)
+local toggleButton = Instance.new("TextButton", win.MainFrame)
+toggleButton.Size = UDim2.new(0, 120, 0, 30)
+toggleButton.Position = UDim2.new(0, 10, 0, 10)
+toggleButton.Text = "Toggle"
+toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleButton.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+toggleButton.Font = Enum.Font.SourceSans
+toggleButton.TextSize = 18
+toggleButton.BorderSizePixel = 0
+toggleButton.MouseButton1Click:Connect(function()
+    -- Toggle Action (For example, show or hide the GUI)
+    win.MainFrame.Visible = not win.MainFrame.Visible
+end)
+
+-- Start the RGB/Glow animation for the toggle button
+coroutine.wrap(applyRGBEffect)(toggleButton)
+
+-- Draggable functionality for the whole window
+local dragToggle = nil
+local dragInput = nil
+local dragStart = nil
+local startPos = nil
+
+-- Enable dragging for main window
+win.MainFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragToggle = true
+        dragStart = input.Position
+        startPos = win.MainFrame.Position
+    end
+end)
+
+win.MainFrame.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement and dragToggle then
+        local delta = input.Position - dragStart
+        win.MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+
+win.MainFrame.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragToggle = false
+    end
+end)
