@@ -1,4 +1,4 @@
- repeat wait() until game:IsLoaded()
+repeat wait() until game:IsLoaded()
 
 -- GUI Elements
 local ScreenGui = Instance.new("ScreenGui")
@@ -44,7 +44,6 @@ RGBBorder.Parent = Frame
 RGBBorder.Thickness = 2
 RGBBorder.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 
--- RGB Color Animation
 task.spawn(function()
 	while true do
 		for i = 0, 1, 0.01 do
@@ -57,7 +56,7 @@ task.spawn(function()
 	end
 end)
 
--- Title Text
+-- Title
 Title.Parent = Frame
 Title.Text = "GMON HUB KEY SYSTEM"
 Title.Font = Enum.Font.GothamBold
@@ -66,7 +65,7 @@ Title.TextColor3 = Color3.new(1, 1, 1)
 Title.Size = UDim2.new(1, 0, 0, 40)
 Title.BackgroundTransparency = 1
 
--- Key Input Box
+-- Key Input
 KeyBox.Parent = Frame
 KeyBox.PlaceholderText = "Enter Your Key..."
 KeyBox.Size = UDim2.new(0.9, 0, 0, 35)
@@ -78,7 +77,7 @@ KeyBox.TextColor3 = Color3.new(1, 1, 1)
 
 Instance.new("UICorner", KeyBox).CornerRadius = UDim.new(0, 8)
 
--- Submit Button
+-- Submit
 Submit.Parent = Frame
 Submit.Text = "Submit"
 Submit.Size = UDim2.new(0.42, 0, 0, 35)
@@ -89,7 +88,7 @@ Submit.TextColor3 = Color3.new(1, 1, 1)
 
 Instance.new("UICorner", Submit).CornerRadius = UDim.new(0, 8)
 
--- Get Key Button
+-- Get Key
 GetKey.Parent = Frame
 GetKey.Text = "Get Key"
 GetKey.Size = UDim2.new(0.42, 0, 0, 35)
@@ -100,11 +99,19 @@ GetKey.TextColor3 = Color3.new(1, 1, 1)
 
 Instance.new("UICorner", GetKey).CornerRadius = UDim.new(0, 8)
 
--- Button Functionality
+-- Key File
+local savedKeyPath = "gmon_key.txt"
+local savedKey
+if isfile(savedKeyPath) then
+    savedKey = readfile(savedKeyPath)
+end
+
+-- Get Key Linkvertise
 GetKey.MouseButton1Click:Connect(function()
-    setclipboard("https://pandadevelopment.net/")
+    setclipboard("https://link-target.net/558030/gmon-key")
 end)
 
+-- Submit Key Verification
 Submit.MouseButton1Click:Connect(function()
     local inputKey = KeyBox.Text ~= "" and KeyBox.Text or savedKey
     if not inputKey then
@@ -114,12 +121,9 @@ Submit.MouseButton1Click:Connect(function()
         return
     end
 
-    local success, result = pcall(function()
-        return loadstring(game:HttpGet("https://pandadevelopment.net/api/key-system/verify.lua?identifier=gmon_hub&key="..inputKey.."&apikey=ee311851f3c742a8f78dce99e56992555609d23497928e9b33802e7127610c2e"))()
-    end)
-
-    if success and result then
-        writefile(savedKeyPath, inputKey) -- Simpan key
+    -- Gantilah "GMON-123KEY" sesuai key buatanmu
+    if inputKey == "GMON-123KEY" then
+        writefile(savedKeyPath, inputKey)
         ScreenGui:Destroy()
         loadstring(game:HttpGet("https://raw.githubusercontent.com/gomlet674/G-Mon-Hub/main/main.lua"))()
     else
@@ -127,4 +131,44 @@ Submit.MouseButton1Click:Connect(function()
         task.wait(2)
         Submit.Text = "Submit"
     end
+end)
+
+-- Drag Functionality
+local UIS = game:GetService("UserInputService")
+local dragging, dragInput, dragStart, startPos
+
+local function updateInput(input)
+	local delta = input.Position - dragStart
+	Frame.Position = UDim2.new(
+		startPos.X.Scale,
+		startPos.X.Offset + delta.X,
+		startPos.Y.Scale,
+		startPos.Y.Offset + delta.Y
+	)
+end
+
+Frame.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		dragging = true
+		dragStart = input.Position
+		startPos = Frame.Position
+
+		input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End then
+				dragging = false
+			end
+		end)
+	end
+end)
+
+Frame.InputChanged:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+		dragInput = input
+	end
+end)
+
+UIS.InputChanged:Connect(function(input)
+	if input == dragInput and dragging then
+		updateInput(input)
+	end
 end)
