@@ -1,4 +1,4 @@
-repeat wait() until game:IsLoaded()
+ repeat wait() until game:IsLoaded()
 
 -- GUI Elements
 local ScreenGui = Instance.new("ScreenGui")
@@ -106,12 +106,20 @@ GetKey.MouseButton1Click:Connect(function()
 end)
 
 Submit.MouseButton1Click:Connect(function()
-    local inputKey = KeyBox.Text
+    local inputKey = KeyBox.Text ~= "" and KeyBox.Text or savedKey
+    if not inputKey then
+        Submit.Text = "Enter Key"
+        task.wait(2)
+        Submit.Text = "Submit"
+        return
+    end
+
     local success, result = pcall(function()
-        return loadstring(game:HttpGet("https://pandadevelopment.net/api/key-system/verify.lua?identifier=gmon_hub&key="..inputKey))()
+        return loadstring(game:HttpGet("https://pandadevelopment.net/api/key-system/verify.lua?identifier=gmon_hub&key="..inputKey.."&apikey=ee311851f3c742a8f78dce99e56992555609d23497928e9b33802e7127610c2e"))()
     end)
 
     if success and result then
+        writefile(savedKeyPath, inputKey) -- Simpan key
         ScreenGui:Destroy()
         loadstring(game:HttpGet("https://raw.githubusercontent.com/gomlet674/G-Mon-Hub/main/main.lua"))()
     else
