@@ -1,13 +1,22 @@
 repeat wait() until game:IsLoaded()
 
+-- Pastikan UserInputService terpasang
 local uis = game:GetService("UserInputService")
 local plr = game.Players.LocalPlayer
 
--- UI Library
+-- Memuat library UI
 local library = loadstring(game:HttpGet("https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/source.lua"))()
 
--- Create Window
-local win = library:CreateWindow("GMON HUB", "Mukuro Styled UI", Color3.fromRGB(255, 0, 0), "rbxassetid://15275852420")
+-- Membuat window untuk UI
+local win = library:CreateWindow("GMON HUB", "Mukuro Styled UI", Color3.fromRGB(255,0,0), "rbxassetid://88817335071002")
+
+-- Membuat tab pertama (Main Tab)
+local Main = win:CreateTab("Main")
+Main:CreateDropdown("Select Weapon", _G.WeaponList or {"Refresh Weapon"}, function(val) _G.Weapon = val end)
+Main:CreateButton("Refresh Weapon", function() RefreshWeaponList() end)
+Main:CreateToggle("Auto Farm", nil, function(v) _G.AutoFarm = v end)
+
+-- Tambahkan tab lain jika diperlukan seperti Stats, Teleport, dll.
 
 -- Main Tab
 local Main = win:CreateTab("Main")
