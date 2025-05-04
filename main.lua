@@ -1,74 +1,91 @@
+-- GMON Hub Main Script
+local CoreGui = game:GetService("CoreGui")
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local VIM = game:GetService("VirtualInputManager")
 
--- GMON Hub Main Script (main.lua)
-repeat wait() until game:IsLoaded()
+local player = Players.LocalPlayer
 
-local uis = game:GetService("UserInputService")
-local plr = game.Players.LocalPlayer
+-- UI Setup
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "GMON_MainUI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = player:WaitForChild("PlayerGui")
 
--- UI Library
-local library = loadstring(game:HttpGet("https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/source.lua"))()
+-- Toggle Button
+local Toggle = Instance.new("ImageButton")
+Toggle.Size = UDim2.new(0, 40, 0, 40)
+Toggle.Position = UDim2.new(0, 10, 0.5, -100)
+Toggle.BackgroundTransparency = 1
+Toggle.Image = "rbxassetid://94747801090737"
+Toggle.Name = "GMON_Toggle"
+Toggle.Parent = ScreenGui
 
--- Create Window
-local win = library:CreateWindow("GMON HUB", "Mukuro Styled UI", Color3.fromRGB(255,0,0), "rbxassetid://15275852420")
+-- Drag toggle
+local dragging, dragInput, dragStart, startPos
+Toggle.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		dragging = true
+		dragStart = input.Position
+		startPos = Toggle.Position
 
--- Main Tab
-local Main = win:CreateTab("Main")
-Main:CreateDropdown("Select Weapon", _G.WeaponList or {"Refresh Weapon"}, function(val) _G.Weapon = val end)
-Main:CreateButton("Refresh Weapon", function() RefreshWeaponList() end)
-Main:CreateToggle("Auto Farm", nil, function(v) _G.AutoFarm = v end)
-Main:CreateToggle("Auto Next Sea", nil, function(v) _G.AutoNextSea = v end)
-Main:CreateToggle("Auto Equip Accessory", nil, function(v) _G.AutoEquipAccessory = v end)
+		input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End then
+				dragging = false
+			end
+		end)
+	end
+end)
+Toggle.InputChanged:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseMovement then
+		dragInput = input
+	end
+end)
+RunService.Heartbeat:Connect(function()
+	if dragging and dragInput then
+		local delta = dragInput.Position - dragStart
+		Toggle.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+	end
+end)
 
--- Stats Tab
-local Stats = win:CreateTab("Stats")
-Stats:CreateToggle("Auto Melee", nil, function(v) _G.AutoMelee = v end)
-Stats:CreateToggle("Auto Defense", nil, function(v) _G.AutoDefense = v end)
-Stats:CreateToggle("Auto Sword", nil, function(v) _G.AutoSword = v end)
-Stats:CreateToggle("Auto Gun", nil, function(v) _G.AutoGun = v end)
-Stats:CreateToggle("Auto Blox Fruit", nil, function(v) _G.AutoBloxFruit = v end)
+-- Background Panel
+local BG = Instance.new("ImageLabel")
+BG.Name = "Background"
+BG.Size = UDim2.new(0, 480, 0, 320)
+BG.Position = UDim2.new(0.5, -240, 0.5, -160)
+BG.BackgroundTransparency = 1
+BG.Image = "rbxassetid://88817335071002"
+BG.Visible = true
+BG.Parent = ScreenGui
 
--- Teleport Tab
-local Teleport = win:CreateTab("Teleport")
-Teleport:CreateDropdown("Teleport to Island", _G.IslandList or {"Select"}, function(v) TeleportToIsland(v) end)
-Teleport:CreateButton("Teleport to Sea 1", function() TeleportToSea(1) end)
-Teleport:CreateButton("Teleport to Sea 2", function() TeleportToSea(2) end)
-Teleport:CreateButton("Teleport to Sea 3", function() TeleportToSea(3) end)
+Toggle.MouseButton1Click:Connect(function()
+	BG.Visible = not BG.Visible
+end)
 
--- Players Tab
-local Players = win:CreateTab("Players")
-Players:CreateButton("Kill Player", function() KillSelectedPlayer() end)
-Players:CreateButton("Spectate Player", function() SpectateSelectedPlayer() end)
+-- RGB Border Effect
+local RGBFrame = Instance.new("Frame", BG)
+RGBFrame.Size = UDim2.new(1, 0, 1, 0)
+RGBFrame.Position = UDim2.new(0, 0, 0, 0)
+RGBFrame.BackgroundTransparency = 1
+RGBFrame.BorderSizePixel = 4
+RGBFrame.ZIndex = 2
 
--- Devil Fruit Tab
-local Fruit = win:CreateTab("DevilFruit")
-Fruit:CreateToggle("Auto Store Fruit", nil, function(v) _G.AutoStoreFruit = v end)
-Fruit:CreateToggle("Auto Random Fruit", nil, function(v) _G.AutoRandomFruit = v end)
-Fruit:CreateToggle("Auto Eat Fruit", nil, function(v) _G.AutoEatFruit = v end)
-Fruit:CreateButton("Bring All Fruit", function() BringAllFruit() end)
-Fruit:CreateToggle("Fruit Sniper", nil, function(v) _G.FruitSniper = v end)
+local border = Instance.new("UIStroke", RGBFrame)
+border.Thickness = 4
+border.Transparency = 0
+border.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+border.LineJoinMode = Enum.LineJoinMode.Round
+border.Color = Color3.fromRGB(255, 0, 0)
 
--- ESP-Raid Tab
-local ESPRaid = win:CreateTab("ESP-Raid")
-ESPRaid:CreateToggle("Enable ESP", nil, function(v) _G.ESP = v end)
-ESPRaid:CreateToggle("Auto Join Raid", nil, function(v) _G.AutoRaid = v end)
-ESPRaid:CreateToggle("Auto Kill Raid Boss", nil, function(v) _G.AutoRaidBoss = v end)
-
--- Buy Item Tab
-local Buy = win:CreateTab("Buy Item")
-Buy:CreateButton("Buy Legendary Sword", function() BuyLegendarySword() end)
-Buy:CreateToggle("Auto Buy Potion", nil, function(v) _G.AutoBuyPotion = v end)
-Buy:CreateToggle("Auto Buy Enhancement", nil, function(v) _G.AutoBuyEnhance = v end)
-
--- Setting Tab
-local Setting = win:CreateTab("Setting")
-Setting:CreateToggle("Fast Attack", nil, function(v) _G.FastAttack = v end)
-Setting:CreateToggle("Auto Click", nil, function(v) _G.AutoClick = v end)
-Setting:CreateToggle("Skill Z", nil, function(v) _G.SkillZ = v end)
-Setting:CreateToggle("Skill X", nil, function(v) _G.SkillX = v end)
-Setting:CreateToggle("Skill C", nil, function(v) _G.SkillC = v end)
-Setting:CreateToggle("Skill V", nil, function(v) _G.SkillV = v end)
-
--- Info Tab
-local Info = win:CreateTab("Info")
-Info:CreateLabel("Full Moon: " .. tostring(game:GetService("Lighting").ClockTime))
-Info:CreateButton("Copy Discord", function() setclipboard("https://discord.gg/gmonhub") end)
+-- Rainbow effect loop
+spawn(function()
+	local hue = 0
+	while wait(0.03) do
+		hue = (hue + 1) % 360
+		local color = Color3.fromHSV(hue / 360, 1, 1)
+		pcall(function()
+			border.Color = color
+		end)
+	end
+end)
