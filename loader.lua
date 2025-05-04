@@ -108,7 +108,7 @@ end
 
 -- Get Key Linkvertise
 GetKey.MouseButton1Click:Connect(function()
-    setclipboard("https://link-target.net/558030/gmon-key")
+    setclipboard("https://link-target.net/1209226/get-key-gmon-hub-script")
 end)
 
 -- Submit Key Verification
@@ -122,7 +122,7 @@ Submit.MouseButton1Click:Connect(function()
     end
 
     -- Gantilah "GMON-123KEY" sesuai key buatanmu
-    if inputKey == "GMON-123KEY" then
+    if inputKey == "GmonHub311851f3c742a8f78dce99e56992555609d23497928e9b33802e7127610c2e" then
         writefile(savedKeyPath, inputKey)
         ScreenGui:Destroy()
         loadstring(game:HttpGet("https://raw.githubusercontent.com/gomlet674/G-Mon-Hub/main/main.lua"))()
