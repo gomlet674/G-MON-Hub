@@ -20,7 +20,12 @@ local GMON = {}
 function GMON:CreateWindow(title, subtitle, color, imageId)
 	local Tabs = {}
 	local ScreenGui = game:GetService("Players").LocalPlayer.PlayerGui:FindFirstChild("GMON_MainUI")
-
+if not ScreenGui then
+    ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Name = "GMON_MainUI"
+    ScreenGui.Parent = game:GetService("Players").LocalPlayer.PlayerGui
+	end
+	
 	local Holder = Instance.new("Frame")
 	Holder.Name = "MainHolder"
 	Holder.Size = UDim2.new(0, 460, 0, 300)
