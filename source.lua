@@ -1,145 +1,155 @@
-local Library = {}
-local Players = game:GetService("Players")
-local plr = Players.LocalPlayer
+-- GMON Hub Source Logic for Roblox Blox Fruits
+local TweenService = game:GetService("TweenService")
+local player = game.Players.LocalPlayer
+local uis = game:GetService("UserInputService")
+local rs = game:GetService("RunService")
 
-function Library:Window(title, subtitle, color, icon)
-    local g = Instance.new("ScreenGui", game:GetService("CoreGui"))
-    g.Name = "GMON HUB"
+-- Variables for tracking the state of features
+_G.AutoFarm = false
+_G.AutoNextSea = false
+_G.AutoEquipAccessory = false
+_G.Weapon = nil
+_G.AutoMelee = false
+_G.AutoDefense = false
+_G.AutoSword = false
+_G.AutoGun = false
+_G.AutoBloxFruit = false
 
-    -- Main Frame
-    local main = Instance.new("Frame", g)
-    main.Size = UDim2.new(0, 600, 0, 400)
-    main.Position = UDim2.new(0.5, -300, 0.5, -200)
-    main.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    main.BackgroundTransparency = 0.4
-    main.BorderSizePixel = 0
-    main.Name = "MainFrame"
-
-    -- Draggable Functionality
-    local dragToggle = nil
-    local dragInput = nil
-    local dragStart = nil
-    local startPos = nil
-
-    -- Enable dragging
-    main.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragToggle = true
-            dragStart = input.Position
-            startPos = main.Position
+-- Function to handle Auto Farm Logic
+local function AutoFarmLogic()
+    while _G.AutoFarm do
+        -- Logic for Auto Farming based on Sea and Level
+        local currentSea = GetPlayerSea(player)
+        if currentSea == 1 then
+            -- Auto Farm logic for Sea 1
+        elseif currentSea == 2 then
+            -- Auto Farm logic for Sea 2
+        elseif currentSea == 3 then
+            -- Auto Farm logic for Sea 3
         end
-    end)
-
-    main.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement and dragToggle then
-            local delta = input.Position - dragStart
-            main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-        end
-    end)
-
-    main.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragToggle = false
-        end
-    end)
-
-    -- Set Anime Background
-    local bg = Instance.new("ImageLabel", main)
-    bg.Size = UDim2.new(1, 0, 1, 0)
-    bg.BackgroundTransparency = 1
-    bg.Image = "rbxassetid://88817335071002"  -- Background anime image
-    bg.ZIndex = -1
-
-    -- Tabs and Pages
-    local tabsHolder = Instance.new("Frame", main)
-    tabsHolder.Name = "Tabs"
-    tabsHolder.Size = UDim2.new(0, 120, 1, 0)
-    tabsHolder.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-    tabsHolder.BorderSizePixel = 0
-
-    local pagesHolder = Instance.new("Frame", main)
-    pagesHolder.Name = "Pages"
-    pagesHolder.Position = UDim2.new(0, 120, 0, 0)
-    pagesHolder.Size = UDim2.new(1, -120, 1, 0)
-    pagesHolder.BackgroundTransparency = 1
-
-    local ui = {
-        Tabs = {},
-        Main = main
-    }
-
-    function ui:Tab(name)
-        local tabBtn = Instance.new("TextButton", tabsHolder)
-        tabBtn.Size = UDim2.new(1, 0, 0, 40)
-        tabBtn.Text = name
-        tabBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-        tabBtn.TextColor3 = Color3.new(1,1,1)
-        tabBtn.BorderSizePixel = 0
-
-        local page = Instance.new("ScrollingFrame", pagesHolder)
-        page.Size = UDim2.new(1, 0, 1, 0)
-        page.ScrollBarThickness = 4
-        page.Visible = false
-        page.Name = name
-        page.CanvasSize = UDim2.new(0,0,10,0)
-        page.BackgroundTransparency = 1
-
-        tabBtn.MouseButton1Click:Connect(function()
-            for _, v in pairs(pagesHolder:GetChildren()) do
-                if v:IsA("ScrollingFrame") then
-                    v.Visible = false
-                end
-            end
-            page.Visible = true
-        end)
-
-        if #pagesHolder:GetChildren() == 1 then
-            page.Visible = true
-        end
-
-        local tab = {}
-
-        function tab:Section(sectionName)
-            local section = Instance.new("Frame", page)
-            section.Size = UDim2.new(1, -10, 0, 30)
-            section.Position = UDim2.new(0, 5, 0, #page:GetChildren()*40)
-            section.BackgroundTransparency = 1
-
-            local label = Instance.new("TextLabel", section)
-            label.Size = UDim2.new(1, 0, 0, 20)
-            label.Text = sectionName
-            label.TextColor3 = Color3.new(1,1,1)
-            label.BackgroundTransparency = 1
-            label.TextXAlignment = Enum.TextXAlignment.Left
-            label.Font = Enum.Font.SourceSansBold
-            label.TextSize = 16
-
-            local sec = {}
-
-            function sec:Toggle(txt, default, callback)
-                local toggleBtn = Instance.new("TextButton", page)
-                toggleBtn.Size = UDim2.new(1, -10, 0, 30)
-                toggleBtn.Position = UDim2.new(0, 5, 0, #page:GetChildren()*35)
-                toggleBtn.Text = txt
-                toggleBtn.BackgroundColor3 = Color3.fromRGB(50,50,50)
-                toggleBtn.TextColor3 = Color3.new(1,1,1)
-                toggleBtn.BorderSizePixel = 0
-
-                local state = default
-                toggleBtn.MouseButton1Click:Connect(function()
-                    state = not state
-                    callback(state)
-                    toggleBtn.Text = txt.." ["..(state and "ON" or "OFF").."]"
-                end)
-            end
-
-            return sec
-        end
-
-        return tab
+        wait(1)
     end
-
-    return ui
 end
 
-return Library
+-- Function to handle Auto Equip Accessory
+local function AutoEquipAccessoryLogic()
+    while _G.AutoEquipAccessory do
+        -- Logic for Auto Equip Accessory (e.g., equip the highest damage accessory)
+        EquipHighestDamageAccessory()
+        wait(1)
+    end
+end
+
+-- Function to handle Auto Next Sea
+local function AutoNextSeaLogic()
+    while _G.AutoNextSea do
+        -- Logic to automatically transition to the next Sea
+        local currentSea = GetPlayerSea(player)
+        if currentSea == 1 then
+            -- Teleport to Sea 2
+            TeleportToSea(2)
+        elseif currentSea == 2 then
+            -- Teleport to Sea 3
+            TeleportToSea(3)
+        end
+        wait(1)
+    end
+end
+
+-- Function to handle Weapon Detection
+local function AutoDetectWeapon()
+    while true do
+        if _G.AutoFarm then
+            local bestWeapon = GetBestWeapon()
+            EquipWeapon(bestWeapon)
+        end
+        wait(1)
+    end
+end
+
+-- Function to handle Auto Blox Fruit
+local function AutoBloxFruitLogic()
+    while _G.AutoBloxFruit do
+        -- Logic to automatically use Blox Fruit abilities
+        UseBestBloxFruit()
+        wait(1)
+    end
+end
+
+-- Function to handle Auto Melee Logic
+local function AutoMeleeLogic()
+    while _G.AutoMelee do
+        -- Logic to automatically use melee attacks
+        UseMelee()
+        wait(1)
+    end
+end
+
+-- Function to handle Auto Defense Logic
+local function AutoDefenseLogic()
+    while _G.AutoDefense do
+        -- Logic to automatically defend against enemies
+        ActivateDefense()
+        wait(1)
+    end
+end
+
+-- Function to start all background tasks based on UI toggle states
+local function StartBackgroundTasks()
+    if _G.AutoFarm then
+        coroutine.wrap(AutoFarmLogic)()
+    end
+    if _G.AutoEquipAccessory then
+        coroutine.wrap(AutoEquipAccessoryLogic)()
+    end
+    if _G.AutoNextSea then
+        coroutine.wrap(AutoNextSeaLogic)()
+    end
+    if _G.AutoBloxFruit then
+        coroutine.wrap(AutoBloxFruitLogic)()
+    end
+    if _G.AutoMelee then
+        coroutine.wrap(AutoMeleeLogic)()
+    end
+    if _G.AutoDefense then
+        coroutine.wrap(AutoDefenseLogic)()
+    end
+end
+
+-- Call the background tasks function to start
+StartBackgroundTasks()
+
+-- Placeholders for helper functions (These will need implementation)
+function GetPlayerSea(player)
+    -- Return current sea (1, 2, or 3)
+    return 1  -- Example return
+end
+
+function TeleportToSea(seaNumber)
+    -- Logic to teleport to the next sea
+end
+
+function EquipHighestDamageAccessory()
+    -- Logic to equip the highest damage accessory
+end
+
+function GetBestWeapon()
+    -- Logic to get the best weapon based on the current level and preferences
+    return "BestWeapon"  -- Placeholder
+end
+
+function EquipWeapon(weapon)
+    -- Logic to equip the weapon
+end
+
+function UseBestBloxFruit()
+    -- Logic to use the best Blox Fruit
+end
+
+function UseMelee()
+    -- Logic to use melee attacks
+end
+
+function ActivateDefense()
+    -- Logic to activate defense
+end
