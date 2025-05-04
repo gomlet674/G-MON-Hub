@@ -6,13 +6,51 @@ function Library:Window(title, subtitle, color, icon)
     local g = Instance.new("ScreenGui", game:GetService("CoreGui"))
     g.Name = "GMON HUB"
 
+    -- Main Frame
     local main = Instance.new("Frame", g)
     main.Size = UDim2.new(0, 600, 0, 400)
     main.Position = UDim2.new(0.5, -300, 0.5, -200)
-    main.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    main.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    main.BackgroundTransparency = 0.4
     main.BorderSizePixel = 0
     main.Name = "MainFrame"
 
+    -- Draggable Functionality
+    local dragToggle = nil
+    local dragInput = nil
+    local dragStart = nil
+    local startPos = nil
+
+    -- Enable dragging
+    main.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragToggle = true
+            dragStart = input.Position
+            startPos = main.Position
+        end
+    end)
+
+    main.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement and dragToggle then
+            local delta = input.Position - dragStart
+            main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+
+    main.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragToggle = false
+        end
+    end)
+
+    -- Set Anime Background
+    local bg = Instance.new("ImageLabel", main)
+    bg.Size = UDim2.new(1, 0, 1, 0)
+    bg.BackgroundTransparency = 1
+    bg.Image = "rbxassetid://88817335071002"  -- Background anime image
+    bg.ZIndex = -1
+
+    -- Tabs and Pages
     local tabsHolder = Instance.new("Frame", main)
     tabsHolder.Name = "Tabs"
     tabsHolder.Size = UDim2.new(0, 120, 1, 0)
