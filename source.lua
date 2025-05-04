@@ -15,6 +15,130 @@ _G.AutoSword = false
 _G.AutoGun = false
 _G.AutoBloxFruit = false
 
+local GMON = {}
+
+function GMON:CreateWindow(title, subtitle, color, imageId)
+	local Tabs = {}
+	local ScreenGui = game:GetService("Players").LocalPlayer.PlayerGui:FindFirstChild("GMON_MainUI")
+
+	local Holder = Instance.new("Frame")
+	Holder.Name = "MainHolder"
+	Holder.Size = UDim2.new(0, 460, 0, 300)
+	Holder.Position = UDim2.new(0.5, -230, 0.5, -150)
+	Holder.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+	Holder.BorderSizePixel = 0
+	Holder.Visible = true
+	Holder.Parent = ScreenGui.Background
+
+	local TabButtons = Instance.new("Frame", Holder)
+	TabButtons.Name = "TabButtons"
+	TabButtons.Size = UDim2.new(0, 100, 1, 0)
+	TabButtons.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+	TabButtons.BorderSizePixel = 0
+
+	local Content = Instance.new("Frame", Holder)
+	Content.Name = "Content"
+	Content.Position = UDim2.new(0, 100, 0, 0)
+	Content.Size = UDim2.new(1, -100, 1, 0)
+	Content.BackgroundTransparency = 1
+
+	function GMON:CreateTab(name)
+		local tabFrame = Instance.new("ScrollingFrame", Content)
+		tabFrame.Name = name
+		tabFrame.Size = UDim2.new(1, 0, 1, 0)
+		tabFrame.CanvasSize = UDim2.new(0, 0, 0, 500)
+		tabFrame.BackgroundTransparency = 1
+		tabFrame.Visible = false
+		tabFrame.ScrollBarThickness = 6
+
+		local button = Instance.new("TextButton", TabButtons)
+		button.Name = name .. "_Btn"
+		button.Size = UDim2.new(1, 0, 0, 30)
+		button.Text = name
+		button.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+		button.TextColor3 = Color3.new(1,1,1)
+		button.Font = Enum.Font.SourceSansBold
+		button.TextSize = 14
+
+		button.MouseButton1Click:Connect(function()
+			for _, child in pairs(Content:GetChildren()) do
+				if child:IsA("ScrollingFrame") then
+					child.Visible = false
+				end
+			end
+			tabFrame.Visible = true
+		end)
+
+		local y = 10
+		local function place(obj)
+			obj.Position = UDim2.new(0, 10, 0, y)
+			obj.Size = UDim2.new(1, -20, 0, 30)
+			obj.Parent = tabFrame
+			y = y + 35
+		end
+
+		return {
+			CreateButton = function(text, callback)
+				local btn = Instance.new("TextButton")
+				btn.Text = text
+				btn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+				btn.TextColor3 = Color3.new(1,1,1)
+				btn.Font = Enum.Font.SourceSansBold
+				btn.TextSize = 14
+				btn.MouseButton1Click:Connect(callback)
+				place(btn)
+			end,
+
+			CreateToggle = function(text, default, callback)
+				local toggle = Instance.new("TextButton")
+				toggle.Text = "[ OFF ] " .. text
+				toggle.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+				toggle.TextColor3 = Color3.new(1,1,1)
+				toggle.Font = Enum.Font.SourceSansBold
+				toggle.TextSize = 14
+				local state = default or false
+				toggle.MouseButton1Click:Connect(function()
+					state = not state
+					toggle.Text = (state and "[ ON ] " or "[ OFF ] ") .. text
+					callback(state)
+				end)
+				place(toggle)
+			end,
+
+			CreateDropdown = function(text, list, callback)
+				local dropdown = Instance.new("TextButton")
+				dropdown.Text = text .. ": " .. list[1]
+				dropdown.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+				dropdown.TextColor3 = Color3.new(1,1,1)
+				dropdown.Font = Enum.Font.SourceSansBold
+				dropdown.TextSize = 14
+				local index = 1
+				dropdown.MouseButton1Click:Connect(function()
+					index = (index % #list) + 1
+					dropdown.Text = text .. ": " .. list[index]
+					callback(list[index])
+				end)
+				place(dropdown)
+			end,
+
+			CreateLabel = function(text)
+				local lbl = Instance.new("TextLabel")
+				lbl.Text = text
+				lbl.BackgroundTransparency = 1
+				lbl.TextColor3 = Color3.new(1,1,1)
+				lbl.Font = Enum.Font.SourceSans
+				lbl.TextSize = 14
+				lbl.TextXAlignment = Enum.TextXAlignment.Left
+				place(lbl)
+			end,
+		}
+	end
+
+	return GMON
+end
+
+return GMON
+
 -- Function to handle Auto Farm Logic
 local function AutoFarmLogic()
     while _G.AutoFarm do
