@@ -18,14 +18,16 @@ _G.AutoBloxFruit = false
 -- Function to handle Auto Farm Logic
 local function AutoFarmLogic()
     while _G.AutoFarm do
-        -- Logic for Auto Farming based on Sea and Level
         local currentSea = GetPlayerSea(player)
         if currentSea == 1 then
             -- Auto Farm logic for Sea 1
+            print("Farming in Sea 1")
         elseif currentSea == 2 then
             -- Auto Farm logic for Sea 2
+            print("Farming in Sea 2")
         elseif currentSea == 3 then
             -- Auto Farm logic for Sea 3
+            print("Farming in Sea 3")
         end
         wait(1)
     end
@@ -34,7 +36,6 @@ end
 -- Function to handle Auto Equip Accessory
 local function AutoEquipAccessoryLogic()
     while _G.AutoEquipAccessory do
-        -- Logic for Auto Equip Accessory (e.g., equip the highest damage accessory)
         EquipHighestDamageAccessory()
         wait(1)
     end
@@ -43,13 +44,10 @@ end
 -- Function to handle Auto Next Sea
 local function AutoNextSeaLogic()
     while _G.AutoNextSea do
-        -- Logic to automatically transition to the next Sea
         local currentSea = GetPlayerSea(player)
         if currentSea == 1 then
-            -- Teleport to Sea 2
             TeleportToSea(2)
         elseif currentSea == 2 then
-            -- Teleport to Sea 3
             TeleportToSea(3)
         end
         wait(1)
@@ -70,7 +68,6 @@ end
 -- Function to handle Auto Blox Fruit
 local function AutoBloxFruitLogic()
     while _G.AutoBloxFruit do
-        -- Logic to automatically use Blox Fruit abilities
         UseBestBloxFruit()
         wait(1)
     end
@@ -79,7 +76,6 @@ end
 -- Function to handle Auto Melee Logic
 local function AutoMeleeLogic()
     while _G.AutoMelee do
-        -- Logic to automatically use melee attacks
         UseMelee()
         wait(1)
     end
@@ -88,7 +84,6 @@ end
 -- Function to handle Auto Defense Logic
 local function AutoDefenseLogic()
     while _G.AutoDefense do
-        -- Logic to automatically defend against enemies
         ActivateDefense()
         wait(1)
     end
@@ -127,10 +122,12 @@ end
 
 function TeleportToSea(seaNumber)
     -- Logic to teleport to the next sea
+    print("Teleporting to Sea", seaNumber)
 end
 
 function EquipHighestDamageAccessory()
     -- Logic to equip the highest damage accessory
+    print("Equipping highest damage accessory")
 end
 
 function GetBestWeapon()
@@ -140,16 +137,20 @@ end
 
 function EquipWeapon(weapon)
     -- Logic to equip the weapon
+    print("Equipping weapon:", weapon)
 end
 
 function UseBestBloxFruit()
     -- Logic to use the best Blox Fruit
+    print("Using best Blox Fruit")
 end
 
 function UseMelee()
     -- Logic to use melee attacks
+    print("Using melee attack")
 end
 
 function ActivateDefense()
     -- Logic to activate defense
+    print("Activating defense")
 end
