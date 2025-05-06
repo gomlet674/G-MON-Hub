@@ -1,165 +1,42 @@
--- GMON HUB UI Library (source.lua)
-local TweenService = game:GetService("TweenService")
-local CoreGui = game:GetService("CoreGui")
-local Players = game:GetService("Players")
-local plr = Players.LocalPlayer
-local mouse = plr:GetMouse()
+-- GMON Hub - source.lua -- Dibuat untuk Roblox Blox Fruits, memuat seluruh fitur utama seperti ESP, Auto Farm, Sea Event, dll.
 
-local library = {}
-local windows = {}
+local GMON = {}
 
-function library:CreateWindow(title, subtitle, color, icon)
-    local ScreenGui = Instance.new("ScreenGui", CoreGui)
-    ScreenGui.Name = "GMON_UI"
-    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    pcall(function() syn.protect_gui(ScreenGui) end)
+-- SERVICES local Players = game:GetService("Players") local ReplicatedStorage = game:GetService("ReplicatedStorage") local Workspace = game:GetService("Workspace") local HttpService = game:GetService("HttpService") local RunService = game:GetService("RunService") local TweenService = game:GetService("TweenService") local VirtualInputManager = game:GetService("VirtualInputManager")
 
-    local MainFrame = Instance.new("Frame", ScreenGui)
-    MainFrame.Name = "MainFrame"
-    MainFrame.Size = UDim2.new(0, 700, 0, 460)
-    MainFrame.Position = UDim2.new(0.5, -350, 0.5, -230)
-    MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-    MainFrame.BorderSizePixel = 0
-    MainFrame.Active = true
-    MainFrame.Draggable = true
+local LocalPlayer = Players.LocalPlayer local Character = function() return LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait() end
 
-    local Title = Instance.new("TextLabel", MainFrame)
-    Title.Size = UDim2.new(1, 0, 0, 40)
-    Title.Text = title .. " - " .. subtitle
-    Title.TextColor3 = color
-    Title.Font = Enum.Font.GothamBold
-    Title.TextSize = 18
-    Title.BackgroundTransparency = 1
+-- UTILITIES function GMON:TweenTo(pos) pcall(function() local hrp = Character():WaitForChild("HumanoidRootPart") local tween = TweenService:Create(hrp, TweenInfo.new((hrp.Position - pos).Magnitude/300, Enum.EasingStyle.Linear), {CFrame = CFrame.new(pos)}) tween:Play() tween.Completed:Wait() end) end
 
-    local TabHolder = Instance.new("Frame", MainFrame)
-    TabHolder.Name = "Tabs"
-    TabHolder.Position = UDim2.new(0, 0, 0, 40)
-    TabHolder.Size = UDim2.new(0, 700, 0, 420)
-    TabHolder.BackgroundTransparency = 1
+function GMON:EquipBestWeapon() local Backpack = LocalPlayer.Backpack local Priority = {"Blox Fruit", "Sword", "Melee"} for _, class in ipairs(Priority) do for _, item in pairs(Backpack:GetChildren()) do if item:IsA("Tool") and item.ToolTip:find(class) then LocalPlayer.Character.Humanoid:EquipTool(item) return end end end end
 
-    local tabs = {}
+function GMON:AutoFarm() RunService.Heartbeat:Connect(function() if GMON.AutoFarmEnabled then local lvl = LocalPlayer.Data.Level.Value local mob = GMON:GetMobForLevel(lvl) if mob then GMON:TweenTo(mob.Position + Vector3.new(0, 30, 0)) GMON:EquipBestWeapon() LocalPlayer.Character.Humanoid:MoveTo(mob.Position) end end end) end
 
-    function library:CreateTab(name)
-        local TabButton = Instance.new("TextButton", MainFrame)
-        TabButton.Size = UDim2.new(0, 100, 0, 30)
-        TabButton.Position = UDim2.new(0, #tabs * 105 + 10, 0, 5)
-        TabButton.Text = name
-        TabButton.BackgroundColor3 = color
-        TabButton.TextColor3 = Color3.new(1, 1, 1)
-        TabButton.Font = Enum.Font.GothamBold
-        TabButton.TextSize = 14
+function GMON:GetMobForLevel(lvl) for _, v in pairs(GMON.MobTable) do if lvl >= v.Min and lvl <= v.Max then local mob = Workspace.Enemies:FindFirstChild(v.Name) if mob then return mob end end end return nil end
 
-        local TabPage = Instance.new("ScrollingFrame", TabHolder)
-        TabPage.Size = UDim2.new(1, 0, 1, 0)
-        TabPage.CanvasSize = UDim2.new(0, 0, 5, 0)
-        TabPage.ScrollBarThickness = 8
-        TabPage.BackgroundTransparency = 1
-        TabPage.Visible = false
+GMON.MobTable = { {Name="Bandit", Min=5, Max=10}, {Name="Leviathan Minion", Min=2450, Max=2475}, -- Tambahkan semua data mob dari level 5-2650 sesuai update Gravity }
 
-        TabButton.MouseButton1Click:Connect(function()
-            for _, v in pairs(TabHolder:GetChildren()) do
-                if v:IsA("ScrollingFrame") then v.Visible = false end
-            end
-            TabPage.Visible = true
-        end)
+function GMON:AutoChest() while GMON.AutoChestEnabled do for _, v in pairs(Workspace:GetDescendants()) do if v:IsA("TouchTransmitter") and v.Parent:FindFirstChild("TouchInterest") then GMON:TweenTo(v.Position) wait(0.5) end end wait(5) end end
 
-        if #tabs == 0 then TabPage.Visible = true end
-        table.insert(tabs, TabButton)
+function GMON:AutoBoss() if GMON.BossTarget and Workspace.Enemies:FindFirstChild(GMON.BossTarget) then local boss = Workspace.Enemies[GMON.BossTarget] GMON:TweenTo(boss.Position + Vector3.new(0, 30, 0)) end end
 
-        local tabFunctions = {}
+function GMON:ESP() for _, v in pairs(Workspace:GetChildren()) do if v:IsA("Model") and v:FindFirstChild("Humanoid") then local highlight = Instance.new("Highlight", v) highlight.FillColor = Color3.fromRGB(255, 0, 0) highlight.OutlineColor = Color3.fromRGB(255, 255, 255) end end end
 
-        local yOffset = 0
-        local function newElement(obj)
-            obj.Position = UDim2.new(0, 10, 0, yOffset)
-            obj.Size = UDim2.new(1, -20, 0, 35)
-            obj.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-            obj.TextColor3 = Color3.new(1, 1, 1)
-            obj.Font = Enum.Font.Gotham
-            obj.TextSize = 14
-            obj.Parent = TabPage
-            yOffset = yOffset + 40
-        end
+function GMON:AutoSeaEvents() while GMON.SeaEventEnabled do for _, v in pairs(Workspace.SeaEvents:GetChildren()) do if v:IsA("Model") then GMON:TweenTo(v:GetPivot().Position) end end wait(10) end end
 
-        function tabFunctions:CreateButton(text, callback)
-            local btn = Instance.new("TextButton")
-            btn.Text = text
-            newElement(btn)
-            btn.MouseButton1Click:Connect(callback)
-        end
+function GMON:ServerHop() local function Hop() local servers = HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/2753915549/servers/Public?sortOrder=Asc&limit=100")) for _, server in pairs(servers.data) do if server.playing < server.maxPlayers then TeleportService:TeleportToPlaceInstance(game.PlaceId, server.id) end end end Hop() end
 
-        function tabFunctions:CreateToggle(text, default, callback)
-            local tog = Instance.new("TextButton")
-            tog.Text = "[OFF] " .. text
-            newElement(tog)
-            local state = default or false
-            tog.MouseButton1Click:Connect(function()
-                state = not state
-                tog.Text = (state and "[ON] " or "[OFF] ") .. text
-                callback(state)
-            end)
-        end
+function GMON:FPSBooster() for _, v in pairs(game:GetDescendants()) do if v:IsA("BasePart") then v.Material = Enum.Material.Plastic v.Reflectance = 0 end end setfpscap(30) end
 
-        function tabFunctions:CreateDropdown(text, list, callback)
-            local dropdown = Instance.new("TextButton")
-            dropdown.Text = text .. ": " .. list[1]
-            newElement(dropdown)
-            local index = 1
-            dropdown.MouseButton1Click:Connect(function()
-                index = index + 1
-                if index > #list then index = 1 end
-                dropdown.Text = text .. ": " .. list[index]
-                callback(list[index])
-            end)
-        end
+function GMON:AutoAwakenFruit() -- Implementasi tergantung event atau raid end
 
-        function tabFunctions:CreateLabel(txt)
-            local label = Instance.new("TextLabel")
-            label.Text = txt
-            newElement(label)
-        end
+function GMON:AutoEnchant() -- Cek lokasi enchant dan auto klik NPC atau GUI end
 
-        return tabFunctions
-    end
+function GMON:AutoCrafting() -- Cek material dan NPC crafting, lalu otomatis buat end
 
-    return library
-end
+function GMON:BountyFarm() -- Temukan player musuh dan auto ke lokasi end
 
-return library
+-- TOGGLE SETUP GMON.AutoFarmEnabled = false GMON.AutoChestEnabled = false GMON.SeaEventEnabled = false GMON.BossTarget = "Leviathan"
 
-local UIS = game:GetService("UserInputService")
-
-local frame = script.Parent -- Ganti dengan path ke frame kamu
-local dragging, dragInput, dragStart, startPos
-
-local function update(input)
-	if not dragging then return end
-	local delta = input.Position - dragStart
-	frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-end
-
-frame.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-		dragging = true
-		dragStart = input.Position
-		startPos = frame.Position
-
-		input.Changed:Connect(function()
-			if input.UserInputState == Enum.UserInputState.End then
-				dragging = false
-			end
-		end)
-	end
-end)
-
-frame.InputChanged:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-		dragInput = input
-	end
-end)
-
-UIS.InputChanged:Connect(function(input)
-	if input == dragInput then
-		update(input)
-	end
-end)
+return GMON
 
