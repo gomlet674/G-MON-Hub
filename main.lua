@@ -34,8 +34,213 @@ local border = Instance.new("UIStroke", RGBFrame) border.Thickness = 4 border.Tr
 -- Rainbow effect loop
 spawn(function() local hue = 0 while wait(0.03) do hue = (hue + 1) % 360 local color = Color3.fromHSV(hue / 360, 1, 1) pcall(function() border.Color = color end) end end)
 
+-- Tab Sidebar (Vertical Scroll)
+local tabFrame = Instance.new("ScrollingFrame")
+tabFrame.Name = "TabFrame"
+tabFrame.Size = UDim2.new(0, 120, 1, -20)
+tabFrame.Position = UDim2.new(0, 10, 0, 10)
+tabFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+tabFrame.BorderSizePixel = 0
+tabFrame.ScrollBarThickness = 6
+tabFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+tabFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+tabFrame.ScrollingDirection = Enum.ScrollingDirection.Y
+tabFrame.ZIndex = 3
+tabFrame.Parent = BG
+
+-- UIListLayout for Tab Buttons
+local listLayout = Instance.new("UIListLayout")
+listLayout.Parent = tabFrame
+listLayout.SortOrder = Enum.SortOrder.LayoutOrder
+listLayout.Padding = UDim.new(0, 5)
+
+-- Function to create tab buttons
+local function createTabButton(name, onClick)
+	local button = Instance.new("TextButton")
+	button.Size = UDim2.new(1, -10, 0, 30)
+	button.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+	button.BorderSizePixel = 0
+	button.Text = name
+	button.Font = Enum.Font.Gotham
+	button.TextColor3 = Color3.fromRGB(255, 255, 255)
+	button.TextSize = 14
+	button.ZIndex = 4
+	button.Parent = tabFrame
+
+	button.MouseButton1Click:Connect(function()
+		onClick()
+	end)
+
+	return button
+end
+
+-- Tab container (content appears here)
+local contentFrame = Instance.new("Frame")
+contentFrame.Name = "ContentFrame"
+contentFrame.Size = UDim2.new(1, -140, 1, -20)
+contentFrame.Position = UDim2.new(0, 130, 0, 10)
+contentFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+contentFrame.BorderSizePixel = 0
+contentFrame.ZIndex = 3
+contentFrame.Parent = BG
+
+-- Example Tab Logic
+local tabs = {
+	"Main", "Stats", "Teleport", "Players",
+	"DevilFruit", "ESP-Raid", "Buy Item", "Setting"
+}
+
+local function clearContent()
+	for _, child in pairs(contentFrame:GetChildren()) do
+		if not child:IsA("UIListLayout") then
+			child:Destroy()
+		end
+	end
+end
+
+-- Isi konten tab Main (Auto Farm)
+if tabName == "Main" then
+	local page = tabPages[tabName]
+
+	-- Select Weapon Label
+	local weaponLabel = Instance.new("TextLabel", page)
+	weaponLabel.Size = UDim2.new(0, 200, 0, 25)
+	weaponLabel.Position = UDim2.new(0, 10, 0, 10)
+	weaponLabel.Text = "Select Weapon"
+	weaponLabel.TextColor3 = Color3.new(1,1,1)
+	weaponLabel.BackgroundTransparency = 1
+	weaponLabel.Font = Enum.Font.Gotham
+	weaponLabel.TextSize = 14
+
+	-- Dropdown Weapon
+	local weaponDropdown = Instance.new("TextButton", page)
+	weaponDropdown.Size = UDim2.new(0, 200, 0, 30)
+	weaponDropdown.Position = UDim2.new(0, 10, 0, 40)
+	weaponDropdown.Text = "Click to select"
+	weaponDropdown.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+	weaponDropdown.TextColor3 = Color3.new(1,1,1)
+	weaponDropdown.Font = Enum.Font.Gotham
+	weaponDropdown.TextSize = 14
+
+	-- Refresh Weapon Button
+	local refreshBtn = Instance.new("TextButton", page)
+	refreshBtn.Size = UDim2.new(0, 100, 0, 30)
+	refreshBtn.Position = UDim2.new(0, 220, 0, 40)
+	refreshBtn.Text = "Refresh"
+	refreshBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+	refreshBtn.TextColor3 = Color3.new(1,1,1)
+	refreshBtn.Font = Enum.Font.Gotham
+	refreshBtn.TextSize = 14
+
+	-- Method Dropdown
+	local methodLabel = Instance.new("TextLabel", page)
+	methodLabel.Size = UDim2.new(0, 200, 0, 25)
+	methodLabel.Position = UDim2.new(0, 10, 0, 80)
+	methodLabel.Text = "Method"
+	methodLabel.TextColor3 = Color3.new(1,1,1)
+	methodLabel.BackgroundTransparency = 1
+	methodLabel.Font = Enum.Font.Gotham
+	methodLabel.TextSize = 14
+
+	local methodDropdown = Instance.new("TextButton", page)
+	methodDropdown.Size = UDim2.new(0, 200, 0, 30)
+	methodDropdown.Position = UDim2.new(0, 10, 0, 110)
+	methodDropdown.Text = "Level"
+	methodDropdown.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+	methodDropdown.TextColor3 = Color3.new(1,1,1)
+	methodDropdown.Font = Enum.Font.Gotham
+	methodDropdown.TextSize = 14
+
+	-- Fast Attack Toggle
+	local fastAttack = Instance.new("TextButton", page)
+	fastAttack.Size = UDim2.new(0, 200, 0, 30)
+	fastAttack.Position = UDim2.new(0, 10, 0, 150)
+	fastAttack.Text = "Fast Attack: OFF"
+	fastAttack.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+	fastAttack.TextColor3 = Color3.new(1,1,1)
+	fastAttack.Font = Enum.Font.Gotham
+	fastAttack.TextSize = 14
+
+	local fastAttackEnabled = false
+	fastAttack.MouseButton1Click:Connect(function()
+		fastAttackEnabled = not fastAttackEnabled
+		fastAttack.Text = "Fast Attack: " .. (fastAttackEnabled and "ON" or "OFF")
+	end)
+
+	-- Auto Farm Toggle
+	local autoFarmBtn = Instance.new("TextButton", page)
+	autoFarmBtn.Size = UDim2.new(0, 200, 0, 40)
+	autoFarmBtn.Position = UDim2.new(0, 10, 0, 200)
+	autoFarmBtn.Text = "Auto Farm: OFF"
+	autoFarmBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 127)
+	autoFarmBtn.TextColor3 = Color3.new(1,1,1)
+	autoFarmBtn.Font = Enum.Font.GothamBold
+	autoFarmBtn.TextSize = 16
+
+	local autoFarmEnabled = false
+	autoFarmBtn.MouseButton1Click:Connect(function()
+		autoFarmEnabled = not autoFarmEnabled
+		autoFarmBtn.Text = "Auto Farm: " .. (autoFarmEnabled and "ON" or "OFF")
+	end)
+end
+-- Clear all tab pages
+local function showTab(tabName)
+	for name, page in pairs(tabPages) do
+		page.Visible = (name == tabName)
+	end
+end
+
+for _, tabName in pairs(tabs) do
+	createTabButton(tabName, function()
+		showTab(tabName)
+	end)
+end
+
 -- Create Tabs 
 local function createTab(name, pos) local tab = Instance.new("TextButton") tab.Text = name tab.Size = UDim2.new(0, 100, 0, 30) tab.Position = UDim2.new(0, 10 + (pos * 110), 0, 10) tab.BackgroundColor3 = Color3.fromRGB(25, 25, 25) tab.TextColor3 = Color3.new(1,1,1) tab.Parent = BG return tab end
+
+local tabPages = {}
+
+-- Buat container tiap tab (panel isi)
+for _, tabName in pairs(tabs) do
+	local page = Instance.new("Frame")
+	page.Name = tabName .. "_Page"
+	page.Size = UDim2.new(1, 0, 1, 0)
+	page.BackgroundTransparency = 1
+	page.Visible = false
+	page.Parent = contentFrame
+	tabPages[tabName] = page
+
+	-- Contoh isi awal tab (nanti diganti dengan fitur real)
+	local label = Instance.new("TextLabel", page)
+	label.Size = UDim2.new(1, 0, 0, 30)
+	label.Position = UDim2.new(0, 0, 0, 0)
+	label.BackgroundTransparency = 1
+	label.Font = Enum.Font.GothamBold
+	label.TextSize = 20
+	label.TextColor3 = Color3.new(1, 1, 1)
+	label.Text = "Kamu membuka tab: " .. tabName
+end
+
+-- Fungsi show tab
+local function showTab(tabName)
+	for name, page in pairs(tabPages) do
+		page.Visible = (name == tabName)
+	end
+end
+
+-- Ubah callback button
+for _, button in ipairs(tabFrame:GetChildren()) do
+	if button:IsA("TextButton") then
+		local tabName = button.Text
+		button.MouseButton1Click:Connect(function()
+			showTab(tabName)
+		end)
+	end
+end
+
+-- Aktifkan default tab pertama
+showTab(tabs[1])
 
 -- Create Tabs and Pages
 local Tabs = {
