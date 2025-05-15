@@ -98,6 +98,72 @@ local function clearContent()
 	end
 end
 
+local tabPages = {}
+for _, tabName in pairs(tabs) do
+	local page = Instance.new("Frame")
+	page.Name = tabName
+	page.Size = UDim2.new(1, 0, 1, 0)
+	page.BackgroundTransparency = 1
+	page.Visible = false
+	page.Parent = contentFrame
+	tabPages[tabName] = page
+end
+
+-- Tab: Setting
+local SettingTab = Window:Tab("Setting", "rbxassetid://settings_icon")
+SettingTab:Toggle("Fast Attack", GMON.Settings.FastAttack, function(val)
+    GMON.Settings.FastAttack = val
+end)
+SettingTab:Toggle("Auto Click", GMON.Settings.AutoClick, function(val)
+    GMON.Settings.AutoClick = val
+end)
+SettingTab:Label("Skill Usage:")
+SettingTab:Toggle("Use Skill Z", GMON.Settings.UseSkillZ, function(val)
+    GMON.Settings.UseSkillZ = val
+end)
+SettingTab:Toggle("Use Skill X", GMON.Settings.UseSkillX, function(val)
+    GMON.Settings.UseSkillX = val
+end)
+SettingTab:Toggle("Use Skill C", GMON.Settings.UseSkillC, function(val)
+    GMON.Settings.UseSkillC = val
+end)
+SettingTab:Toggle("Use Skill V", GMON.Settings.UseSkillV, function(val)
+    GMON.Settings.UseSkillV = val
+end)
+SettingTab:Dropdown("Skill Mode", {"Sniper", "Closest", "Spam"}, function(option)
+    GMON.Settings.SkillMode = option
+end)
+
+-- Tab: Prehistoric
+local PreTab = Window:Tab("Prehistoric Island", "rbxassetid://prehistoric_icon")
+PreTab:Toggle("Auto Farm", GMON.Prehistoric.AutoFarm, function(v)
+    GMON.Prehistoric.AutoFarm = v
+end)
+PreTab:Toggle("Auto Kill Boss", GMON.Prehistoric.AutoBoss, function(v)
+    GMON.Prehistoric.AutoBoss = v
+end)
+PreTab:Toggle("Auto Collect Item", GMON.Prehistoric.AutoItem, function(v)
+    GMON.Prehistoric.AutoItem = v
+end)
+PreTab:Toggle("Auto Take Heart", GMON.Prehistoric.AutoHeart, function(v)
+    GMON.Prehistoric.AutoHeart = v
+end)
+PreTab:Toggle("Auto Draco Race v1–v4", GMON.Prehistoric.AutoDraco, function(v)
+    GMON.Prehistoric.AutoDraco = v
+end)
+PreTab:Toggle("Auto Blaze Ember Hunt", GMON.Prehistoric.AutoBlaze, function(v)
+    GMON.Prehistoric.AutoBlaze = v
+end)
+PreTab:Toggle("Craft Prehistoric Weapon", GMON.Prehistoric.AutoCraft, function(v)
+    GMON.Prehistoric.AutoCraft = v
+end)
+PreTab:Toggle("Auto Leviathan Attack", GMON.Prehistoric.AutoLeviathan, function(v)
+    GMON.Prehistoric.AutoLeviathan = v
+end)
+PreTab:Toggle("Auto Teleport to Island", GMON.Prehistoric.AutoTPIsland, function(v)
+    GMON.Prehistoric.AutoTPIsland = v
+end)
+
 -- Isi konten tab Main (Auto Farm)
 if tabName == "Main" then
 	local page = tabPages[tabName]
