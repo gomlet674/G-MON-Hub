@@ -1,96 +1,99 @@
--- GMON HUB - Custom UI tanpa Rayfield
--- By gomlet674
+-- GMON HUB - UI Tanpa Rayfield, dengan Toggle dan RGB Border
 
--- Load fitur dari source.lua
-local GMON = loadstring(game:HttpGet("https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/source.lua"))()
+-- Load fitur source.lua
+local GMON = loadstring(game:HttpGet("https://raw.githubusercontent.com/gomlet674/G-Mon-Hub/main/source.lua"))()
 
--- UI Library Buatan Sendiri
-local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
-ScreenGui.Name = "GMONHubUI"
-ScreenGui.ResetOnSpawn = false
+-- Buat GUI
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "GMON_UI"
+ScreenGui.Parent = game.CoreGui
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
--- Frame Utama
-local MainFrame = Instance.new("Frame", ScreenGui)
-MainFrame.Size = UDim2.new(0, 350, 0, 250)
-MainFrame.Position = UDim2.new(0.5, -175, 0.5, -125)
-MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-MainFrame.BorderSizePixel = 0
-MainFrame.Active = true
-MainFrame.Draggable = true
+-- Frame utama
+local Frame = Instance.new("Frame")
+Frame.Size = UDim2.new(0, 400, 0, 250)
+Frame.Position = UDim2.new(0.5, -200, 0.5, -125)
+Frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+Frame.Parent = ScreenGui
+Frame.Active = true
+Frame.Draggable = true
 
--- RGB Border
-local UICorner = Instance.new("UICorner", MainFrame)
+-- Corner & RGB Stroke
+local UICorner = Instance.new("UICorner", Frame)
 UICorner.CornerRadius = UDim.new(0, 12)
 
-local UIStroke = Instance.new("UIStroke", MainFrame)
-UIStroke.Thickness = 3
+local UIStroke = Instance.new("UIStroke", Frame)
+UIStroke.Thickness = 2
 spawn(function()
-	while true do
+	while wait() do
 		for i = 0, 255, 4 do
-			UIStroke.Color = Color3.fromHSV(i / 255, 1, 1)
+			UIStroke.Color = Color3.fromHSV(i/255, 1, 1)
 			wait()
 		end
 	end
 end)
 
--- Title
-local Title = Instance.new("TextLabel", MainFrame)
+-- Judul
+local Title = Instance.new("TextLabel")
 Title.Text = "GMON HUB"
-Title.Size = UDim2.new(1, 0, 0, 30)
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.Size = UDim2.new(1, 0, 0, 40)
 Title.BackgroundTransparency = 1
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.TextScaled = true
+Title.Parent = Frame
 
--- Button ESP God Chalice
-local Button1 = Instance.new("TextButton", MainFrame)
-Button1.Size = UDim2.new(0, 300, 0, 40)
-Button1.Position = UDim2.new(0, 25, 0, 50)
-Button1.Text = "ESP God Chalice"
-Button1.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-Button1.TextColor3 = Color3.fromRGB(255, 255, 255)
-Button1.MouseButton1Click:Connect(function()
+-- Tombol ESP God Chalice
+local ESPBtn = Instance.new("TextButton")
+ESPBtn.Size = UDim2.new(0, 350, 0, 40)
+ESPBtn.Position = UDim2.new(0, 25, 0, 60)
+ESPBtn.Text = "ESP God Chalice"
+ESPBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+ESPBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ESPBtn.Parent = Frame
+ESPBtn.MouseButton1Click:Connect(function()
 	GMON.ESPGodChalice()
 end)
 
--- Button Farm Chest
-local Button2 = Instance.new("TextButton", MainFrame)
-Button2.Size = UDim2.new(0, 300, 0, 40)
-Button2.Position = UDim2.new(0, 25, 0, 100)
-Button2.Text = "Start Farm Chest"
-Button2.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-Button2.TextColor3 = Color3.fromRGB(255, 255, 255)
-Button2.MouseButton1Click:Connect(function()
+-- Tombol Farm Chest
+local FarmBtn = Instance.new("TextButton")
+FarmBtn.Size = UDim2.new(0, 350, 0, 40)
+FarmBtn.Position = UDim2.new(0, 25, 0, 110)
+FarmBtn.Text = "Auto Farm Chest"
+FarmBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+FarmBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+FarmBtn.Parent = Frame
+FarmBtn.MouseButton1Click:Connect(function()
 	GMON.FarmChest()
 end)
 
--- Toggle UI Button (RGB melingkar)
-local ToggleUI = Instance.new("ScreenGui", game.CoreGui)
-ToggleUI.Name = "GMON_Toggle"
+-- Tombol Toggle (kanan layar, RGB)
+local ToggleGui = Instance.new("ScreenGui", game.CoreGui)
+ToggleGui.Name = "GMON_Toggle"
 
-local ToggleBtn = Instance.new("TextButton", ToggleUI)
+local ToggleBtn = Instance.new("TextButton", ToggleGui)
 ToggleBtn.Size = UDim2.new(0, 40, 0, 40)
-ToggleBtn.Position = UDim2.new(1, -60, 0.4, 0)
+ToggleBtn.Position = UDim2.new(1, -60, 0.5, -20)
 ToggleBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 ToggleBtn.Text = "G"
 ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 
-local ToggleUICorner = Instance.new("UICorner", ToggleBtn)
-ToggleUICorner.CornerRadius = UDim.new(1, 0)
+local corner = Instance.new("UICorner", ToggleBtn)
+corner.CornerRadius = UDim.new(1, 0)
 
-local ToggleStroke = Instance.new("UIStroke", ToggleBtn)
-ToggleStroke.Thickness = 2
+local toggleStroke = Instance.new("UIStroke", ToggleBtn)
+toggleStroke.Thickness = 2
 
 spawn(function()
-	while true do
-		for i = 0, 255, 5 do
-			ToggleStroke.Color = Color3.fromHSV(i / 255, 1, 1)
+	while wait() do
+		for i = 0, 255, 4 do
+			toggleStroke.Color = Color3.fromHSV(i/255, 1, 1)
 			wait()
 		end
 	end
 end)
 
-local visible = true
+local isVisible = true
 ToggleBtn.MouseButton1Click:Connect(function()
-	visible = not visible
-	MainFrame.Visible = visible
+	isVisible = not isVisible
+	Frame.Visible = isVisible
 end)
