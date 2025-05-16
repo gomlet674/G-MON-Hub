@@ -125,7 +125,7 @@ Submit.MouseButton1Click:Connect(function()
     if inputKey == "GmonHub311851f3c742a8f78dce99e56992555609d23497928e9b33802e7127610c2e" then
         writefile(savedKeyPath, inputKey)
         ScreenGui:Destroy()
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/gomlet674/G-Mon-Hub/main/main.lua"))()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/gomlet674/G-Mon-Hub/main/source.lua"))()
     else
         Submit.Text = "Invalid!"
         task.wait(2)
