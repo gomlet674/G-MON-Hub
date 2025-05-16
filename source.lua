@@ -1,51 +1,127 @@
-local GMON = {}
+-- GUI Toggle Setup
+local chestToggle = false
+local espToggle = false
 
--- ESP God Chalice
-function GMON.ESPGodChalice()
-    for _, v in pairs(game:GetService("Workspace"):GetDescendants()) do
-        if v:IsA("Tool") and v.Name == "God's Chalice" then
-            local Billboard = Instance.new("BillboardGui", v)
-            Billboard.Size = UDim2.new(0, 100, 0, 40)
-            Billboard.AlwaysOnTop = true
-            Billboard.Name = "GMON_ESP"
+-- Simple Notification
+local function notify(msg)
+    game.StarterGui:SetCore("SendNotification", {
+        Title = "GMON HUB",
+        Text = msg,
+        Duration = 5
+    })
+end
 
-            local Text = Instance.new("TextLabel", Billboard)
-            Text.Text = "GOD CHALICE"
-            Text.Size = UDim2.new(1, 0, 1, 0)
-            Text.TextScaled = true
-            Text.TextColor3 = Color3.fromRGB(255, 50, 50)
-            Text.BackgroundTransparency = 1
+-- ESP GOD CHALICE
+local function espGodChalice()
+    while espToggle do
+        task.wait(2)
+        for _, obj in pairs(workspace:GetDescendants()) do
+            if obj:IsA("Tool") and obj.Name == "God's Chalice" and not obj:FindFirstChild("ESP") then
+                local billboard = Instance.new("BillboardGui", obj)
+                billboard.Name = "ESP"
+                billboard.Size = UDim2.new(0, 100, 0, 40)
+                billboard.Adornee = obj.Handle or obj:FindFirstChildWhichIsA("Part")
+                billboard.AlwaysOnTop = true
+
+                local text = Instance.new("TextLabel", billboard)
+                text.Size = UDim2.new(1, 0, 1, 0)
+                text.Text = "GOD CHALICE"
+                text.TextColor3 = Color3.new(1, 0, 0)
+                text.BackgroundTransparency = 1
+                text.TextStrokeTransparency = 0.5
+
+                notify("ESP God Chalice Active!")
+            end
         end
     end
 end
 
--- Farm Chest, stop if God Chalice found
-local farmRunning = false
-function GMON.FarmChest()
-    farmRunning = true
-    while farmRunning and task.wait(0.5) do
-        local foundChalice = false
-        for _, v in pairs(game:GetService("Workspace"):GetDescendants()) do
+-- FARM CHEST
+local function farmChest()
+    while chestToggle do
+        for _, v in pairs(workspace:GetDescendants()) do
+            if not chestToggle then break end
+
             if v:IsA("Tool") and v.Name == "God's Chalice" then
-                foundChalice = true
+                notify("FOUND GOD CHALICE!")
+                chestToggle = false
                 break
             end
-        end
 
-        if foundChalice then
-            farmRunning = false
-            warn("God Chalice ditemukan, Farm dihentikan.")
-            break
-        end
-
-        -- Farm semua chest
-        for _, v in pairs(game:GetService("Workspace"):GetDescendants()) do
-            if v:IsA("Model") and v.Name:lower():find("chest") then
-                game.Players.LocalPlayer.Character:PivotTo(v:GetPivot())
-                wait(1)
+            if v:IsA("Model") and v:FindFirstChild("HumanoidRootPart") == nil and string.find(v.Name, "Chest") then
+                game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = v:GetModelCFrame()
+                task.wait(1.5)
             end
         end
+        task.wait(3)
     end
 end
 
-return GMON
+-- Toggle UI (melengkung dan RGB toggle)
+local function createToggleUI()
+    local gui = Instance.new("ScreenGui", game:GetService("CoreGui"))
+    gui.Name = "GMON_Toggle"
+
+    local frame = Instance.new("Frame", gui)
+    frame.Size = UDim2.new(0, 160, 0, 160)
+    frame.Position = UDim2.new(0.02, 0, 0.3, 0)
+    frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+    frame.Active = true
+    frame.Draggable = true
+
+    local uiCorner = Instance.new("UICorner", frame)
+    uiCorner.CornerRadius = UDim.new(1, 0)
+
+    local stroke = Instance.new("UIStroke", frame)
+    stroke.Thickness = 2
+    stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+
+    task.spawn(function()
+        while true do
+            for i = 0, 1, 0.02 do
+                local r = math.sin(i * math.pi * 2) * 127 + 128
+                local g = math.sin(i * math.pi * 2 + 2) * 127 + 128
+                local b = math.sin(i * math.pi * 2 + 4) * 127 + 128
+                stroke.Color = Color3.fromRGB(r, g, b)
+                task.wait(0.03)
+            end
+        end
+    end)
+
+    -- ESP Toggle
+    local espBtn = Instance.new("TextButton", frame)
+    espBtn.Size = UDim2.new(0.9, 0, 0, 40)
+    espBtn.Position = UDim2.new(0.05, 0, 0.15, 0)
+    espBtn.Text = "ESP God Chalice: OFF"
+    espBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    espBtn.TextColor3 = Color3.new(1, 1, 1)
+    Instance.new("UICorner", espBtn).CornerRadius = UDim.new(0, 10)
+
+    espBtn.MouseButton1Click:Connect(function()
+        espToggle = not espToggle
+        espBtn.Text = "ESP God Chalice: " .. (espToggle and "ON" or "OFF")
+        if espToggle then
+            task.spawn(espGodChalice)
+        end
+    end)
+
+    -- Farm Chest Toggle
+    local chestBtn = Instance.new("TextButton", frame)
+    chestBtn.Size = UDim2.new(0.9, 0, 0, 40)
+    chestBtn.Position = UDim2.new(0.05, 0, 0.55, 0)
+    chestBtn.Text = "Farm Chest: OFF"
+    chestBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    chestBtn.TextColor3 = Color3.new(1, 1, 1)
+    Instance.new("UICorner", chestBtn).CornerRadius = UDim.new(0, 10)
+
+    chestBtn.MouseButton1Click:Connect(function()
+        chestToggle = not chestToggle
+        chestBtn.Text = "Farm Chest: " .. (chestToggle and "ON" or "OFF")
+        if chestToggle then
+            task.spawn(farmChest)
+        end
+    end)
+end
+
+-- Run UI
+createToggleUI()
