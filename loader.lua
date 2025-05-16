@@ -113,8 +113,9 @@ end)
 
 -- Submit Key Verification
 Submit.MouseButton1Click:Connect(function()
-    local inputKey = KeyBox.Text ~= "" and KeyBox.Text or savedKey
-    if not inputKey then
+    local inputKey = KeyBox.Text
+
+    if inputKey == nil or inputKey == "" then
         Submit.Text = "Enter Key"
         task.wait(2)
         Submit.Text = "Submit"
