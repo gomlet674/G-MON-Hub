@@ -1,32 +1,96 @@
--- GMON HUB - MAIN.LUA (RGB UI + TOGGLE MELINGKAR)
+-- GMON HUB - Custom UI tanpa Rayfield
+-- By gomlet674
 
--- Load Rayfield UI local Rayfield = loadstring(game:HttpGet("https://raw.githubusercontent.com/shlexware/Rayfield/main/source.lua"))()
+-- Load fitur dari source.lua
+local GMON = loadstring(game:HttpGet("https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/source.lua"))()
 
--- Load Source (GMON Logic) local GMON = loadstring(game:HttpGet("https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/source.lua"))()
+-- UI Library Buatan Sendiri
+local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
+ScreenGui.Name = "GMONHubUI"
+ScreenGui.ResetOnSpawn = false
 
--- Window Utama local Window = Rayfield:CreateWindow({ Name = "GMON HUB | Blox Fruits", LoadingTitle = "Loading GMON HUB...", LoadingSubtitle = "by gomlet674", ConfigurationSaving = { Enabled = true, FolderName = "GMONHub", FileName = "GMONConfig" }, Discord = { Enabled = false } })
+-- Frame Utama
+local MainFrame = Instance.new("Frame", ScreenGui)
+MainFrame.Size = UDim2.new(0, 350, 0, 250)
+MainFrame.Position = UDim2.new(0.5, -175, 0.5, -125)
+MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.Draggable = true
 
--- Tambahan: UI Toggle Melayang & RGB local CoreGui = game:GetService("CoreGui") local TweenService = game:GetService("TweenService") local ToggleGUI = Instance.new("ScreenGui", CoreGui) ToggleGUI.Name = "GMON_ToggleGUI" ToggleGUI.ResetOnSpawn = false
+-- RGB Border
+local UICorner = Instance.new("UICorner", MainFrame)
+UICorner.CornerRadius = UDim.new(0, 12)
 
-local ToggleFrame = Instance.new("Frame", ToggleGUI) ToggleFrame.Size = UDim2.new(0, 60, 0, 60) ToggleFrame.Position = UDim2.new(0, 50, 0.2, 0) ToggleFrame.BackgroundColor3 = Color3.fromRGB(255, 255, 255) ToggleFrame.BackgroundTransparency = 0.2 ToggleFrame.BorderSizePixel = 0 ToggleFrame.Draggable = true ToggleFrame.Active = true ToggleFrame.AnchorPoint = Vector2.new(0.5, 0.5) ToggleFrame.ZIndex = 2
+local UIStroke = Instance.new("UIStroke", MainFrame)
+UIStroke.Thickness = 3
+spawn(function()
+	while true do
+		for i = 0, 255, 4 do
+			UIStroke.Color = Color3.fromHSV(i / 255, 1, 1)
+			wait()
+		end
+	end
+end)
 
-local UICorner = Instance.new("UICorner", ToggleFrame) UICorner.CornerRadius = UDim.new(1, 0)
+-- Title
+local Title = Instance.new("TextLabel", MainFrame)
+Title.Text = "GMON HUB"
+Title.Size = UDim2.new(1, 0, 0, 30)
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.BackgroundTransparency = 1
+Title.TextScaled = true
 
-local UIGradient = Instance.new("UIGradient", ToggleFrame) UIGradient.Color = ColorSequence.new{ ColorSequenceKeypoint.new(0.00, Color3.fromRGB(255, 0, 0)), ColorSequenceKeypoint.new(0.33, Color3.fromRGB(0, 255, 0)), ColorSequenceKeypoint.new(0.66, Color3.fromRGB(0, 0, 255)), ColorSequenceKeypoint.new(1.00, Color3.fromRGB(255, 0, 0)) }
+-- Button ESP God Chalice
+local Button1 = Instance.new("TextButton", MainFrame)
+Button1.Size = UDim2.new(0, 300, 0, 40)
+Button1.Position = UDim2.new(0, 25, 0, 50)
+Button1.Text = "ESP God Chalice"
+Button1.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+Button1.TextColor3 = Color3.fromRGB(255, 255, 255)
+Button1.MouseButton1Click:Connect(function()
+	GMON.ESPGodChalice()
+end)
 
--- Rainbow effect spawn(function() while task.wait(0.03) do local tick = tick() % 5 / 5 UIGradient.Rotation = UIGradient.Rotation + 1 end end)
+-- Button Farm Chest
+local Button2 = Instance.new("TextButton", MainFrame)
+Button2.Size = UDim2.new(0, 300, 0, 40)
+Button2.Position = UDim2.new(0, 25, 0, 100)
+Button2.Text = "Start Farm Chest"
+Button2.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+Button2.TextColor3 = Color3.fromRGB(255, 255, 255)
+Button2.MouseButton1Click:Connect(function()
+	GMON.FarmChest()
+end)
 
-local ToggleText = Instance.new("TextLabel", ToggleFrame) ToggleText.Size = UDim2.new(1, 0, 1, 0) ToggleText.Text = "GMON" ToggleText.BackgroundTransparency = 1 ToggleText.TextScaled = true ToggleText.TextColor3 = Color3.new(1, 1, 1)
+-- Toggle UI Button (RGB melingkar)
+local ToggleUI = Instance.new("ScreenGui", game.CoreGui)
+ToggleUI.Name = "GMON_Toggle"
 
-local gmonVisible = true ToggleFrame.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then gmonVisible = not gmonVisible for _, v in pairs(CoreGui:GetChildren()) do if v.Name == "Rayfield" then v.Enabled = gmonVisible end end end end)
+local ToggleBtn = Instance.new("TextButton", ToggleUI)
+ToggleBtn.Size = UDim2.new(0, 40, 0, 40)
+ToggleBtn.Position = UDim2.new(1, -60, 0.4, 0)
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+ToggleBtn.Text = "G"
+ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 
--- UI Tabs & Logic local Tab = Window:CreateTab("Main", 4483362458) Tab:CreateSection("Chest & Chalice")
+local ToggleUICorner = Instance.new("UICorner", ToggleBtn)
+ToggleUICorner.CornerRadius = UDim.new(1, 0)
 
-Tab:CreateToggle("ESP God Chalice", nil, function(state) if GMON and GMON.ESPGodChalice then GMON.ESPGodChalice(state) end end)
+local ToggleStroke = Instance.new("UIStroke", ToggleBtn)
+ToggleStroke.Thickness = 2
 
-Tab:CreateButton("Start Farm Chest", function() if GMON and GMON.FarmChest then GMON.FarmChest() end end)
+spawn(function()
+	while true do
+		for i = 0, 255, 5 do
+			ToggleStroke.Color = Color3.fromHSV(i / 255, 1, 1)
+			wait()
+		end
+	end
+end)
 
-Tab:CreateButton("Stop Farm Chest", function() if GMON and GMON.StopFarmChest then GMON.StopFarmChest() end end)
-
--- Tambahkan GUI latar belakang anime jika diperlukan di loader.lua
-
+local visible = true
+ToggleBtn.MouseButton1Click:Connect(function()
+	visible = not visible
+	MainFrame.Visible = visible
+end)
