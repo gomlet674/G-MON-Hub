@@ -40,5 +40,30 @@ Button.MouseButton1Click:Connect(function()
 	end
 end)
 
--- Load semua fitur di file source.lua
-loadstring(game:HttpGet("https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/source.lua"))()
+-- Load Source
+local GMON = loadstring(game:HttpGet("https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/source.lua"))()
+
+-- UI Library (contoh sederhana)
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptc/Moon/main/source.lua"))()
+local Window = Library:CreateWindow("GMON Hub - Farm Chest")
+
+-- Tab & Section
+local Tab = Window:CreateTab("Main", 4483362458) -- ID icon bebas
+local Section = Tab:CreateSection("Chest & Chalice")
+
+-- Toggle: ESP God Chalice
+Tab:CreateToggle("ESP God Chalice", nil, function(state)
+    if state then
+        GMON.ESPGodChalice()
+    end
+end)
+
+-- Button: Start Farm Chest
+Tab:CreateButton("Start Farm Chest", function()
+    GMON.FarmChest()
+end)
+
+-- Button: Stop Farm Chest
+Tab:CreateButton("Stop Farm Chest", function()
+    GMON.StopFarmChest()
+end)
