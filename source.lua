@@ -1,65 +1,226 @@
--- GMON Hub - source.lua -- Semua logika fitur utama dimasukkan di sini
+-- source.lua
 
-local Players = game:GetService("Players") local LocalPlayer = Players.LocalPlayer local RunService = game:GetService("RunService") local TweenService = game:GetService("TweenService") local VirtualInputManager = game:GetService("VirtualInputManager") local HttpService = game:GetService("HttpService")
+-- Referensi ke main.lua
+local GMON = require(game:GetService("CoreGui"):WaitForChild("GMONHub"))
 
-local GMON = {}
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+local UserInputService = game:GetService("UserInputService")
 
+local Player = Players.LocalPlayer
+local Character = Player.Character or Player.CharacterAdded:Wait()
+local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
+local Humanoid = Character:WaitForChild("Humanoid")
 
----
+-- Config
+local FarmRadius = 80 -- radius untuk cari mob
+local ChestRadius = 80
 
--- Utility Functions --
+-- Utility Functions
+local function getNearestEnemy()
+    local nearest
+    local nearestDistance = math.huge
+    for _, mob in pairs(Workspace.Enemies:GetChildren()) do
+        if mob:FindFirstChild("Humanoid") and mob.Humanoid.Health > 0 and mob:FindFirstChild("HumanoidRootPart") then
+            local dist = (HumanoidRootPart.Position - mob.HumanoidRootPart.Position).Magnitude
+            if dist < FarmRadius then
+                if dist < nearestDistance then
+                    nearest = mob
+                    nearestDistance = dist
+                end
+            end
+        end
+    end
+    return nearest
+end
 
-function GMON:TweenTo(pos) if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then local hrp = LocalPlayer.Character.HumanoidRootPart local tweenInfo = TweenInfo.new((hrp.Position - pos).Magnitude / 300, Enum.EasingStyle.Linear) local tween = TweenService:Create(hrp, tweenInfo, {CFrame = CFrame.new(pos)}) tween:Play() tween.Completed:Wait() end end
+local function getNearestChest()
+    local nearest
+    local nearestDistance = math.huge
+    for _, part in pairs(Workspace:GetDescendants()) do
+        if part:IsA("Part") and part.Name:lower():find("chest") then
+            local dist = (HumanoidRootPart.Position - part.Position).Magnitude
+            if dist < ChestRadius then
+                if dist < nearestDistance then
+                    nearest = part
+                    nearestDistance = dist
+                end
+            end
+        end
+    end
+    return nearest
+end
 
-function GMON:GetWeapon(type) local backpack = LocalPlayer.Backpack for _, v in pairs(backpack:GetChildren()) do if v:IsA("Tool") then if type == "Melee" and string.find(v.Name, "Combat") then return v end if type == "Sword" and string.find(v.Name, "Sword") then return v end if type == "Fruit" and not string.find(v.Name, "Sword") and not string.find(v.Name, "Gun") and not string.find(v.Name, "Combat") then return v end if type == "Gun" and string.find(v.Name, "Gun") then return v end end end end
+-- Weapon Equip Logic
+local function equipWeapon(weaponType)
+    local backpack = Player.Backpack
+    local char = Player.Character
+    if not char then return end
 
-function GMON:EquipWeapon(type) local tool = GMON:GetWeapon(type) if tool then LocalPlayer.Character.Humanoid:EquipTool(tool) end end
+    local function equip(item)
+        if char:FindFirstChild(item.Name) == nil then
+            Player.Character.Humanoid:EquipTool(item)
+        end
+    end
 
+    if weaponType == "Melee" then
+        -- Cari tool melee prioritas
+        for _, tool in pairs(backpack:GetChildren()) do
+            if tool:IsA("Tool") and (tool.Name:lower():find("melee") or tool.Name:lower():find("katana") or tool.Name:lower():find("sword")) then
+                equip(tool)
+                return
+            end
+        end
+    elseif weaponType == "Fruit" then
+        -- Cari tool buah di backpack
+        for _, tool in pairs(backpack:GetChildren()) do
+            if tool:IsA("Tool") and tool.Name:lower():find("fruit") then
+                equip(tool)
+                return
+            end
+        end
+    elseif weaponType == "Sword" then
+        -- Prioritaskan sword
+        for _, tool in pairs(backpack:GetChildren()) do
+            if tool:IsA("Tool") and tool.Name:lower():find("sword") then
+                equip(tool)
+                return
+            end
+        end
+    elseif weaponType == "Gun" then
+        -- Cari senjata jarak jauh (gun)
+        for _, tool in pairs(backpack:GetChildren()) do
+            if tool:IsA("Tool") and (tool.Name:lower():find("gun") or tool.Name:lower():find("pistol") or tool.Name:lower():find("rifle")) then
+                equip(tool)
+                return
+            end
+        end
+    end
+end
 
----
+-- Simple attack function (klik kiri)
+local function attack()
+    local tool = Player.Character and Player.Character:FindFirstChildOfClass("Tool")
+    if not tool then return end
 
--- Auto Farm Feature --
+    -- Klik kiri otomatis (sebagai simulasi)
+    local mouse = Player:GetMouse()
+    -- Simulate attack by activating tool
+    tool:Activate()
+end
 
-GMON.AutoFarm = false GMON.SelectedWeapon = "Melee"
+-- Aimbot Logic (simple)
+local function aimbot()
+    if not GMON.AimbotEnabled() then return end
+    local target = getNearestEnemy()
+    if not target then return end
+    local targetPart = target:FindFirstChild("HumanoidRootPart")
+    if not targetPart then return end
 
-function GMON:StartAutoFarm() spawn(function() while GMON.AutoFarm do local mob = GMON:GetNearestMob() if mob then GMON:TweenTo(mob.HumanoidRootPart.Position + Vector3.new(0, 5, 0)) wait(0.5) GMON:EquipWeapon(GMON.SelectedWeapon) end wait() end end) end
+    -- Set camera CFrame ke target
+    local camera = workspace.CurrentCamera
+    camera.CFrame = CFrame.new(camera.CFrame.Position, targetPart.Position)
+end
 
-function GMON:GetNearestMob() local nearest local dist = math.huge for _, mob in pairs(workspace.Enemies:GetChildren()) do if mob:FindFirstChild("HumanoidRootPart") and mob:FindFirstChild("Humanoid") and mob.Humanoid.Health > 0 then local d = (mob.HumanoidRootPart.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude if d < dist then dist = d nearest = mob end end end return nearest end
+-- Auto Farm Logic
+local function autoFarm()
+    if not GMON.AutoFarmEnabled() then return end
 
+    local enemy = getNearestEnemy()
+    if enemy and enemy:FindFirstChild("HumanoidRootPart") then
+        -- Tween ke posisi dekat enemy
+        GMON.TweenTo(enemy.HumanoidRootPart.Position + Vector3.new(0, 3, 0), 300)
 
----
+        -- Equip weapon sesuai pilihan
+        equipWeapon(GMON.SelectedWeapon())
 
--- Aimbot Feature --
+        -- Attack terus sampai enemy mati
+        while enemy.Humanoid.Health > 0 and GMON.AutoFarmEnabled() do
+            attack()
+            task.wait(0.3)
+        end
+    else
+        task.wait(0.5)
+    end
+end
 
-GMON.Aimbot = false function GMON:EnableAimbot() local camera = workspace.CurrentCamera RunService.RenderStepped:Connect(function() if GMON.Aimbot then local target = GMON:GetNearestMob() if target then camera.CFrame = CFrame.new(camera.CFrame.Position, target.HumanoidRootPart.Position) end end end) end
+-- Auto Chest Logic
+local function autoChest()
+    if not GMON.AutoChestEnabled() then return end
+    local chest = getNearestChest()
+    if chest then
+        GMON.TweenTo(chest.Position + Vector3.new(0, 3, 0), 300)
+        task.wait(1.5)
+    else
+        task.wait(3)
+    end
+end
 
+-- Main Loop
+RunService.Heartbeat:Connect(function()
+    if GMON.AutoFarmEnabled() then
+        autoFarm()
+    end
+    if GMON.AutoChestEnabled() then
+        autoChest()
+    end
+    if GMON.AimbotEnabled() then
+        aimbot()
+    end
+end)
 
----
+-- Server Hop (Optional)
+local TeleportService = game:GetService("TeleportService")
+local PlaceId = game.PlaceId
 
--- Fruit Mastery --
+local function serverHop()
+    local servers = {}
+    local HttpService = game:GetService("HttpService")
+    local success, response = pcall(function()
+        return game:HttpGetAsync("https://games.roblox.com/v1/games/"..PlaceId.."/servers/Public?sortOrder=Asc&limit=100")
+    end)
+    if success then
+        local data = HttpService:JSONDecode(response)
+        if data and data.data then
+            for _, server in pairs(data.data) do
+                if server.playing < server.maxPlayers then
+                    table.insert(servers, server.id)
+                end
+            end
+        end
+    end
 
-GMON.FruitMastery = false function GMON:TrainFruit() spawn(function() while GMON.FruitMastery do GMON:EquipWeapon("Fruit") VirtualInputManager:SendKeyEvent(true, "Z", false, game) wait(5) end end) end
+    if #servers > 0 then
+        local randomServer = servers[math.random(1, #servers)]
+        TeleportService:TeleportToPlaceInstance(PlaceId, randomServer, Player)
+    end
+end
 
+-- Command to hop server via chat (/hop)
+Player.Chatted:Connect(function(msg)
+    if msg:lower() == "/hop" then
+        serverHop()
+    end
+end)
 
----
+-- Auto Equip Accessory (Example)
+local function autoEquipAccessory()
+    local char = Player.Character
+    if not char then return end
+    for _, acc in pairs(Player.Backpack:GetChildren()) do
+        if acc:IsA("Tool") and (acc.Name:lower():find("accessory") or acc.Name:lower():find("ring") or acc.Name:lower():find("amulet")) then
+            Player.Character.Humanoid:EquipTool(acc)
+        end
+    end
+end
 
--- Fast Attack + Click --
+-- Auto Equip accessory setiap 60 detik
+task.spawn(function()
+    while true do
+        autoEquipAccessory()
+        task.wait(60)
+    end
+end)
 
-GMON.FastAttack = false GMON.AutoClick = false function GMON:EnableAttack() spawn(function() while true do if GMON.FastAttack or GMON.AutoClick then pcall(function() local tool = LocalPlayer.Character:FindFirstChildOfClass("Tool") if tool then tool:Activate() end end) end wait(0.2) end end) end
-
-
----
-
--- Auto Equip Accessory --
-
-function GMON:AutoEquipAccessory() for _, item in pairs(LocalPlayer.Backpack:GetChildren()) do if item:IsA("Tool") and string.find(item.Name, "Accessory") then LocalPlayer.Character.Humanoid:EquipTool(item) end end end
-
-
----
-
--- Initialization --
-
-GMON:EnableAimbot() GMON:EnableAttack()
-
-return GMON
-
+print("GMON Hub source.lua loaded successfully.")
