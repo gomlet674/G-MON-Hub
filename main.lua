@@ -5,7 +5,7 @@ local Http    = game:GetService("HttpService")
 local Players = game:GetService("Players")
 
 -- load UI lib (misal Rayfield, Kavo, etc.)
-local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/gomlet674/G-Mon-Hub/assets/library.lua",true))()
+local UI = loadstring(game:HttpGet("https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/library.lua", true))()
 local Window  = Library:CreateWindow({Title="G-Mon Hub | Blox Fruits", Rounded=true, Drag=true})
 
 -- Tabs sesuai IsnaHamzah + Redz
