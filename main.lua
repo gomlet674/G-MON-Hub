@@ -6,7 +6,7 @@ local Players = game:GetService("Players")
 
 -- load UI lib (misal Rayfield, Kavo, etc.)
 local UI = loadstring(game:HttpGet("https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/library.lua", true))()
-local Window  = Library:CreateWindow({Title="G-Mon Hub | Blox Fruits", Rounded=true, Drag=true})
+local Window = UI:CreateWindow({Title="G-Mon Hub | Blox Fruits", Rounded=true, Drag=true})
 
 -- Tabs sesuai IsnaHamzah + Redz
 local T = {
@@ -78,5 +78,5 @@ T.Settings:Dropdown({Text="Toggle UI Key",List={"M","K","L"},Callback=function(k
 T.Settings:Slider({Text="UI Transparency",min=0,max=1,Default=0.3,Callback=function(v) Library.MainFrame.BackgroundTransparency=v end})
 
 -- finally init
-Library:Init()
+UI:Init()
 print("G-Mon Hub GUI loaded!")
