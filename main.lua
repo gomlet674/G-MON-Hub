@@ -71,28 +71,6 @@ toggleBtn.MouseButton1Click:Connect(function()
     frame.Visible = not frame.Visible
 end)
 
--- Global ON/OFF
-local globalToggle = New("TextButton", {
-    Text = "ON",
-    Size = UDim2.new(0, 50, 0, 25),
-    Position = UDim2.new(1, -60, 0, 5),
-    BackgroundColor3 = Color3.fromRGB(0, 170, 0),
-    TextColor3 = Color3.new(1,1,1),
-    Parent = frame
-})
-New("UICorner", {}, globalToggle)
-
-local globalState = true
-globalToggle.MouseButton1Click:Connect(function()
-    globalState = not globalState
-    globalToggle.Text = globalState and "ON" or "OFF"
-    globalToggle.BackgroundColor3 = globalState and Color3.fromRGB(0, 170, 0) or Color3.fromRGB(170, 0, 0)
-
-    for k, v in pairs(_G.Flags) do
-        _G.Flags[k] = globalState
-    end
-end)
-
 -- Tabs & Pages
 local tabNames = {
     "Info", "Main", "Item", "Sea", "Prehistoric",
