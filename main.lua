@@ -1,98 +1,22 @@
-repeat wait() until game:IsLoaded()
+-- main.lua - GMON Hub UI Script (Tab: Main)
 
--- Load source logic
-loadstring(game:HttpGet("https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/source.lua"))()
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/main/source.lua"))() local Window = Library.CreateLib("GMON Hub | Main", "Midnight")
 
--- UI Library (Contoh pakai Rayfield, bisa diganti sesuai preferensi)
-local Rayfield = loadstring(game:HttpGet("https://raw.githubusercontent.com/shlexware/Rayfield/main/source.lua"))()
+-- Main Tab local Main = Window:NewTab("Main") local MainSection = Main:NewSection("Auto Farm Settings")
 
-local Window = Rayfield:CreateWindow({
-   Name = "GMON Hub | Blox Fruits",
-   LoadingTitle = "GMON Hub Loading...",
-   LoadingSubtitle = "By Gomlet",
-   ConfigurationSaving = {
-      Enabled = true,
-      FolderName = "GMONHub", 
-      FileName = "GMONConfig"
-   },
-   Discord = {
-      Enabled = false
-   },
-   KeySystem = false
-})
+-- Dropdown: Select Weapon MainSection:NewDropdown("Select Weapon", "Choose weapon type", {"Melee", "Fruit", "Sword", "Gun"}, function(currentOption) getgenv().SelectedWeapon = currentOption end)
 
--- Main Tab
-local MainTab = Window:CreateTab("Main", 4483362458)
+-- Toggle: Fruit Mastery MainSection:NewToggle("Fruit Mastery", "Auto level up Fruit mastery", function(state) getgenv().FruitMastery = state end)
 
-MainTab:CreateToggle({
-   Name = "Auto Farm",
-   CurrentValue = false,
-   Flag = "AutoFarm",
-   Callback = function(Value)
-       shared.AutoFarm = Value
-   end,
-})
+-- Toggle: Auto Farm MainSection:NewToggle("Auto Farm", "Automatically farms enemies", function(state) getgenv().AutoFarm = state end)
 
-MainTab:CreateToggle({
-   Name = "Aimbot (Player)",
-   CurrentValue = false,
-   Flag = "Aimbot",
-   Callback = function(Value)
-       shared.Aimbot = Value
-   end,
-})
+-- Toggle: Fast Attack MainSection:NewToggle("Fast Attack", "Faster combat attacks", function(state) getgenv().FastAttack = state end)
 
-MainTab:CreateButton({
-   Name = "Refresh Weapon",
-   Callback = function()
-       RefreshWeaponList()
-   end,
-})
+-- Toggle: Auto Click MainSection:NewToggle("Auto Click", "Auto click ability/attack", function(state) getgenv().AutoClick = state end)
 
-MainTab:CreateDropdown({
-   Name = "Select Weapon",
-   Options = {"Melee", "Sword", "Blox Fruit"},
-   CurrentOption = "Melee",
-   Flag = "SelectedWeapon",
-   Callback = function(Value)
-       shared.SelectedWeapon = Value
-   end,
-})
+-- Toggle: Auto Equip Accessory MainSection:NewToggle("Auto Equip Accessory", "Equip best accessory automatically", function(state) getgenv().AutoEquipAccessory = state end)
 
-MainTab:CreateToggle({
-   Name = "Auto Equip Accessory",
-   CurrentValue = false,
-   Flag = "AutoEquipAccessory",
-   Callback = function(Value)
-       shared.AutoEquipAccessory = Value
-   end,
-})
+-- Toggle: Aimbot MainSection:NewToggle("Aimbot", "Aim at enemy automatically", function(state) getgenv().AimbotEnabled = state end)
 
--- Settings Tab
-local SettingTab = Window:CreateTab("Setting", 4483345998)
+-- Save current config to shared/global environment shared.GMON_Settings = getgenv()
 
-SettingTab:CreateToggle({
-   Name = "Fast Attack",
-   CurrentValue = false,
-   Flag = "FastAttack",
-   Callback = function(Value)
-       shared.FastAttack = Value
-   end,
-})
-
-SettingTab:CreateToggle({
-   Name = "Auto Click",
-   CurrentValue = false,
-   Flag = "AutoClick",
-   Callback = function(Value)
-       shared.AutoClick = Value
-   end,
-})
-
--- Add more tabs like Stats, Teleport, Players, DevilFruit, ESP-Raid, Buy Item as needed
-
-Rayfield:Notify({
-   Title = "GMON Hub Loaded",
-   Content = "Main UI Loaded Successfully",
-   Duration = 5
-})
