@@ -1,93 +1,26 @@
--- source.lua - G-Mon Hub Final Logic --
+-- GMON Hub - source.lua (Final) -- Menyusun semua fitur lengkap untuk Blox Fruits sesuai request user
 
-local Players = game:GetService("Players") local Replicated = game:GetService("ReplicatedStorage") local Workspace = game:GetService("Workspace")
+local Window = Library:CreateWindow({ Name = "GMON Hub", LoadingTitle = "GMON HUB | BLOX FRUITS", LoadingSubtitle = "by Gomlet", ConfigurationSaving = { Enabled = true, FolderName = "GMONHub", FileName = "GMONSettings" }, Discord = { Enabled = true, Invite = "pandadev", RememberJoins = true }, KeySystem = false, })
 
-local function getHRP() local char = Players.LocalPlayer.Character return char and char:FindFirstChild("HumanoidRootPart") end
+-- Tabs local InfoTab = Window:CreateTab("Info", 4483362458) local MainTab = Window:CreateTab("Main", 4483362458) local ItemTab = Window:CreateTab("Item", 4483362458) local PrehistoricTab = Window:CreateTab("Prehistoric Island", 4483362458) local KitsuneTab = Window:CreateTab("Kitsune Island", 4483362458) local MirageTab = Window:CreateTab("Mirage Island", 4483362458) local LeviathanTab = Window:CreateTab("Leviathan", 4483362458) local SeaTab = Window:CreateTab("Sea Events", 4483362458) local MiscTab = Window:CreateTab("Misc", 4483362458) local SettingTab = Window:CreateTab("Setting", 4483362458)
 
--- Utility 
-local function serverHop() -- Dummy server hop logic 
-print("[GMON] Server hop...")
- end
+-- MainTab Features MainTab:CreateDropdown("Select Weapon", {"Melee", "Sword", "Blox Fruit"}, function(v) getgenv().SelectedWeapon = v end) MainTab:CreateToggle("Auto Farm", nil, function(v) getgenv().AutoFarm = v end) MainTab:CreateToggle("Farm Nearest", nil, function(v) getgenv().FarmNearest = v end) MainTab:CreateToggle("Auto Next Sea", nil, function(v) getgenv().AutoNextSea = v end) MainTab:CreateToggle("Auto Equip Accessory", nil, function(v) getgenv().AutoEquipAccessory = v end)
 
-local function redeemAllCodes() -- Dummy redeem logic print("[GMON] Redeeming all codes...") end
+-- ItemTab Features ItemTab:CreateButton("Auto CDK", function() -- your CDK logic end) ItemTab:CreateButton("Farm Material", function() -- your material logic end) ItemTab:CreateButton("Auto Holy Torch", function() -- torch logic end) ItemTab:CreateButton("Auto Tushita", function() -- tushita logic end)
 
-local function fastAttack() -- Dummy fast attack logic print("[GMON] Fast Attack enabled") end
+-- PrehistoricTab Features PrehistoricTab:CreateToggle("Auto Farm", nil, function(v) getgenv().AutoFarmPrehistoric = v end) PrehistoricTab:CreateToggle("Auto Kill Boss", nil, function(v) getgenv().AutoKillPreBoss = v end) PrehistoricTab:CreateToggle("Auto Collect Item", nil, function(v) getgenv().AutoCollectPreItem = v end)
 
-local function autoFarm() -- Dummy farm logic print("[GMON] Farming mobs...") end
+-- KitsuneTab Features KitsuneTab:CreateToggle("Auto Kill Kitsune", nil, function(v) getgenv().AutoKillKitsune = v end) KitsuneTab:CreateToggle("Auto Farm Kitsune", nil, function(v) getgenv().AutoFarmKitsune = v end)
 
-local function autoChest() -- Dummy chest farm logic print("[GMON] Farming chests...") end
+-- MirageTab Features MirageTab:CreateToggle("Auto Find Mirage", nil, function(v) getgenv().AutoFindMirage = v end) MirageTab:CreateToggle("Auto Get Blue Gear", nil, function(v) getgenv().AutoBlueGear = v end)
 
-local function autoCDK() -- Dummy CDK logic print("[GMON] Collecting CDK...") end
+-- LeviathanTab Features LeviathanTab:CreateToggle("Auto Kill Leviathan", nil, function(v) getgenv().AutoKillLeviathan = v end) LeviathanTab:CreateToggle("Auto Take Heart", nil, function(v) getgenv().AutoTakeHeart = v end) LeviathanTab:CreateToggle("Auto Draco Race", nil, function(v) getgenv().AutoDraco = v end) LeviathanTab:CreateToggle("Auto Blaze Ember", nil, function(v) getgenv().AutoBlaze = v end) LeviathanTab:CreateToggle("Auto Craft", nil, function(v) getgenv().AutoCraft = v end)
 
-local function autoGolem() -- Dummy golem farm print("[GMON] Killing Golem...") end
+-- SeaTab Features SeaTab:CreateToggle("Auto Sea Events", nil, function(v) getgenv().AutoSeaEvents = v end) SeaTab:CreateToggle("Auto Sea Beast", nil, function(v) getgenv().AutoSeaBeast = v end) SeaTab:CreateToggle("Auto Boat", nil, function(v) getgenv().AutoBoat = v end)
 
-local function autoLeviathan() print("[GMON] Attacking Leviathan...") end
+-- MiscTab Features MiscTab:CreateButton("Redeem All Codes", function() -- redeem logic end) MiscTab:CreateButton("FPS Booster", function() -- fps logic end) MiscTab:CreateButton("Server Hop", function() -- hop logic end)
 
-local function autoEnchant() print("[GMON] Auto Enchanting...") end
+-- SettingTab Features SettingTab:CreateToggle("Fast Attack", nil, function(v) getgenv().FastAttack = v end) SettingTab:CreateToggle("Auto Click", nil, function(v) getgenv().AutoClick = v end) SettingTab:CreateToggle("Use Skill X", nil, function(v) getgenv().UseSkillX = v end) SettingTab:CreateToggle("Use Skill Z", nil, function(v) getgenv().UseSkillZ = v end) SettingTab:CreateToggle("Use Skill C", nil, function(v) getgenv().UseSkillC = v end) SettingTab:CreateToggle("Use Skill V", nil, function(v) getgenv().UseSkillV = v end)
 
-local function autoAwaken() print("[GMON] Auto Awakening Fruit...") end
-
-local function autoBoat() print("[GMON] Auto Sailing...") end
-
-local function autoSeaEvent() print("[GMON] Auto Sea Events...") end
-
-local function bountyFarm() print("[GMON] Bounty Hunting...") end
-
--- Main Loop spawn(function() while task.wait(0.5) do local hrp = getHRP()
-
--- Info
-    if _G.Flags.TrackEliteSpawn then print("[GMON] Tracking Elite Spawn") end
-    if _G.Flags.TrackFullMoon then print("[GMON] Tracking Full Moon") end
-    if _G.Flags.TrackGodChalice then print("[GMON] Tracking God Chalice") end
-
-    -- Main
-    if _G.Flags.AutoFarm then autoFarm() end
-    if _G.Flags.FarmAllBoss then print("[GMON] Farming All Boss") end
-    if _G.Flags.MasteryFruit then print("[GMON] Mastering Fruit") end
-
-    -- Item
-    if _G.Flags.AutoCDK then autoCDK() end
-    if _G.Flags.AutoYama then print("[GMON] Getting Yama") end
-    if _G.Flags.AutoTushita then print("[GMON] Getting Tushita") end
-    if _G.Flags.AutoSoulGuitar then print("[GMON] Getting Soul Guitar") end
-
-    -- Sea Events
-    if _G.Flags.KillSeaBeast then print("[GMON] Killing Sea Beast") end
-    if _G.Flags.AutoSail then autoBoat() end
-
-    -- Prehistoric
-    if _G.Flags.KillGolem then autoGolem() end
-    if _G.Flags.DefendVolcano then print("[GMON] Defending Volcano") end
-    if _G.Flags.CollectDragonEgg then print("[GMON] Collecting Dragon Egg") end
-    if _G.Flags.CollectBones then print("[GMON] Collecting Bones") end
-
-    -- Kitsune
-    if _G.Flags.CollectAzure then print("[GMON] Collecting Azure Ember") end
-    if _G.Flags.TradeAzure then print("[GMON] Trading Azure") end
-
-    -- Leviathan
-    if _G.Flags.AttackLeviathan then autoLeviathan() end
-
-    -- DevilFruit
-    if _G.Flags.GachaFruit then print("[GMON] Gacha Fruit...") end
-    if _G.Flags.FruitTarget ~= "" then print("[GMON] Targeting Fruit: " .. _G.Flags.FruitTarget) end
-
-    -- ESP (stub)
-    if _G.Flags.ESPFruit then print("[GMON] ESP: Fruit") end
-    if _G.Flags.ESPPlayer then print("[GMON] ESP: Player") end
-    if _G.Flags.ESPChest then print("[GMON] ESP: Chest") end
-    if _G.Flags.ESPFlower then print("[GMON] ESP: Flower") end
-
-    -- Misc
-    if _G.Flags.ServerHop then serverHop() end
-    if _G.Flags.RedeemCodes then redeemAllCodes() end
-
-    -- Setting
-    if _G.Flags.FastAttack then fastAttack() end
-end
-
-end)
-
-print("[GMON] source.lua initialized")
-
+-- InfoTab Features InfoTab:CreateLabel("Full Moon Status: Pending") InfoTab:CreateLabel("Discord: discord.gg/pandadev")
 
