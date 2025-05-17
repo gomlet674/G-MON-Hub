@@ -15,7 +15,7 @@ GMON Hub adalah script Roblox Blox Fruits lengkap dengan berbagai fitur auto far
 
 | Fitur                   | Deskripsi                                                                                  | Screenshot                          |
 |-------------------------|--------------------------------------------------------------------------------------------|-----------------------------------|
-| **Auto Farm**            | Auto farming musuh berdasarkan level dan posisi dengan tween (gerak halus)                | ![Auto Farm](./images/auto_farm.png)         |
+| **Auto Farm**            | Auto farming musuh berdasarkan level dan posisi dengan tween (gerak halus)                | ![Auto Farm](https://github.com/gomlet674/G-MON-Hub/blob/1cee51faa662c10ee6df2b5134c53cea8d6b84e3/file_00000000ed206230908b23c1c2bcede4.png)         |
 | **Auto Chest**           | Auto farming chest dengan tween ke posisi chest terdekat                                   | ![Auto Chest](./images/auto_chest.png)       |
 | **Select Weapon**        | Pilihan equip otomatis: Melee, Fruit, Sword, Gun                                          | ![Select Weapon](./images/select_weapon.png) |
 | **Aimbot**               | Kamera otomatis mengarah ke musuh saat aktif                                              | ![Aimbot](./images/aimbot.png)                 |
