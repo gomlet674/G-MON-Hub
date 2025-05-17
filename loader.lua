@@ -99,15 +99,31 @@ GetKey.TextColor3 = Color3.new(1, 1, 1)
 
 Instance.new("UICorner", GetKey).CornerRadius = UDim.new(0, 8)
 
+GetKey.MouseButton1Click:Connect(function()
+    setclipboard("https://pandadevelopment.net/getkey/ee311851f3c742a8f78dce99e56992555609d23497928e9b33802e7127610c2e")
+end)
+
 -- Key File Path
 local savedKeyPath = "gmon_key.txt"
 
--- Valid Key (bisa kamu ganti sesuai sistemmu)
-local validKey = "GmonHub311851f3c742a8f78dce99e56992555609d23497928e9b33802e7127610c2e"
+-- Ganti validKey dengan nil karena akan dicek lewat API
+local validKey = nil
 
--- Fungsi submit otomatis
+local function checkKeyWithPanda(key)
+    local HttpService = game:GetService("HttpService")
+    local success, response = pcall(function()
+        return game:HttpGet("https://pandadevelopment.net/api/checkKey?script_key="..key.."&api_key=ee311851f3c742a8f78dce99e56992555609d23497928e9b33802e7127610c2e")
+    end)
+
+    if success then
+        local data = HttpService:JSONDecode(response)
+        return data.status == "success"
+    end
+    return false
+end
+
 local function submitKey(key)
-    if key == validKey then
+    if checkKeyWithPanda(key) then
         writefile(savedKeyPath, key)
         ScreenGui:Destroy()
         loadstring(game:HttpGet("https://raw.githubusercontent.com/gomlet674/G-Mon-Hub/main/main.lua"))()
