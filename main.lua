@@ -304,48 +304,6 @@ task.spawn(function()
         task.wait(10)
     end
 end)
-
-local function AddDropdown(page, placeholder, list, onSelect)
-    local dropdown = New("TextButton", {
-        Text = placeholder,
-        Size = UDim2.new(1, 0, 0, 30),
-        BackgroundColor3 = Color3.fromRGB(60, 60, 60),
-        TextColor3 = Color3.new(1, 1, 1),
-        Parent = page
-    })
-    New("UICorner", {}, dropdown)
-
-    local isOpen = false
-    local options = {}
-
-    local dropdownFrame = New("Frame", {
-        Size = UDim2.new(1, 0, 0, #list * 25),
-        BackgroundColor3 = Color3.fromRGB(50, 50, 50),
-        Position = UDim2.new(0, 0, 0, 30),
-        Visible = false,
-        Parent = dropdown
-    })
-
-    New("UICorner", {}, dropdownFrame)
-
-    for i, option in ipairs(list) do
-        local btn = New("TextButton", {
-            Text = option,
-            Size = UDim2.new(1, 0, 0, 25),
-            BackgroundColor3 = Color3.fromRGB(70, 70, 70),
-            TextColor3 = Color3.new(1,1,1),
-            Parent = dropdownFrame
-        })
-        table.insert(options, btn)
-
-        btn.MouseButton1Click:Connect(function()
-            dropdown.Text = option
-            dropdownFrame.Visible = false
-            isOpen = false
-            onSelect(option)
-        end)
-    end
-
     dropdown.MouseButton1Click:Connect(function()
         isOpen = not isOpen
         dropdownFrame.Visible = isOpen
