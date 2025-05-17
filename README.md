@@ -1,3 +1,8 @@
+Berikut contoh README.md yang bisa kamu pakai untuk repositori GitHub script GMON Roblox Blox Fruits, lengkap dengan penjelasan fitur dan placeholder gambar. Kamu tinggal ganti link gambar sesuai dengan file gambar yang kamu upload di repo kamu.
+
+
+---
+
 # GMON Hub - Roblox Blox Fruits Script
 
 ![GMON Hub Banner](./images/banner.png)
@@ -33,3 +38,39 @@ GMON Hub adalah script Roblox Blox Fruits lengkap dengan berbagai fitur auto far
 ---
 
 ## Struktur File
+
+GMON-Hub/ │ ├── loader.lua       # Script loader dan sistem key ├── main.lua         # Script UI dan toggle button ├── source.lua       # Logic utama fitur script ├── README.md        # Dokumentasi ini └── images/          # Folder screenshot dan banner ├── banner.png ├── auto_farm.png ├── auto_chest.png ├── select_weapon.png ├── aimbot.png ├── tween.png ├── server_hop.png ├── accessory.png └── ui_rgb.png
+
+---
+
+## Screenshot
+
+![GMON Hub UI](./images/ui_rgb.png)
+
+---
+
+## Disclaimer
+
+Script ini hanya untuk penggunaan pribadi dan edukasi. Gunakan dengan bijak sesuai aturan game Roblox.
+
+---
+
+## License
+
+MIT License © 2025 YourName
+
+---
+
+Jika kamu ingin request fitur atau melaporkan bug, silakan buat issue di repository ini.
+
+---
+
+**Terima kasih sudah menggunakan GMON Hub!**
+
+
+---
+
+Kalau kamu ingin, aku bisa bantu buatkan banner dan screenshot dummy untuk dimasukkan ke folder images agar README lebih menarik.
+
+Mau?
+
