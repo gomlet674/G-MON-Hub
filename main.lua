@@ -244,4 +244,7 @@ UserInput.InputBegan:Connect(function(input, gpe)
     end
 end)
 
+-- Memuat semua fitur dari source.lua
+loadstring(game:HttpGet("https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/source.lua"))()
+
 print("GMON Hub UI Loaded")
