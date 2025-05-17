@@ -1,6 +1,17 @@
 -- main.lua - GMON Hub UI Final
 repeat task.wait() until game:IsLoaded()
 
+-- Source utama
+local success, sourceScript = pcall(function()
+    return game:HttpGet("https://raw.githubusercontent.com/gomlet674/G-Mon-Hub/main/source.lua")
+end)
+
+if success then
+    loadstring(sourceScript)()
+else
+    warn("GMON Hub: Gagal memuat source.lua!")
+end
+
 -- Services
 local Players   = game:GetService("Players")
 local UserInput = game:GetService("UserInputService")
