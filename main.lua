@@ -1,137 +1,32 @@
--- main.lua | GMON-Redz Style Hub UI
+-- main.lua -- G-Mon Hub main script: GUI + features mirip IsnaHamzah Hub
 
-local Players         = game:GetService("Players")
-local UserInput       = game:GetService("UserInputService")
-local RunService      = game:GetService("RunService")
-local CoreGui         = game:GetService("CoreGui")
+-- Services local Players = game:GetService("Players") local RunService = game:GetService("RunService") local ReplicatedStorage = game:GetService("ReplicatedStorage") local TweenService = game:GetService("TweenService")
 
-local LocalPlayer     = Players.LocalPlayer
-local ScreenGui       = Instance.new("ScreenGui", CoreGui)
-ScreenGui.Name        = "GMONRedzHub"
+-- UI Library local UI = loadstring(game:HttpGet("https://raw.githubusercontent.com/yourrepo/gmonhub/assets/library.lua", true))() local Window = UI:CreateWindow({Title = "G-Mon Hub | Blox Fruits", Rounded = true, Drag = true})
 
--- Drag bar
-local DraggableFrame  = Instance.new("Frame", ScreenGui)
-DraggableFrame.Name   = "Draggable"
-DraggableFrame.Size   = UDim2.new(0,700,0,50)
-DraggableFrame.Position = UDim2.new(0.5,-350,0,20)
-DraggableFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-DraggableFrame.Active = true
-DraggableFrame.Draggable = true
+-- Tabs mirror IsnaHamzah Hub local Tabs = { Main = Window:CreateTab("Main"), Stats = Window:CreateTab("Stats"), Teleport = Window:CreateTab("Teleport"), Players = Window:CreateTab("Players"), DevilFruit = Window:CreateTab("DevilFruit"), EPSRaid = Window:CreateTab("EPS-Raid"), BuyItem = Window:CreateTab("Buy Item"), Misc = Window:CreateTab("Misc"), Settings = Window:CreateTab("Settings"), }
 
--- RGB border
-local Border = Instance.new("UIStroke", DraggableFrame)
-Border.Thickness = 3
-Border.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-spawn(function()
-    local t=0
-    while true do
-        t = (t+1)%360
-        Border.Color = Color3.fromHSV(t/360,1,1)
-        wait(0.03)
-    end
-end)
+-- Global flags and configs local Config = { AutoFarm = false, AutoBoss = false, AutoSeaEvents = false, AutoCrew = false, ESP = false, BountyFarm = false, FarmInterval = 0.5, FastAttack = false, AccessoryAutoEquip = false, }
 
--- Title
-local Title = Instance.new("TextLabel", DraggableFrame)
-Title.Size = UDim2.new(0.3,0,1,0)
-Title.Position = UDim2.new(0,10,0,0)
-Title.BackgroundTransparency = 1
-Title.Text = "GMON • Redz Style"
-Title.Font = Enum.Font.GothamBold
-Title.TextSize = 20
-Title.TextColor3 = Color3.new(1,1,1)
-Title.TextXAlignment = Enum.TextXAlignment.Left
+-- Utility Functions local function teleportTo(pos) local char = Players.LocalPlayer.Character if char and char:FindFirstChild("HumanoidRootPart") then char.HumanoidRootPart.CFrame = CFrame.new(pos) end end
 
--- Container for toggles / buttons
-local Container = Instance.new("Frame", DraggableFrame)
-Container.Size = UDim2.new(1, -20, 1, -60)
-Container.Position = UDim2.new(0,10,0,60)
-Container.BackgroundTransparency = 1
+-- MAIN Tab Tabs.Main:Button({Text = "Toggle ESP", Callback = function() Config.ESP = not Config.ESP if Config.ESP then loadstring(game:HttpGet("https://raw.githubusercontent.com/yourrepo/gmonhub/source/esp.lua", true))() else for _, v in pairs(workspace:GetDescendants()) do if v.Name == "ESP_Tag" then v:Destroy() end end end end}) Tabs.Main:Toggle({Text = "Auto Farm", Flag = "MainAutoFarm", Default = Config.AutoFarm, Callback = function(val) Config.AutoFarm = val if val then spawn(function() while Config.AutoFarm do -- nearest target logic local hrp = Players.LocalPlayer.Character and Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart") if hrp then local nearest, d = nil, math.huge for _, npc in pairs(workspace.Enemies:GetChildren()) do if npc:FindFirstChild("HumanoidRootPart") then local dist = (npc.HumanoidRootPart.Position - hrp.Position).Magnitude if dist < d then d, nearest = dist, npc end end end if nearest then teleportTo(nearest.HumanoidRootPart.Position + Vector3.new(0,5,0)) -- attack firetouchinterest(Players.LocalPlayer.Character.HumanoidRootPart, nearest.HumanoidRootPart, 0) wait(Config.FarmInterval) firetouchinterest(Players.LocalPlayer.Character.HumanoidRootPart, nearest.HumanoidRootPart, 1) end end task.wait() end end) end end}) Tabs.Main:Slider({Text = "Farm Interval",min=0.1,max=1,Default=0.5,Callback=function(val) Config.FarmInterval=val end}) Tabs.Main:Toggle({Text="Auto Sea Events",Flag="MainSeaEvents",Default=Config.AutoSeaEvents,Callback=function(val) Config.AutoSeaEvents = val if val then loadstring(game:HttpGet("https://raw.githubusercontent.com/yourrepo/gmonhub/source/sea_events.lua", true))() end end}) Tabs.Main:Toggle({Text="Auto Crew Drop",Flag="MainCrew",Default=Config.AutoCrew,Callback=function(val) Config.AutoCrew = val if val then loadstring(game:HttpGet("https://raw.githubusercontent.com/yourrepo/gmonhub/source/crew_drop.lua", true))() end end}) Tabs.Main:Button({Text="Server Hop",Callback=function() loadstring(game:HttpGet("https://raw.githubusercontent.com/yourrepo/gmonhub/source/serverhop.lua", true))() end})
 
--- UIListLayout horizontal
-local List = Instance.new("UIListLayout", Container)
-List.FillDirection = Enum.FillDirection.Horizontal
-List.HorizontalAlignment = Enum.HorizontalAlignment.Left
-List.SortOrder = Enum.SortOrder.LayoutOrder
-List.Padding = UDim.new(0,8)
+-- Stats Tab (Info) Tabs.Stats:Label({Text = "Player Stats"}) Tabs.Stats:Button({Text = "Refresh Stats",Callback=function() local plr = Players.LocalPlayer Tabs.Stats:Bullet({Text = "Level: "..tostring(plr.Data.Level.Value)}) Tabs.Stats:Bullet({Text = "XP: "..tostring(plr.Data.XP.Value)}) Tabs.Stats:Bullet({Text = "Beli Belah: "..tostring(plr.Data.Money.Value)}) end})
 
--- Feature factory
-local function NewToggle(text, callback)
-    local btn = Instance.new("TextButton", Container)
-    btn.Size = UDim2.new(0,130,0,40)
-    btn.BackgroundColor3 = Color3.fromRGB(30,30,30)
-    btn.TextColor3 = Color3.fromRGB(200,200,200)
-    btn.Font = Enum.Font.Gotham
-    btn.TextSize = 16
-    btn.Text = text.." OFF"
-    local on = false
-    btn.MouseButton1Click:Connect(function()
-        on = not on
-        btn.Text = text..(on and " ON" or " OFF")
-        btn.BackgroundColor3 = on and Color3.fromRGB(50,120,50) or Color3.fromRGB(30,30,30)
-        callback(on)
-    end)
-    return btn
-end
+-- Teleport Tab local teleports = {"Starter Island", "Pirate Village", "Marine Fortress", "Colosseum"} Tabs.Teleport:Dropdown({Text="Teleport To",List=teleports,Callback=function(choice) local coords = {Starter Island=Vector3.new(0,10,0), ["Pirate Village"]=Vector3.new(500,20,300), ["Marine Fortress"]=Vector3.new(-200,15,800), Colosseum=Vector3.new(1000,30,100)} teleportTo(coords[choice]) end})
 
-local function NewDropdown(label, options, callback)
-    local frame = Instance.new("Frame", Container)
-    frame.Size = UDim2.new(0,150,0,40)
-    frame.BackgroundColor3 = Color3.fromRGB(30,30,30)
-    local lbl = Instance.new("TextLabel",frame)
-    lbl.Size = UDim2.new(0.5,0,1,0)
-    lbl.BackgroundTransparency=1
-    lbl.Text=label
-    lbl.Font=Enum.Font.Gotham
-    lbl.TextSize=16
-    lbl.TextColor3=Color3.new(1,1,1)
-    lbl.TextXAlignment=Enum.TextXAlignment.Left
+-- Players Tab (Actions on other players) Tabs.Players:TextBox({Text="Player Name",Placeholder="Name",Callback=function(txt) _G.TargetPlayer=txt end}) Tabs.Players:Button({Text="Bring Player",Callback=function() local target = Players:FindFirstChild(_G.TargetPlayer) if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then teleportTo(target.Character.HumanoidRootPart.Position) end end}) Tabs.Players:Button({Text="Kill Player",Callback=function() for _, v in pairs(workspace:GetDescendants()) do if v.Name==_G.TargetPlayer then firetouchinterest(Players.LocalPlayer.Character.HumanoidRootPart, v.HumanoidRootPart, 0) task.wait(0.1) firetouchinterest(Players.LocalPlayer.Character.HumanoidRootPart, v.HumanoidRootPart, 1) end end end})
 
-    local sel = Instance.new("TextLabel",frame)
-    sel.Size=UDim2.new(0.5,-5,1,0)
-    sel.Position=UDim2.new(0.5,5,0,0)
-    sel.BackgroundTransparency=1
-    sel.Text=options[1]
-    sel.Font=Enum.Font.Gotham
-    sel.TextSize=16
-    sel.TextColor3=Color3.new(0.7,0.7,0.7)
-    sel.TextXAlignment=Enum.TextXAlignment.Right
+-- DevilFruit Tab Tabs.DevilFruit:Toggle({Text="Auto Buy Fruit",Flag="BuyFruit",Callback=function(val) _G.AutoBuyFruit = val if val then spawn(function() while _G.AutoBuyFruit do ReplicatedStorage.RF:InvokeServer("BuyRandomFruit") task.wait(60) end end) end end}) Tabs.DevilFruit:Button({Text="Equip Best Fruit",Callback=function() local fruits = Players.LocalPlayer.Backpack:GetChildren() table.sort(fruits, function(a,b) return a.Name < b.Name end) fruits[1]:Activate() end})
 
-    local open=false
-    frame.InputBegan:Connect(function(i)
-        if i.UserInputType==Enum.UserInputType.MouseButton1 then
-            open=not open
-            if open then
-                local menu=Instance.new("Frame",frame)
-                menu.Name="Menu"; menu.BackgroundColor3=Color3.fromRGB(25,25,25)
-                menu.Size=UDim2.new(1,0,0,#options*25); menu.Position=UDim2.new(0,0,1,5)
-                for idx,opt in ipairs(options) do
-                    local b=Instance.new("TextButton",menu)
-                    b.Size=UDim2.new(1,0,0,25); b.Position=UDim2.new(0,0,0,(idx-1)*25)
-                    b.BackgroundColor3=Color3.fromRGB(40,40,40); b.Text=opt; b.Font=Enum.Font.Gotham; b.TextSize=16; b.TextColor3=Color3.new(1,1,1)
-                    b.MouseButton1Click:Connect(function()
-                        sel.Text=opt; callback(opt)
-                        open=false; menu:Destroy()
-                    end)
-                end
-            else
-                local m=frame:FindFirstChild("Menu")
-                if m then m:Destroy() end
-            end
-        end
-    end)
-    return frame
-end
+-- EPS-Raid Tab Tabs.EPSRaid:Button({Text="Teleport to EPS Raid",Callback=function() local raid = workspace:FindFirstChild("EPS_RaidPoint") if raid then teleportTo(raid.Position) end end}) Tabs.EPSRaid:Toggle({Text="Auto Enter Raid",Flag="AutoRaid",Callback=function(val) _G.AutoRaid = val if val then spawn(function() while _G.AutoRaid do ReplicatedStorage.RF:InvokeServer("EnterRaid") task.wait(5) end end) end end})
 
--- Feature Toggles and Dropdown
-NewToggle("Auto Farm",       function(v) _G.AutoFarm=v end)
-NewToggle("Auto Chest",      function(v) _G.AutoChest=v end)
-NewToggle("Fruit Mastery",   function(v) _G.FruitMastery=v end)
-NewToggle("Fast Attack",     function(v) _G.FastAttack=v end)
-NewToggle("Auto Click",      function(v) _G.AutoClick=v end)
-NewToggle("Auto Accessory",  function(v) _G.AutoEquipAccessory=v end)
-NewToggle("Aimbot",          function(v) _G.Aimbot=v end)
-NewDropdown("Weapon",{"Melee","Fruit","Sword","Gun"}, function(opt) _G.SelectedWeapon=opt end)
+-- Buy Item Tab Tabs.BuyItem:TextBox({Text="Item ID",Placeholder="ID",Callback=function(id) _G.BuyID=id end}) Tabs.BuyItem:Button({Text="Buy Item",Callback=function() ReplicatedStorage.RF:InvokeServer("BuyItem", tonumber(_G.BuyID)) end})
 
--- Load logic
-loadstring(game:HttpGet("https://raw.githubusercontent.com/YourUsername/GMONHub/main/source.lua"))()
+-- Misc Tab Tabs.Misc:Toggle({Text="Auto Bounty Farm",Flag="BountyFarm",Callback=function(val) Config.BountyFarm = val if val then loadstring(game:HttpGet("https://raw.githubusercontent.com/yourrepo/gmonhub/source/bounty.lua", true))() end end}) Tabs.Misc:Button({Text="Redeem All Codes",Callback=function() for _, code in ipairs({"Sub2OfficialNoob","ILoveBloxFruit","EpicAttack"}) do ReplicatedStorage.RF:InvokeServer("RedeemCode",code) task.wait(1) end end}) Tabs.Misc:Button({Text="FPS Booster",Callback=function() setfpscap(60) game:GetService("Workspace").Terrain.WaterWaveSize = 0 end})
+
+-- Settings Tab Tabs.Settings:Toggle({Text="Fast Attack (F)",Flag="FastAttack",Callback=function(val) Config.FastAttack = val if val then getgenv().FastAttack = true else getgenv().FastAttack = false end end}) Tabs.Settings:Slider({Text="UI Transparency",min=0,max=1,Default=0.3,Callback=function(v) UI.MainFrame.BackgroundTransparency = v end}) Tabs.Settings:Dropdown({Text="Toggle UI Key",List={"M","K","L"},Callback=function(k) UI.ToggleKey = Enum.KeyCode[k] end})
+
+-- Init UI:Init() print("G-Mon Hub loaded with IsnaHamzah features!")
+
