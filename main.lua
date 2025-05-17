@@ -104,7 +104,7 @@ for i, name in ipairs(tabNames) do
         BackgroundTransparency = 0.5,
         BackgroundColor3 = Color3.fromRGB(40, 40, 40),
         TextColor3 = Color3.new(1,1,1),
-        Parent = tabBar
+        Parent = tabScroll -- FIXED: from tabBar to tabScroll
     })
     New("UICorner", {}, btn)
 
@@ -122,7 +122,6 @@ for i, name in ipairs(tabNames) do
         Padding = UDim.new(0, 5)
     })
 
-    -- Tambahkan ke daftar pages dan tabs
     table.insert(tabs, btn)
     table.insert(pages, page)
 
@@ -249,13 +248,6 @@ AddToggle(pg, "Auto Awaken Fruit", "AutoAwaken")
 pg = pages[11]
 AddToggle(pg, "Fast Attack", "FastAttack")
 AddText(pg, "Toggle GUI: Press M or click left button")
-
--- M Key toggle
-UserInput.InputBegan:Connect(function(input, gpe)
-    if not gpe and input.KeyCode == Enum.KeyCode.M then
-        frame.Visible = not frame.Visible
-    end
-end)
 
 -- M Key toggle
 UserInput.InputBegan:Connect(function(input, gpe)
