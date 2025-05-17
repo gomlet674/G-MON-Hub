@@ -1,112 +1,98 @@
--- main.lua repeat wait() until game:IsLoaded()
+repeat wait() until game:IsLoaded()
 
--- Load source.lua (must be hosted via raw link or local execution depending on executor) loadstring(game:HttpGet("https://raw.githubusercontent.com/gomlet674/G-MON-Hub/refs/heads/main/source.lua"))()
+-- Load source logic
+loadstring(game:HttpGet("https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/source.lua"))()
 
--- You can replace the URL above with your own if hosting elsewhere.
+-- UI Library (Contoh pakai Rayfield, bisa diganti sesuai preferensi)
+local Rayfield = loadstring(game:HttpGet("https://raw.githubusercontent.com/shlexware/Rayfield/main/source.lua"))()
 
--- source.lua local chestToggle = false local espToggle = false
+local Window = Rayfield:CreateWindow({
+   Name = "GMON Hub | Blox Fruits",
+   LoadingTitle = "GMON Hub Loading...",
+   LoadingSubtitle = "By Gomlet",
+   ConfigurationSaving = {
+      Enabled = true,
+      FolderName = "GMONHub", 
+      FileName = "GMONConfig"
+   },
+   Discord = {
+      Enabled = false
+   },
+   KeySystem = false
+})
 
-local function notify(msg) pcall(function() game.StarterGui:SetCore("SendNotification", { Title = "GMON HUB", Text = msg, Duration = 5 }) end) end
+-- Main Tab
+local MainTab = Window:CreateTab("Main", 4483362458)
 
-local function espGodChalice() notify("ESP God Chalice Active!") while espToggle do task.wait(1) for _, obj in pairs(workspace:GetDescendants()) do if obj:IsA("Tool") and obj.Name == "God's Chalice" and not obj:FindFirstChild("ESP") then local billboard = Instance.new("BillboardGui", obj) billboard.Name = "ESP" billboard.Size = UDim2.new(0, 100, 0, 40) billboard.Adornee = obj.Handle or obj:FindFirstChildWhichIsA("Part") billboard.AlwaysOnTop = true
+MainTab:CreateToggle({
+   Name = "Auto Farm",
+   CurrentValue = false,
+   Flag = "AutoFarm",
+   Callback = function(Value)
+       shared.AutoFarm = Value
+   end,
+})
 
-local text = Instance.new("TextLabel", billboard)
-            text.Size = UDim2.new(1, 0, 1, 0)
-            text.Text = "GOD CHALICE"
-            text.TextColor3 = Color3.new(1, 0, 0)
-            text.BackgroundTransparency = 1
-            text.TextStrokeTransparency = 0.5
-        end
-    end
-end
+MainTab:CreateToggle({
+   Name = "Aimbot (Player)",
+   CurrentValue = false,
+   Flag = "Aimbot",
+   Callback = function(Value)
+       shared.Aimbot = Value
+   end,
+})
 
-end
+MainTab:CreateButton({
+   Name = "Refresh Weapon",
+   Callback = function()
+       RefreshWeaponList()
+   end,
+})
 
-local function farmChest() notify("Farm Chest Started!") while chestToggle do local chests = {} for _, v in pairs(workspace:GetDescendants()) do if v:IsA("Model") and not v:FindFirstChild("HumanoidRootPart") and v.Name:find("Chest") then table.insert(chests, v) elseif v:IsA("Tool") and v.Name == "God's Chalice" then notify("FOUND GOD CHALICE!") chestToggle = false return end end
+MainTab:CreateDropdown({
+   Name = "Select Weapon",
+   Options = {"Melee", "Sword", "Blox Fruit"},
+   CurrentOption = "Melee",
+   Flag = "SelectedWeapon",
+   Callback = function(Value)
+       shared.SelectedWeapon = Value
+   end,
+})
 
-for i = #chests, 2, -1 do
-        local j = math.random(1, i)
-        chests[i], chests[j] = chests[j], chests[i]
-    end
+MainTab:CreateToggle({
+   Name = "Auto Equip Accessory",
+   CurrentValue = false,
+   Flag = "AutoEquipAccessory",
+   Callback = function(Value)
+       shared.AutoEquipAccessory = Value
+   end,
+})
 
-    for _, chest in pairs(chests) do
-        if not chestToggle then break end
-        if chest and chest:IsDescendantOf(workspace) then
-            game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = chest:GetModelCFrame()
-            task.wait(1.25)
-        end
-    end
+-- Settings Tab
+local SettingTab = Window:CreateTab("Setting", 4483345998)
 
-    task.wait(2)
-end
+SettingTab:CreateToggle({
+   Name = "Fast Attack",
+   CurrentValue = false,
+   Flag = "FastAttack",
+   Callback = function(Value)
+       shared.FastAttack = Value
+   end,
+})
 
-end
+SettingTab:CreateToggle({
+   Name = "Auto Click",
+   CurrentValue = false,
+   Flag = "AutoClick",
+   Callback = function(Value)
+       shared.AutoClick = Value
+   end,
+})
 
-local function createToggleUI() if game:GetService("CoreGui"):FindFirstChild("GMON_Toggle") then game:GetService("CoreGui"):FindFirstChild("GMON_Toggle"):Destroy() end
+-- Add more tabs like Stats, Teleport, Players, DevilFruit, ESP-Raid, Buy Item as needed
 
-local gui = Instance.new("ScreenGui", game:GetService("CoreGui"))
-gui.Name = "GMON_Toggle"
-gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-
-local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.new(0, 160, 0, 160)
-frame.Position = UDim2.new(0.02, 0, 0.3, 0)
-frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-frame.Active = true
-frame.Draggable = true
-
-local uiCorner = Instance.new("UICorner", frame)
-uiCorner.CornerRadius = UDim.new(1, 0)
-
-local stroke = Instance.new("UIStroke", frame)
-stroke.Thickness = 2
-stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-
-task.spawn(function()
-    while gui and gui.Parent do
-        for i = 0, 1, 0.02 do
-            local r = math.sin(i * math.pi * 2) * 127 + 128
-            local g = math.sin(i * math.pi * 2 + 2) * 127 + 128
-            local b = math.sin(i * math.pi * 2 + 4) * 127 + 128
-            stroke.Color = Color3.fromRGB(r, g, b)
-            task.wait(0.03)
-        end
-    end
-end)
-
-local espBtn = Instance.new("TextButton", frame)
-espBtn.Size = UDim2.new(0.9, 0, 0, 40)
-espBtn.Position = UDim2.new(0.05, 0, 0.15, 0)
-espBtn.Text = "ESP God Chalice: OFF"
-espBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-espBtn.TextColor3 = Color3.new(1, 1, 1)
-Instance.new("UICorner", espBtn).CornerRadius = UDim.new(0, 10)
-
-espBtn.MouseButton1Click:Connect(function()
-    espToggle = not espToggle
-    espBtn.Text = "ESP God Chalice: " .. (espToggle and "ON" or "OFF")
-    if espToggle then
-        task.spawn(espGodChalice)
-    end
-end)
-
-local chestBtn = Instance.new("TextButton", frame)
-chestBtn.Size = UDim2.new(0.9, 0, 0, 40)
-chestBtn.Position = UDim2.new(0.05, 0, 0.55, 0)
-chestBtn.Text = "Farm Chest: OFF"
-chestBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-chestBtn.TextColor3 = Color3.new(1, 1, 1)
-Instance.new("UICorner", chestBtn).CornerRadius = UDim.new(0, 10)
-
-chestBtn.MouseButton1Click:Connect(function()
-    chestToggle = not chestToggle
-    chestBtn.Text = "Farm Chest: " .. (chestToggle and "ON" or "OFF")
-    if chestToggle then
-        task.spawn(farmChest)
-    end
-end)
-
-end
-
-createToggleUI()
-
+Rayfield:Notify({
+   Title = "GMON Hub Loaded",
+   Content = "Main UI Loaded Successfully",
+   Duration = 5
+})
