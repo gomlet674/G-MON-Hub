@@ -4,17 +4,20 @@ local espToggle = false
 
 -- Simple Notification
 local function notify(msg)
-    game.StarterGui:SetCore("SendNotification", {
-        Title = "GMON HUB",
-        Text = msg,
-        Duration = 5
-    })
+    pcall(function()
+        game.StarterGui:SetCore("SendNotification", {
+            Title = "GMON HUB",
+            Text = msg,
+            Duration = 5
+        })
+    end)
 end
 
 -- ESP GOD CHALICE
 local function espGodChalice()
+    notify("ESP God Chalice Active!")
     while espToggle do
-        task.wait(2)
+        task.wait(1)
         for _, obj in pairs(workspace:GetDescendants()) do
             if obj:IsA("Tool") and obj.Name == "God's Chalice" and not obj:FindFirstChild("ESP") then
                 local billboard = Instance.new("BillboardGui", obj)
@@ -29,8 +32,6 @@ local function espGodChalice()
                 text.TextColor3 = Color3.new(1, 0, 0)
                 text.BackgroundTransparency = 1
                 text.TextStrokeTransparency = 0.5
-
-                notify("ESP God Chalice Active!")
             end
         end
     end
@@ -38,29 +39,46 @@ end
 
 -- FARM CHEST
 local function farmChest()
+    notify("Farm Chest Started!")
     while chestToggle do
+        local chests = {}
         for _, v in pairs(workspace:GetDescendants()) do
-            if not chestToggle then break end
-
-            if v:IsA("Tool") and v.Name == "God's Chalice" then
+            if v:IsA("Model") and not v:FindFirstChild("HumanoidRootPart") and v.Name:find("Chest") then
+                table.insert(chests, v)
+            elseif v:IsA("Tool") and v.Name == "God's Chalice" then
                 notify("FOUND GOD CHALICE!")
                 chestToggle = false
-                break
-            end
-
-            if v:IsA("Model") and v:FindFirstChild("HumanoidRootPart") == nil and string.find(v.Name, "Chest") then
-                game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = v:GetModelCFrame()
-                task.wait(1.5)
+                return
             end
         end
-        task.wait(3)
+
+        -- Kocok urutan chest agar tidak tempat yang sama terus
+        for i = #chests, 2, -1 do
+            local j = math.random(1, i)
+            chests[i], chests[j] = chests[j], chests[i]
+        end
+
+        for _, chest in pairs(chests) do
+            if not chestToggle then break end
+            if chest and chest:IsDescendantOf(workspace) then
+                game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = chest:GetModelCFrame()
+                task.wait(1.25)
+            end
+        end
+
+        task.wait(2)
     end
 end
 
 -- Toggle UI (melengkung dan RGB toggle)
 local function createToggleUI()
+    if game:GetService("CoreGui"):FindFirstChild("GMON_Toggle") then
+        game:GetService("CoreGui"):FindFirstChild("GMON_Toggle"):Destroy()
+    end
+
     local gui = Instance.new("ScreenGui", game:GetService("CoreGui"))
     gui.Name = "GMON_Toggle"
+    gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
     local frame = Instance.new("Frame", gui)
     frame.Size = UDim2.new(0, 160, 0, 160)
@@ -77,7 +95,7 @@ local function createToggleUI()
     stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 
     task.spawn(function()
-        while true do
+        while gui and gui.Parent do
             for i = 0, 1, 0.02 do
                 local r = math.sin(i * math.pi * 2) * 127 + 128
                 local g = math.sin(i * math.pi * 2 + 2) * 127 + 128
