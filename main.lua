@@ -185,30 +185,41 @@ local function AddInput(page, placeholder, onInput)
     end)
 end
 
+-- Contoh fungsi AddToggle
+function AddToggle(page, labelOff, flagName)
+    local toggle = Instance.new("TextButton") -- contoh GUI element
+    toggle.Text = _G.Flags[flagName] and labelOff:gsub("Off", "On") or labelOff
+    toggle.MouseButton1Click:Connect(function()
+        _G.Flags[flagName] = not _G.Flags[flagName]
+        toggle.Text = _G.Flags[flagName] and labelOff:gsub("Off", "On") or labelOff
+    end)
+    toggle.Parent = page
+end
+
 -- Populate Tabs
 -- Info
 local pg = pages[1]
-AddToggle(pg, "Kill Elite Spawn Off", "Kill elite Spawn On")
-AddToggle(pg, "Lock Full Moon Off", "Lock Full Moon On")
-AddToggle(pg, " Farm God Chalice Off", "Farm God Chalice On")
+AddToggle(pg, "Kill Elite Spawn", "Kill elite Spawn")
+AddToggle(pg, "Lock Full Moon", "Lock Full Moon")
+AddToggle(pg, " Farm God Chalice", "Farm God Chalice")
 
 -- Main
 pg = pages[2]
-AddToggle(pg, "Auto Farm Off", "AutoFarm On")
+AddToggle(pg, "Auto Farm", "AutoFarm")
 AddInput(pg, "Select Boss", function(text)
     _G.Flags.SelectBoss = text
 end)
 AddToggle(pg, "Farm Boss Selected", "FarmBossSelected")
-AddToggle(pg, "Farm All Boss Off", "FarmAllBoss On")
-AddToggle(pg, "Mastery Fruit Off", "MasteryFruit On")
-AddToggle(pg, "Aimbot Off", "Aimbot On") 
+AddToggle(pg, "Farm All Boss ", "FarmAllBoss")
+AddToggle(pg, "Mastery Fruit", "MasteryFruit")
+AddToggle(pg, "Aimbot", "Aimbot") 
 
 -- Item
 pg = pages[3]
-AddToggle(pg, "Auto CDK Off", "AutoCDK On")
-AddToggle(pg, "Auto Yama Off", "AutoYama On")
-AddToggle(pg, "Auto Tushita Off", "AutoTushita On")
-AddToggle(pg, "Auto Soul Guitar Off", "AutoSoulGuitar On")
+AddToggle(pg, "Auto CDK", "AutoCDK")
+AddToggle(pg, "Auto Yama", "AutoYama")
+AddToggle(pg, "Auto Tushita", "AutoTushita")
+AddToggle(pg, "Auto Soul Guitar", "AutoSoulGuitar")
 
 -- Sea
 pg = pages[4]
