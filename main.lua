@@ -124,10 +124,10 @@ for i, name in ipairs(tabNames) do
         Parent = frame
     })
     New("UIListLayout", {
-        Parent = page,
-        SortOrder = Enum.SortOrder.LayoutOrder,
-        Padding = UDim.new(0, 5)
-    })
+    Parent = page,
+    SortOrder = Enum.SortOrder.LayoutOrder,
+    Padding = UDim.new(0, 5)
+})
 
     table.insert(tabs, btn)
     table.insert(pages, page)
