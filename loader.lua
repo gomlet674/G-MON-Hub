@@ -10,28 +10,24 @@ local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
 local function showCenterNotification(title, message, displayTime)
     displayTime = displayTime or 3
 
-    -- Buat ScreenGui
     local screenGui = Instance.new("ScreenGui")
     screenGui.Name = "CenterNotificationGui"
     screenGui.ResetOnSpawn = false
     screenGui.Parent = playerGui
 
-    -- Container Frame
     local frame = Instance.new("Frame")
     frame.Size = UDim2.new(0, 300, 0, 100)
     frame.AnchorPoint = Vector2.new(0.5, 0.5)
-    frame.Position = UDim2.new(0.5, 0.5, 0.5, 0)  -- tengah layar
+    frame.Position = UDim2.new(0.5, 0, 0.5, 0)  -- tengah layar, perbaikan disini
     frame.BackgroundColor3 = Color3.fromRGB(25,25,25)
     frame.BackgroundTransparency = 0.4
     frame.BorderSizePixel = 0
     frame.Parent = screenGui
 
-    -- Rounded corners
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(0, 12)
     corner.Parent = frame
 
-    -- Title Label
     local titleLabel = Instance.new("TextLabel")
     titleLabel.Size = UDim2.new(1, -20, 0, 30)
     titleLabel.Position = UDim2.new(0, 10, 0, 10)
@@ -43,7 +39,6 @@ local function showCenterNotification(title, message, displayTime)
     titleLabel.TextXAlignment = Enum.TextXAlignment.Center
     titleLabel.Parent = frame
 
-    -- Message Label
     local msgLabel = Instance.new("TextLabel")
     msgLabel.Size = UDim2.new(1, -20, 0, 50)
     msgLabel.Position = UDim2.new(0, 10, 0, 40)
@@ -56,35 +51,37 @@ local function showCenterNotification(title, message, displayTime)
     msgLabel.TextXAlignment = Enum.TextXAlignment.Center
     msgLabel.Parent = frame
 
-    -- Mulai dengan scale kecil (menghilang)
     frame.Size = UDim2.new(0, 0, 0, 0)
 
-    -- Tween untuk muncul
-    game:GetService("TweenService"):Create(frame, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+    local tweenService = game:GetService("TweenService")
+
+    tweenService:Create(frame, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
         Size = UDim2.new(0, 300, 0, 100)
     }):Play()
 
-    -- Setelah beberapa detik, tween keluar dan hapus
     delay(displayTime, function()
-    local tween = game:GetService("TweenService"):Create(frame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-        Size = UDim2.new(0, 0, 0, 0),
-        BackgroundTransparency = 1
-    })
-    tween:Play()
-    tween.Completed:Connect(function()
-        screenGui:Destroy()
+        local tween = tweenService:Create(frame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+            Size = UDim2.new(0, 0, 0, 0),
+            BackgroundTransparency = 1
+        })
+        tween:Play()
+        tween.Completed:Connect(function()
+            screenGui:Destroy()
+        end)
     end)
+end -- end function showCenterNotification
+
+-- Contoh penggunaan notifikasi:
+local MarketplaceService = game:GetService("MarketplaceService")
+local success, productInfo = pcall(function()
+    return MarketplaceService:GetProductInfo(game.PlaceId, Enum.InfoType.Game)
 end)
 
--- Contoh penggunaan:
-showCenterNotification("[Game Detected]", game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId, Enum.InfoType.Game).Name, 5)
+local gameName = success and productInfo.Name or "Unknown Game"
 
--- Main
-local placeId = game.PlaceId
-local gameName = getGameName(placeId)
+showCenterNotification("[Game Detected]", gameName, 5)
 
--- Show a notification at the top center
-notify("[Game Detected]", gameName, 7)
+-- Selanjutnya GUI Loader kamu bisa lanjutkan...
 
 -- GUI Elements
 local ScreenGui = Instance.new("ScreenGui")
