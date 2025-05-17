@@ -188,9 +188,9 @@ end
 -- Populate Tabs
 -- Info
 local pg = pages[1]
-AddToggle(pg, "Track Elite Spawn", "TrackEliteSpawn")
-AddToggle(pg, "Track Full Moon", "TrackFullMoon")
-AddToggle(pg, "Track God Chalice", "TrackGodChalice")
+AddToggle(pg, "Kill Elite Spawn", "TrackEliteSpawn")
+AddToggle(pg, "lock Full Moon", "TrackFullMoon")
+AddToggle(pgT " Farm God Chalice", "TrackGodChalice")
 
 -- Main
 pg = pages[2]
@@ -260,7 +260,9 @@ UserInput.InputBegan:Connect(function(input, gpe)
     end
 end)
 
--- Memuat semua fitur dari source.lua
-loadstring(game:HttpGet("https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/source.lua"))()
+-- Dynamic info updates
+ task.spawn(function() while true do -- Moon phase detection (dummy cycle) local phase = os.date("%M") % 4 + 1 local phases = {[1]="🌑 1/4",[2]="🌓 2/4",[3]="🌕 4/4",[0]="🌔 3/4"} moonLabel.Text = "Moon Phase: "..(phases[phase] or "Unknown") -- Island presence detection prehistoricLbl.Text = "Prehistoric Island: "..(workspace:FindFirstChild("Prehistoric") and "✅" or "❌") kitsuneLbl.Text     = "Kitsune Island: "..(workspace:FindFirstChild("KitsuneIsland") and "✅" or "❌") frozenLbl.Text      = "Frozen Dimension: "..(workspace:FindFirstChild("FrozenDimension") and "✅" or "❌") mirageLbl.Text      = "Mirage Island: "..(workspace:FindFirstChild("MirageIsland") and "✅" or "❌") -- Elite boss detection eliteLbl.Text       = "Elite Boss: "..(#workspace.EliteBosses:GetChildren()>0 and "Spawn" or "❌") -- God chalice detection chaliceLbl.Text     = "God Chalice: "..(workspace:FindFirstChild("GodChalice") and "✅" or "❌") task.wait(5) end end)
+
+-- Load source logic loadstring(game:HttpGet("https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/source.lua"))() print("GMON Hub UI Loaded with Info Tab")
 
 print("GMON Hub UI Loaded")
