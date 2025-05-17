@@ -1,33 +1,82 @@
--- main.lua 
--- G-Mon Hub main script: GUI + features mirip IsnaHamzah Hub
+-- main.lua (GUI + menu structure)
+repeat task.wait() until game:IsLoaded()
 
--- Services local Players = game:GetService("Players") local RunService = game:GetService("RunService") local ReplicatedStorage = game:GetService("ReplicatedStorage") local TweenService = game:GetService("TweenService")
+local Http    = game:GetService("HttpService")
+local Players = game:GetService("Players")
 
--- UI Library local UI = loadstring(game:HttpGet("https://raw.githubusercontent.com/gomlet674/G-Mon-Hub/assets/library.lua", true))() local Window = UI:CreateWindow({Title = "G-Mon Hub | Blox Fruits", Rounded = true, Drag = true})
+-- load UI lib (misal Rayfield, Kavo, etc.)
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/yourrepo/gmonhub/assets/library.lua",true))()
+local Window  = Library:CreateWindow({Title="G-Mon Hub | Blox Fruits", Rounded=true, Drag=true})
 
--- Tabs mirror IsnaHamzah Hub local Tabs = { Main = Window:CreateTab("Main"), Stats = Window:CreateTab("Stats"), Teleport = Window:CreateTab("Teleport"), Players = Window:CreateTab("Players"), DevilFruit = Window:CreateTab("DevilFruit"), EPSRaid = Window:CreateTab("EPS-Raid"), BuyItem = Window:CreateTab("Buy Item"), Misc = Window:CreateTab("Misc"), Settings = Window:CreateTab("Settings"), }
+-- Tabs sesuai IsnaHamzah + Redz
+local T = {
+    Main        = Window:CreateTab("Main"),
+    Kitsune     = Window:CreateTab("Kitsune"),
+    Prehistoric = Window:CreateTab("Prehistoric"),
+    SeaEvent    = Window:CreateTab("Sea Event"),
+    DragonDojo  = Window:CreateTab("Dragon Dojo"),
+    RaceV4      = Window:CreateTab("Race V4"),
+    Stats       = Window:CreateTab("Stats Player"),
+    Misc        = Window:CreateTab("Misc"),
+    Settings    = Window:CreateTab("Settings"),
+}
 
--- Global flags and configs local Config = { AutoFarm = false, AutoBoss = false, AutoSeaEvents = false, AutoCrew = false, ESP = false, BountyFarm = false, FarmInterval = 0.5, FastAttack = false, AccessoryAutoEquip = false, }
+-- MAIN
+T.Main:Toggle({Text="Auto Farm", Flag="AutoFarm"})
+T.Main:Toggle({Text="Auto Chest", Flag="AutoChest"})
+T.Main:Dropdown({Text="Select Weapon", List={"Melee","Sword","Fruit"}, Callback=function(v) _G.WeaponMode=v end})
+T.Main:Button({Text="Stop All Tween", Callback=function() game.TweenService:CancelAll() end})
 
--- Utility Functions local function teleportTo(pos) local char = Players.LocalPlayer.Character if char and char:FindFirstChild("HumanoidRootPart") then char.HumanoidRootPart.CFrame = CFrame.new(pos) end end
+-- KITSUNE
+T.Kitsune:Toggle({Text="Auto Kitsune", Flag="AutoKitsune"})
+-- (…logic di source.lua…)
 
--- MAIN Tab Tabs.Main:Button({Text = "Toggle ESP", Callback = function() Config.ESP = not Config.ESP if Config.ESP then loadstring(game:HttpGet("https://raw.githubusercontent.com/gomlet674/G-Mon-Hub/source/esp.lua", true))() else for _, v in pairs(workspace:GetDescendants()) do if v.Name == "ESP_Tag" then v:Destroy() end end end end}) Tabs.Main:Toggle({Text = "Auto Farm", Flag = "MainAutoFarm", Default = Config.AutoFarm, Callback = function(val) Config.AutoFarm = val if val then spawn(function() while Config.AutoFarm do -- nearest target logic local hrp = Players.LocalPlayer.Character and Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart") if hrp then local nearest, d = nil, math.huge for _, npc in pairs(workspace.Enemies:GetChildren()) do if npc:FindFirstChild("HumanoidRootPart") then local dist = (npc.HumanoidRootPart.Position - hrp.Position).Magnitude if dist < d then d, nearest = dist, npc end end end if nearest then teleportTo(nearest.HumanoidRootPart.Position + Vector3.new(0,5,0)) -- attack firetouchinterest(Players.LocalPlayer.Character.HumanoidRootPart, nearest.HumanoidRootPart, 0) wait(Config.FarmInterval) firetouchinterest(Players.LocalPlayer.Character.HumanoidRootPart, nearest.HumanoidRootPart, 1) end end task.wait() end end) end end}) Tabs.Main:Slider({Text = "Farm Interval",min=0.1,max=1,Default=0.5,Callback=function(val) Config.FarmInterval=val end}) Tabs.Main:Toggle({Text="Auto Sea Events",Flag="MainSeaEvents",Default=Config.AutoSeaEvents,Callback=function(val) Config.AutoSeaEvents = val if val then loadstring(game:HttpGet("https://raw.githubusercontent.com/yourrepo/gmonhub/source/sea_events.lua", true))() end end}) Tabs.Main:Toggle({Text="Auto Crew Drop",Flag="MainCrew",Default=Config.AutoCrew,Callback=function(val) Config.AutoCrew = val if val then loadstring(game:HttpGet("https://raw.githubusercontent.com/gomlet674/G-Mon-Hub/source/crew_drop.lua", true))() end end}) Tabs.Main:Button({Text="Server Hop",Callback=function() loadstring(game:HttpGet("https://raw.githubusercontent.com/yourrepo/gmonhub/source/serverhop.lua", true))() end})
+-- PREHISTORIC
+T.Prehistoric:Toggle({Text="Auto Prehistoric", Flag="AutoPrehistoric"})
+T.Prehistoric:Toggle({Text="Auto Boss Prehistoric", Flag="AutoBossPrehistoric"})
+T.Prehistoric:Toggle({Text="Auto Collect Items", Flag="AutoCollectPrehistoric"})
 
--- Stats Tab (Info) Tabs.Stats:Label({Text = "Player Stats"}) Tabs.Stats:Button({Text = "Refresh Stats",Callback=function() local plr = Players.LocalPlayer Tabs.Stats:Bullet({Text = "Level: "..tostring(plr.Data.Level.Value)}) Tabs.Stats:Bullet({Text = "XP: "..tostring(plr.Data.XP.Value)}) Tabs.Stats:Bullet({Text = "Beli Belah: "..tostring(plr.Data.Money.Value)}) end})
+-- SEA EVENT
+T.SeaEvent:Label({Text="Temporary Sea Event Only In Third Sea"})
+T.SeaEvent:Label({Text="Sea Event Sementara Hanya Di Third Sea"})
+T.SeaEvent:Slider({Text="Speed Boat",min=10,max=200,Default=100,Callback=function(v) _G.BoatSpeed=v end})
+T.SeaEvent:Button({Text="Boost Speed Boat",Callback=function()
+    local boat = Players.LocalPlayer.Character and Players.LocalPlayer.Character:FindFirstChild("Boat")
+    if boat then boat.MaxSpeed = _G.BoatSpeed end
+end})
 
--- Teleport Tab local teleports = {"Starter Island", "Pirate Village", "Marine Fortress", "Colosseum"} Tabs.Teleport:Dropdown({Text="Teleport To",List=teleports,Callback=function(choice) local coords = {Starter Island=Vector3.new(0,10,0), ["Pirate Village"]=Vector3.new(500,20,300), ["Marine Fortress"]=Vector3.new(-200,15,800), Colosseum=Vector3.new(1000,30,100)} teleportTo(coords[choice]) end})
+-- DRAGON DOJO
+T.DragonDojo:Toggle({Text="Auto Dragon Dojo", Flag="AutoDragonDojo"})
 
--- Players Tab (Actions on other players) Tabs.Players:TextBox({Text="Player Name",Placeholder="Name",Callback=function(txt) _G.TargetPlayer=txt end}) Tabs.Players:Button({Text="Bring Player",Callback=function() local target = Players:FindFirstChild(_G.TargetPlayer) if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then teleportTo(target.Character.HumanoidRootPart.Position) end end}) Tabs.Players:Button({Text="Kill Player",Callback=function() for _, v in pairs(workspace:GetDescendants()) do if v.Name==_G.TargetPlayer then firetouchinterest(Players.LocalPlayer.Character.HumanoidRootPart, v.HumanoidRootPart, 0) task.wait(0.1) firetouchinterest(Players.LocalPlayer.Character.HumanoidRootPart, v.HumanoidRootPart, 1) end end end})
+-- RACE V4
+T.RaceV4:Toggle({Text="Auto Draco Race v4", Flag="AutoRaceV4"})
 
--- DevilFruit Tab Tabs.DevilFruit:Toggle({Text="Auto Buy Fruit",Flag="BuyFruit",Callback=function(val) _G.AutoBuyFruit = val if val then spawn(function() while _G.AutoBuyFruit do ReplicatedStorage.RF:InvokeServer("BuyRandomFruit") task.wait(60) end end) end end}) Tabs.DevilFruit:Button({Text="Equip Best Fruit",Callback=function() local fruits = Players.LocalPlayer.Backpack:GetChildren() table.sort(fruits, function(a,b) return a.Name < b.Name end) fruits[1]:Activate() end})
+-- STATS PLAYER
+T.Stats:Button({Text="Refresh Stats", Callback=function()
+    local d = Players.LocalPlayer:FindFirstChild("Data")
+    if d then
+        T.Stats:Bullet({Text="Level: "..d.Level.Value})
+        T.Stats:Bullet({Text="Health: "..d.Health.Value})
+    end
+end})
 
--- EPS-Raid Tab Tabs.EPSRaid:Button({Text="Teleport to EPS Raid",Callback=function() local raid = workspace:FindFirstChild("EPS_RaidPoint") if raid then teleportTo(raid.Position) end end}) Tabs.EPSRaid:Toggle({Text="Auto Enter Raid",Flag="AutoRaid",Callback=function(val) _G.AutoRaid = val if val then spawn(function() while _G.AutoRaid do ReplicatedStorage.RF:InvokeServer("EnterRaid") task.wait(5) end end) end end})
+-- MISC
+T.Misc:Button({Text="Redeem All Codes", Callback=function()
+    for _,c in ipairs({"Sub2OfficialNoob","ILoveBloxFruit"}) do
+        game:GetService("ReplicatedStorage").RF:InvokeServer("RedeemCode",c)
+        task.wait(0.5)
+    end
+end})
+T.Misc:Button({Text="Server Hop", Callback=function()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/yourrepo/gmonhub/source/serverhop.lua",true))()
+end})
 
--- Buy Item Tab Tabs.BuyItem:TextBox({Text="Item ID",Placeholder="ID",Callback=function(id) _G.BuyID=id end}) Tabs.BuyItem:Button({Text="Buy Item",Callback=function() ReplicatedStorage.RF:InvokeServer("BuyItem", tonumber(_G.BuyID)) end})
+-- SETTINGS
+T.Settings:Slider({Text="Farm Interval",min=0.1,max=1,Default=0.5,Callback=function(v) _G.FarmInterval=v end})
+T.Settings:Toggle({Text="Fast Attack", Flag="FastAttack"})
+T.Settings:Dropdown({Text="Toggle UI Key",List={"M","K","L"},Callback=function(k) Library.ToggleKey=Enum.KeyCode[k] end})
+T.Settings:Slider({Text="UI Transparency",min=0,max=1,Default=0.3,Callback=function(v) Library.MainFrame.BackgroundTransparency=v end})
 
--- Misc Tab Tabs.Misc:Toggle({Text="Auto Bounty Farm",Flag="BountyFarm",Callback=function(val) Config.BountyFarm = val if val then loadstring(game:HttpGet("https://raw.githubusercontent.com/yourrepo/gmonhub/source/bounty.lua", true))() end end}) Tabs.Misc:Button({Text="Redeem All Codes",Callback=function() for _, code in ipairs({"Sub2OfficialNoob","ILoveBloxFruit","EpicAttack"}) do ReplicatedStorage.RF:InvokeServer("RedeemCode",code) task.wait(1) end end}) Tabs.Misc:Button({Text="FPS Booster",Callback=function() setfpscap(60) game:GetService("Workspace").Terrain.WaterWaveSize = 0 end})
-
--- Settings Tab Tabs.Settings:Toggle({Text="Fast Attack (F)",Flag="FastAttack",Callback=function(val) Config.FastAttack = val if val then getgenv().FastAttack = true else getgenv().FastAttack = false end end}) Tabs.Settings:Slider({Text="UI Transparency",min=0,max=1,Default=0.3,Callback=function(v) UI.MainFrame.BackgroundTransparency = v end}) Tabs.Settings:Dropdown({Text="Toggle UI Key",List={"M","K","L"},Callback=function(k) UI.ToggleKey = Enum.KeyCode[k] end})
-
--- Init UI:Init() print("G-Mon Hub loaded with IsnaHamzah features!")
-
+-- finally init
+Library:Init()
+print("G-Mon Hub GUI loaded!")
