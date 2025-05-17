@@ -1,4 +1,39 @@
-repeat wait() until game:IsLoaded()
+-- Auto‐Detect Roblox Game with On‐Screen Notification
+-- Place this in a LocalScript inside StarterPlayerScripts (or similar)
+
+repeat task.wait() until game:IsLoaded()
+
+local Players            = game:GetService("Players")
+local StarterGui         = game:GetService("StarterGui")
+local MarketplaceService = game:GetService("MarketplaceService")
+
+local function notify(title, text, duration)
+    StarterGui:SetCore("SendNotification", {
+        Title = title,
+        Text = text,
+        Duration = duration or 5,
+        Button1 = "OK"
+    })
+end
+
+-- Try to get the game's name from its PlaceId
+local function getGameName(placeId)
+    local success, info = pcall(function()
+        return MarketplaceService:GetProductInfo(placeId, Enum.InfoType.Game)
+    end)
+    if success and info and info.Name then
+        return info.Name
+    else
+        return "Unknown Game"
+    end
+end
+
+-- Main
+local placeId = game.PlaceId
+local gameName = getGameName(placeId)
+
+-- Show a notification at the top center
+notify("[Game Detected]", gameName, 7)
 
 -- GUI Elements
 local ScreenGui = Instance.new("ScreenGui")
@@ -105,6 +140,23 @@ end)
 
 -- Key File Path
 local savedKeyPath = "gmon_key.txt"
+
+-- ➊ Daftar skrip per game (PlaceId → URL skrip)
+local GAME_SCRIPTS = {
+    [4442272183] = "https://raw.githubusercontent.com/gomlet674/G-Mon-Hub/main/main.lua",       -- Block-Fruit
+    [3233893879] = "https://raw.githubusercontent.com/gomlet674/G-Mon-Hub/main/main_arena.lua", -- Contoh game lain
+    -- Tambahkan PlaceId dan URL lain sesuai kebutuhan...
+}
+
+-- Fungsi untuk memuat skrip sesuai game
+local function loadGameScript()
+    local url = GAME_SCRIPTS[game.PlaceId]
+    if not url then
+        warn("GMON Loader: Game PlaceId tidak dikenali:", game.PlaceId)
+        return
+    end
+    loadstring(game:HttpGet(url, true))()
+end
 
 -- Key yang valid
 local VALID_KEY = "GmonHub311851f3c742a8f78dce99e56992555609d23497928e9b33802e7127610c2e"
