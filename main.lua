@@ -112,15 +112,18 @@ for i, name in ipairs(tabNames) do
         Padding = UDim.new(0, 5)
     })
 
+    -- Tambahkan ke daftar pages dan tabs
+    table.insert(tabs, btn)
+    table.insert(pages, page)
+
     btn.MouseButton1Click:Connect(function()
         for _, p in ipairs(pages) do p.Visible = false end
         page.Visible = true
     end)
 
-    if i == 1 then btn:MouseButton1Click() end
-
-    table.insert(tabs, btn)
-    table.insert(pages, page)
+    if i == 1 then
+        page.Visible = true
+    end
 end
 
 -- Add toggle helper
