@@ -267,6 +267,7 @@ UserInput.InputBegan:Connect(function(input, gpe)
     end
 end)
 
+-- Moon Phase & Prehistoric Status (lanjutan dari pages[1])
 local moonLabel = New("TextLabel", {
     Text = "Moon Phase: Loading...",
     Size = UDim2.new(1, 0, 0, 20),
@@ -275,6 +276,7 @@ local moonLabel = New("TextLabel", {
     TextXAlignment = Enum.TextXAlignment.Left,
     Parent = pages[1]
 })
+
 local prehistoricLbl = New("TextLabel", {
     Text = "Prehistoric Island: Checking...",
     Size = UDim2.new(1, 0, 0, 20),
@@ -283,6 +285,24 @@ local prehistoricLbl = New("TextLabel", {
     TextXAlignment = Enum.TextXAlignment.Left,
     Parent = pages[1]
 })
+
+-- Optional: Update loop (placeholder logic, sesuaikan dengan logic kamu di source.lua nanti)
+task.spawn(function()
+    while task.wait(5) do
+        -- Moon phase logic (placeholder)
+        local moon = workspace:FindFirstChild("Moon") -- contoh
+        if moon and moon:FindFirstChild("Phase") then
+            moonLabel.Text = "Moon Phase: " .. moon.Phase.Value
+        else
+            moonLabel.Text = "Moon Phase: Unknown"
+        end
+
+        -- Prehistoric Island check (placeholder)
+        local island = workspace:FindFirstChild("PrehistoricIsland") -- contoh
+        prehistoricLbl.Text = island and "Prehistoric Island: Detected" or "Prehistoric Island: Not Found"
+    end
+end)
+
 local kitsuneLbl = New("TextLabel", {
     Text = "Kitsune Island: Checking...",
     Size = UDim2.new(1, 0, 0, 20),
@@ -304,30 +324,7 @@ task.spawn(function()
         task.wait(10)
     end
 end)
-    dropdown.MouseButton1Click:Connect(function()
-        isOpen = not isOpen
-        dropdownFrame.Visible = isOpen
-    end)
-end
-
-local bossList = {
-    -- Sea 1
-    "The Gorilla King", "Bobby", "Yeti", "Mob Leader", "Vice Admiral",
-    "Warden", "Chief Warden", "Swan", "Magma Admiral", "Fishman Lord",
-    "Wysper", "Thunder God", "Cyborg", "Ice Admiral",
-
-    -- Sea 2
-    "Diamond", "Jeremy", "Fajita", "Don Swan", "Smoke Admiral",
-    "Awakened Ice Admiral", "Tide Keeper",
-
-    -- Sea 3
-    "Stone", "Island Empress", "Kilo Admiral", "Captain Elephant",
-    "Beautiful Pirate", "Longma", "Cake Queen", "Cursed Captain",
-
-    -- Event / Raid
-    "Order", "Rip Indra", "Soul Reaper", "Dough King", "cake Prince", "Tyrant of the skies"
-}
-
+    
 -- Load source logic loadstring(game:HttpGet("https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/source.lua"))()
 
  print("GMON Hub UI Loaded with Info Tab")
