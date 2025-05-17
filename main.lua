@@ -31,7 +31,11 @@ New("ImageLabel", {
 -- Main Frame + RGB Stroke
 local frame = New("Frame", {
     Size = UDim2.new(0, 580, 0, 420),
-    Position = UDim2.new(0.5, -290, 0.5, -210),
+    -- Sebelumnya:
+-- Position = UDim2.new(0.5, -290, 0.5, -210),
+
+-- Ganti jadi:
+Position = UDim2.new(0.5, -290, 0.5, -160),
     BackgroundColor3 = Color3.fromRGB(25, 25, 25),
     BackgroundTransparency = 0.2,
     Draggable = true,
@@ -39,6 +43,16 @@ local frame = New("Frame", {
     Visible = true,
     Name = "MainFrame"
 }, gui)
+
+-- Logo di atas tengah
+local logo = New("ImageLabel", {
+    Image = "rbxassetid://16790218639", -- ganti jika punya logo khusus G-MON
+    Size = UDim2.new(0, 100, 0, 100),
+    Position = UDim2.new(0.5, -50, 0, -60),
+    BackgroundTransparency = 1,
+    Parent = gui,
+    ZIndex = 5
+})
 
 New("UICorner", {CornerRadius = UDim.new(0, 12)}, frame)
 
