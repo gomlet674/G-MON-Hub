@@ -1,8 +1,10 @@
--- GUI Toggle Setup
+repeat wait() until game:IsLoaded()
+
+-- Toggle Flags
 local chestToggle = false
 local espToggle = false
 
--- Simple Notification
+-- Notification
 local function notify(msg)
     pcall(function()
         game.StarterGui:SetCore("SendNotification", {
@@ -13,7 +15,7 @@ local function notify(msg)
     end)
 end
 
--- ESP GOD CHALICE
+-- ESP God Chalice
 local function espGodChalice()
     notify("ESP God Chalice Active!")
     while espToggle do
@@ -37,7 +39,7 @@ local function espGodChalice()
     end
 end
 
--- FARM CHEST
+-- Farm Chest
 local function farmChest()
     notify("Farm Chest Started!")
     while chestToggle do
@@ -52,7 +54,6 @@ local function farmChest()
             end
         end
 
-        -- Kocok urutan chest agar tidak tempat yang sama terus
         for i = #chests, 2, -1 do
             local j = math.random(1, i)
             chests[i], chests[j] = chests[j], chests[i]
@@ -70,7 +71,7 @@ local function farmChest()
     end
 end
 
--- Toggle UI (melengkung dan RGB toggle)
+-- Toggle UI
 local function createToggleUI()
     if game:GetService("CoreGui"):FindFirstChild("GMON_Toggle") then
         game:GetService("CoreGui"):FindFirstChild("GMON_Toggle"):Destroy()
@@ -106,7 +107,7 @@ local function createToggleUI()
         end
     end)
 
-    -- ESP Toggle
+    -- ESP Button
     local espBtn = Instance.new("TextButton", frame)
     espBtn.Size = UDim2.new(0.9, 0, 0, 40)
     espBtn.Position = UDim2.new(0.05, 0, 0.15, 0)
@@ -123,7 +124,7 @@ local function createToggleUI()
         end
     end)
 
-    -- Farm Chest Toggle
+    -- Chest Button
     local chestBtn = Instance.new("TextButton", frame)
     chestBtn.Size = UDim2.new(0.9, 0, 0, 40)
     chestBtn.Position = UDim2.new(0.05, 0, 0.55, 0)
@@ -141,5 +142,91 @@ local function createToggleUI()
     end)
 end
 
--- Run UI
-createToggleUI()
+-- Key System GUI
+local function showKeySystem()
+    local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
+    ScreenGui.Name = "GMON_Loader"
+
+    local background = Instance.new("ImageLabel", ScreenGui)
+    background.Size = UDim2.new(1, 0, 1, 0)
+    background.Image = "rbxassetid://16790218639"
+    background.BackgroundTransparency = 1
+    background.ScaleType = Enum.ScaleType.Crop
+    background.ZIndex = 0
+
+    local Frame = Instance.new("Frame", ScreenGui)
+    Frame.Size = UDim2.new(0, 420, 0, 200)
+    Frame.Position = UDim2.new(0.5, -210, 0.5, -100)
+    Frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    Frame.Active = true
+    Frame.Draggable = true
+    Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 15)
+
+    local RGBBorder = Instance.new("UIStroke", Frame)
+    RGBBorder.Thickness = 2
+    RGBBorder.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+
+    task.spawn(function()
+        while true do
+            for i = 0, 1, 0.01 do
+                local r = math.sin(i * math.pi * 2) * 127 + 128
+                local g = math.sin(i * math.pi * 2 + 2) * 127 + 128
+                local b = math.sin(i * math.pi * 2 + 4) * 127 + 128
+                RGBBorder.Color = Color3.fromRGB(r, g, b)
+                wait(0.03)
+            end
+        end
+    end)
+
+    local Title = Instance.new("TextLabel", Frame)
+    Title.Text = "GMON HUB KEY SYSTEM"
+    Title.Font = Enum.Font.GothamBold
+    Title.TextSize = 20
+    Title.TextColor3 = Color3.new(1, 1, 1)
+    Title.Size = UDim2.new(1, 0, 0, 40)
+    Title.BackgroundTransparency = 1
+
+    local KeyBox = Instance.new("TextBox", Frame)
+    KeyBox.PlaceholderText = "Enter Your Key..."
+    KeyBox.Size = UDim2.new(0.9, 0, 0, 35)
+    KeyBox.Position = UDim2.new(0.05, 0, 0.35, 0)
+    KeyBox.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    KeyBox.Font = Enum.Font.Gotham
+    KeyBox.Text = ""
+    KeyBox.TextColor3 = Color3.new(1, 1, 1)
+    Instance.new("UICorner", KeyBox).CornerRadius = UDim.new(0, 8)
+
+    local Submit = Instance.new("TextButton", Frame)
+    Submit.Size = UDim2.new(0.4, 0, 0, 35)
+    Submit.Position = UDim2.new(0.05, 0, 0.7, 0)
+    Submit.Text = "Submit"
+    Submit.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    Submit.TextColor3 = Color3.new(1, 1, 1)
+    Instance.new("UICorner", Submit).CornerRadius = UDim.new(0, 8)
+
+    local GetKey = Instance.new("TextButton", Frame)
+    GetKey.Size = UDim2.new(0.4, 0, 0, 35)
+    GetKey.Position = UDim2.new(0.55, 0, 0.7, 0)
+    GetKey.Text = "Get Key"
+    GetKey.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+    GetKey.TextColor3 = Color3.new(1, 1, 1)
+    Instance.new("UICorner", GetKey).CornerRadius = UDim.new(0, 8)
+
+    GetKey.MouseButton1Click:Connect(function()
+        setclipboard("https://linkvertise.com/your-key-page")
+        notify("Link copied to clipboard!")
+    end)
+
+    Submit.MouseButton1Click:Connect(function()
+        if KeyBox.Text == "gmonkey" then
+            notify("Key Verified!")
+            ScreenGui:Destroy()
+            createToggleUI()
+        else
+            notify("Invalid Key!")
+        end
+    end)
+end
+
+-- Start
+showKeySystem()
