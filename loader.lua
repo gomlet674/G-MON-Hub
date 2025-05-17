@@ -5,22 +5,11 @@
 
 repeat task.wait() until game:IsLoaded()
 
-local Players = game:GetService("Players")
-local TweenService = game:GetService("TweenService")
-local Marketplace = game:GetService("MarketplaceService")
-local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
+local Players            = game:GetService("Players")
+local TweenService       = game:GetService("TweenService")
+local MarketplaceService = game:GetService("MarketplaceService")
+local playerGui          = Players.LocalPlayer:WaitForChild("PlayerGui")
 
-local function showCenterNotification(title, message, displayTime)
-    -- [seluruh implementasi fungsi yang sudah kita bahas]
-end
-
--- langsung panggil saat load:
-local info = Marketplace:GetProductInfo(game.PlaceId, Enum.InfoType.Place)
-showCenterNotification("[Game Detected]", info.Name, 5)
-local Players = game:GetService("Players")
-local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
-
--- Fungsi untuk memunculkan notifikasi
 local function showCenterNotification(title, message, displayTime)
     displayTime = displayTime or 3
 
@@ -30,74 +19,60 @@ local function showCenterNotification(title, message, displayTime)
     screenGui.ResetOnSpawn = false
     screenGui.Parent = playerGui
 
-    -- Container Frame
-    local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(0, 300, 0, 100)
-    frame.AnchorPoint = Vector2.new(0.5, 0.5)
-    frame.Position = UDim2.new(0.5, 0.5, 0.5, 0)  -- tengah layar
-    frame.BackgroundColor3 = Color3.fromRGB(25,25,25)
+    -- Frame notifikasi
+    local frame = Instance.new("Frame", screenGui)
+    frame.Size              = UDim2.new(0, 300, 0, 100)
+    frame.AnchorPoint       = Vector2.new(0.5, 0.5)
+    frame.Position          = UDim2.new(0.5, 0.5, 0.5, 0)
+    frame.BackgroundColor3  = Color3.fromRGB(25, 25, 25)
     frame.BackgroundTransparency = 0.4
-    frame.BorderSizePixel = 0
-    frame.Parent = screenGui
+    frame.BorderSizePixel   = 0
 
-    -- Rounded corners
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 12)
-    corner.Parent = frame
+    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 12)
 
-    -- Title Label
-    local titleLabel = Instance.new("TextLabel")
-    titleLabel.Size = UDim2.new(1, -20, 0, 30)
-    titleLabel.Position = UDim2.new(0, 10, 0, 10)
-    titleLabel.Text = title
-    titleLabel.Font = Enum.Font.GothamBold
-    titleLabel.TextSize = 18
-    titleLabel.TextColor3 = Color3.new(1,1,1)
+    -- Judul
+    local titleLabel = Instance.new("TextLabel", frame)
+    titleLabel.Size               = UDim2.new(1, -20, 0, 30)
+    titleLabel.Position           = UDim2.new(0, 10, 0, 10)
+    titleLabel.Text               = title
+    titleLabel.Font               = Enum.Font.GothamBold
+    titleLabel.TextSize           = 18
+    titleLabel.TextColor3         = Color3.new(1,1,1)
     titleLabel.BackgroundTransparency = 1
-    titleLabel.TextXAlignment = Enum.TextXAlignment.Center
-    titleLabel.Parent = frame
+    titleLabel.TextXAlignment     = Enum.TextXAlignment.Center
 
-    -- Message Label
-    local msgLabel = Instance.new("TextLabel")
-    msgLabel.Size = UDim2.new(1, -20, 0, 50)
-    msgLabel.Position = UDim2.new(0, 10, 0, 40)
-    msgLabel.Text = message
-    msgLabel.Font = Enum.Font.Gotham
-    msgLabel.TextSize = 14
-    msgLabel.TextColor3 = Color3.new(1,1,1)
+    -- Pesan
+    local msgLabel = Instance.new("TextLabel", frame)
+    msgLabel.Size               = UDim2.new(1, -20, 0, 50)
+    msgLabel.Position           = UDim2.new(0, 10, 0, 40)
+    msgLabel.Text               = message
+    msgLabel.Font               = Enum.Font.Gotham
+    msgLabel.TextSize           = 14
+    msgLabel.TextColor3         = Color3.new(1,1,1)
     msgLabel.BackgroundTransparency = 1
-    msgLabel.TextWrapped = true
-    msgLabel.TextXAlignment = Enum.TextXAlignment.Center
-    msgLabel.Parent = frame
+    msgLabel.TextWrapped        = true
+    msgLabel.TextXAlignment     = Enum.TextXAlignment.Center
 
-    -- Mulai dengan scale kecil (menghilang)
+    -- Animasi muncul
     frame.Size = UDim2.new(0, 0, 0, 0)
-
-    -- Tween untuk muncul
-    game:GetService("TweenService"):Create(frame, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+    TweenService:Create(frame, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
         Size = UDim2.new(0, 300, 0, 100)
     }):Play()
 
-    -- Setelah beberapa detik, tween keluar dan hapus
+    -- Hapus setelah displayTime detik
     delay(displayTime, function()
-        game:GetService("TweenService"):Create(frame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+        TweenService:Create(frame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
             Size = UDim2.new(0, 0, 0, 0),
             BackgroundTransparency = 1
-        }):Play():Destroy()
+        }):Play()
         wait(0.3)
         screenGui:Destroy()
     end)
 end
 
--- Contoh penggunaan:
-showCenterNotification("[Game Detected]", game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId, Enum.InfoType.Game).Name, 5)
-
--- Main
-local placeId = game.PlaceId
-local gameName = getGameName(placeId)
-
--- Show a notification at the top center
-notify("[Game Detected]", gameName, 7)
+-- Panggil notifikasi segera setelah script jalan
+local info = MarketplaceService:GetProductInfo(game.PlaceId, Enum.InfoType.Asset)
+showCenterNotification("[Game Detected]", info.Name, 5)
 
 -- GUI Elements
 local ScreenGui = Instance.new("ScreenGui")
