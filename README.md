@@ -5,7 +5,7 @@ Berikut contoh README.md yang bisa kamu pakai untuk repositori GitHub script GMO
 
 # GMON Hub - Roblox Blox Fruits Script
 
-![GMON Hub Banner](./images/banner.png)
+![GMON Hub Banner](https://github.com/gomlet674/G-MON-Hub/blob/d0d46a821e2b3892fa4d1799ffec8c591a235456/file_00000000892c6230b0c67a678312607c.png)
 
 GMON Hub adalah script Roblox Blox Fruits lengkap dengan berbagai fitur auto farming, aimbot, teleport, dan GUI modern dengan latar belakang anime dan efek RGB.
 
