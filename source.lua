@@ -1,22 +1,20 @@
--- GMON HUB - source.lua
+-- GMON Hub | source.lua -- Semua logic fitur utama di sini
 
-local Players = game:GetService("Players") local LocalPlayer = Players.LocalPlayer local RunService = game:GetService("RunService") local Camera = workspace.CurrentCamera
+local Players = game:GetService("Players") local RunService = game:GetService("RunService") local ReplicatedStorage = game:GetService("ReplicatedStorage") local LocalPlayer = Players.LocalPlayer local Camera = workspace.CurrentCamera
 
--- Auto Farm Logic spawn(function() while task.wait() do if _G.AutoFarm then -- Auto Farm logic placeholder end end end)
+-- Fast Attack Placeholder spawn(function() while task.wait() do if shared.FastAttack then -- Tambahkan logic Fast Attack sesuai metode executor kamu end end end)
 
--- Auto Next Sea spawn(function() while task.wait() do if _G.AutoNextSea then -- Auto travel to next sea logic end end end)
+-- Auto Click Placeholder spawn(function() while task.wait() do if shared.AutoClick then mouse1click() end end end)
 
--- Auto Equip Accessory spawn(function() while task.wait(1) do if _G.AutoEquipAccessory then -- Auto equip best accessory logic end end end)
+-- Auto Equip Accessory function AutoEquipAccessory() for i,v in pairs(LocalPlayer.Backpack:GetChildren()) do if v:IsA("Accessory") and shared.AutoEquipAccessory then LocalPlayer.Character.Humanoid:EquipTool(v) end end end
 
--- Aimbot Logic RunService.RenderStepped:Connect(function() if _G.AimbotEnabled then local closest = nil local shortest = math.huge for _, player in ipairs(Players:GetPlayers()) do if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then local pos, onScreen = Camera:WorldToViewportPoint(player.Character.HumanoidRootPart.Position) if onScreen then local dist = (Vector2.new(pos.X, pos.Y) - Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)).Magnitude if dist < shortest then shortest = dist closest = player end end end end if closest and closest.Character and closest.Character:FindFirstChild("Head") then Camera.CFrame = CFrame.new(Camera.CFrame.Position, closest.Character.Head.Position) end end end)
+-- Auto Farm (Level / Quest based) spawn(function() while task.wait() do if shared.AutoFarm then -- Deteksi level dan quest otomatis -- Pindah ke musuh terdekat -- Serang menggunakan selected weapon end end end)
 
--- Auto Enchant / Craft spawn(function() while task.wait() do if _G.AutoEnchant then -- Enchanting logic placeholder end if _G.AutoCraft then -- Crafting logic placeholder end end end)
+-- Aimbot untuk Player local function GetClosestPlayer() local closest = nil local shortest = math.huge for _,v in pairs(Players:GetPlayers()) do if v ~= LocalPlayer and v.Character and v.Character:FindFirstChild("HumanoidRootPart") then local pos = Camera:WorldToViewportPoint(v.Character.HumanoidRootPart.Position) local dist = (Vector2.new(pos.X, pos.Y) - Vector2.new(mouse.X, mouse.Y)).Magnitude if dist < shortest then shortest = dist closest = v end end end return closest end
 
--- Fast Attack spawn(function() while task.wait() do if _G.FastAttack then -- Fast attack logic placeholder end end end)
+RunService.RenderStepped:Connect(function() if shared.Aimbot then local target = GetClosestPlayer() if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then Camera.CFrame = CFrame.new(Camera.CFrame.Position, target.Character.HumanoidRootPart.Position) end end end)
 
--- Auto Click spawn(function() while task.wait() do if _G.AutoClick then local VirtualUser = game:GetService("VirtualUser") VirtualUser:Button1Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame) end end end)
+-- Tambahkan logic tambahan lain seperti: -- Auto Sea Events, ESP, Auto Enchant, Auto Crafting, Bounty Farm -- Sesuaikan berdasarkan struktur game Blox Fruits terbaru
 
--- Auto Buy / Store Fruit spawn(function() while task.wait() do if _G.AutoBuyFruit then -- Buy fruit logic placeholder end if _G.AutoStoreFruit then -- Store fruit logic placeholder end end end)
-
--- Additional Logic for future features -- Include more loops as needed for additional features like ESP, Sea Events, Leviathan, etc.
+print("[GMON Hub] source.lua loaded")
 
