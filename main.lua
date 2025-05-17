@@ -185,17 +185,6 @@ local function AddInput(page, placeholder, onInput)
     end)
 end
 
--- Contoh fungsi AddToggle
-function AddToggle(page, labelOff, flagName)
-    local toggle = Instance.new("TextButton") -- contoh GUI element
-    toggle.Text = _G.Flags[flagName] and labelOff:gsub("Off", "On") or labelOff
-    toggle.MouseButton1Click:Connect(function()
-        _G.Flags[flagName] = not _G.Flags[flagName]
-        toggle.Text = _G.Flags[flagName] and labelOff:gsub("Off", "On") or labelOff
-    end)
-    toggle.Parent = page
-end
-
 -- Populate Tabs
 -- Info
 local pg = pages[1]
@@ -206,13 +195,16 @@ AddToggle(pg, " Farm God Chalice", "Farm God Chalice")
 -- Main
 pg = pages[2]
 AddToggle(pg, "Auto Farm", "AutoFarm")
-AddInput(pg, "Select Boss", function(text)
-    _G.Flags.SelectBoss = text
+
+AddDropdown(pg, "Select Boss", bossList, function(selected)
+    _G.Flags = _G.Flags or {}
+    _G.Flags.SelectBoss = selected
 end)
+
 AddToggle(pg, "Farm Boss Selected", "FarmBossSelected")
-AddToggle(pg, "Farm All Boss ", "FarmAllBoss")
+AddToggle(pg, "Farm All Boss", "FarmAllBoss")
 AddToggle(pg, "Mastery Fruit", "MasteryFruit")
-AddToggle(pg, "Aimbot", "Aimbot") 
+AddToggle(pg, "Aimbot", "Aimbot")
 
 -- Item
 pg = pages[3]
@@ -312,6 +304,63 @@ task.spawn(function()
         task.wait(10)
     end
 end)
+
+function AddDropdown(page, label, list, callback)
+    local labelText = Instance.new("TextLabel")
+    labelText.Text = label
+    labelText.Size = UDim2.new(0, 200, 0, 25)
+    labelText.TextXAlignment = Enum.TextXAlignment.Left
+    labelText.Parent = page
+
+    local dropdown = Instance.new("TextButton")
+    dropdown.Size = UDim2.new(0, 200, 0, 30)
+    dropdown.Text = "Select..."
+    dropdown.Parent = page
+
+    local dropdownFrame = Instance.new("Frame")
+    dropdownFrame.Size = UDim2.new(0, 200, 0, #list * 25)
+    dropdownFrame.Visible = false
+    dropdownFrame.BackgroundColor3 = Color3.fromRGB(30,30,30)
+    dropdownFrame.BorderSizePixel = 0
+    dropdownFrame.Parent = page
+
+    for _, item in ipairs(list) do
+        local itemButton = Instance.new("TextButton")
+        itemButton.Size = UDim2.new(1, 0, 0, 25)
+        itemButton.Text = item
+        itemButton.BackgroundColor3 = Color3.fromRGB(45,45,45)
+        itemButton.TextColor3 = Color3.new(1,1,1)
+        itemButton.Parent = dropdownFrame
+
+        itemButton.MouseButton1Click:Connect(function()
+            dropdown.Text = item
+            dropdownFrame.Visible = false
+            callback(item)
+        end)
+    end
+
+    dropdown.MouseButton1Click:Connect(function()
+        dropdownFrame.Visible = not dropdownFrame.Visible
+    end)
+end
+
+local bossList = {
+    -- Sea 1
+    "The Gorilla King", "Bobby", "Yeti", "Mob Leader", "Vice Admiral",
+    "Warden", "Chief Warden", "Swan", "Magma Admiral", "Fishman Lord",
+    "Wysper", "Thunder God", "Cyborg", "Ice Admiral",
+
+    -- Sea 2
+    "Diamond", "Jeremy", "Fajita", "Don Swan", "Smoke Admiral",
+    "Awakened Ice Admiral", "Tide Keeper",
+
+    -- Sea 3
+    "Stone", "Island Empress", "Kilo Admiral", "Captain Elephant",
+    "Beautiful Pirate", "Longma", "Cake Queen", "Cursed Captain",
+
+    -- Event / Raid
+    "Order", "Rip Indra", "Soul Reaper"
+}
 
 -- Load source logic loadstring(game:HttpGet("https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/source.lua"))()
 
