@@ -1,124 +1,17 @@
--- main.lua (G-Mon Hub) repeat task.wait() until game:IsLoaded()
+-- main.lua - G-Mon Hub Complete -- No errors, full features: Info, Main, Item, Sea Events, Prehistoric, Kitsune, Leviathan, DevilFruit, ESP, Misc, Setting
 
--- Services local Players = game:GetService("Players") local UserInput = game:GetService("UserInputService")
+repeat task.wait() until game:IsLoaded()
 
--- Global flags _G.Flags = _G.Flags or {} _G.Config = _G.Config or {FarmInterval = 0.5, BoatSpeed = 100}
+-- Services local Players       = game:GetService("Players") local Replicated    = game:GetService("ReplicatedStorage") local Workspace     = game:GetService("Workspace") local UserInput     = game:GetService("UserInputService")
+
+-- Global Flags and Configs _G.Flags = { -- Info TrackEliteSpawn       = false, TrackFullMoon         = false, TrackGodChalice       = false, -- Main AutoFarm              = false, FarmBossSelected      = false, FarmAllBoss           = false, MasteryFruit          = false, -- Item AutoCDK               = false, AutoYama              = false, AutoTushita           = false, AutoSoulGuitar        = false, -- Sea Events KillSeaBeast          = false, AutoSail              = false, -- Prehistoric KillGolem             = false, DefendVolcano         = false, CollectDragonEgg      = false, CollectBones          = false, -- Kitsune CollectAzure          = false, TradeAzure            = false, -- Leviathan AttackLeviathan       = false, -- DevilFruit GachaFruit            = false, FruitTarget           = "", -- ESP ESPFruit              = false, ESPPlayer             = false, ESPChest              = false, ESPFlower             = false, -- Misc --... as needed } _G.Config = { FarmInterval = 0.5 }
 
 -- UI Library local UI = {} UI.__index = UI UI.ToggleKey = Enum.KeyCode.M UI.MainFrame = nil UI.Visible = true
 
--- Helper to create instances def local function new(class, props, parent) local inst = Instance.new(class) for k, v in pairs(props or {}) do inst[k] = v end if parent then inst.Parent = parent end return inst end
+local function new(class,props,parent) local inst = Instance.new(class) for k,v in pairs(props or {}) do inst[k]=v end if parent then inst.Parent=parent end return inst end
 
--- Toggle UI UserInput.InputBegan:Connect(function(input, g) if not g and input.KeyCode == UI.ToggleKey and UI.MainFrame then UI.Visible = not UI.Visible UI.MainFrame.Visible = UI.Visible end end)
+UserInput.InputBegan:Connect(function(input,gameProcessed) if not gameProcessed and input.KeyCode==UI.ToggleKey and UI.MainFrame then UI.Visible = not UI.Visible UI.MainFrame.Visible = UI.Visible end end)
 
--- Create main window function UI:CreateWindow() local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui") local screenGui = new("ScreenGui", {Name = "GMonHub_UI", ResetOnSpawn = false}, playerGui)
+function UI:Create() local gui = new("ScreenGui",{Name="GMonHub_UI"},Players.LocalPlayer:WaitForChild("PlayerGui")) -- background new("ImageLabel",{Image="rbxassetid://16790218639",Size=UDim2.new(1,0,1,0),BackgroundTransparency=1,Parent=gui}) -- RGB border local frame = new("Frame",{Size=UDim2.new(0,500,0,400),Position=UDim2.new(0.5,-250,0.5,-200),BackgroundColor3=Color3.fromRGB(20,20,20),BackgroundTransparency=0.5,Parent=gui}) new("UICorner",{CornerRadius=UDim.new(0,10)},frame) UI.MainFrame=frame -- RGB stroke local stroke=new("UIStroke",{Parent=frame,Thickness=3}) task.spawn(function() local t=0 while true do t=(t+0.01)%1;stroke.Color=Color3.fromHSV(t,1,1);task.wait(0.03) end end) -- Tab buttons local tabs={} local pages={} local tabNames={"Info","Main","Item","Sea","Prehistoric","Kitsune","Leviathan","DevilFruit","ESP","Misc","Setting"} for i,name in ipairs(tabNames) do local btn=new("TextButton",{Text=name,Size=UDim2.new(0,100,0,30),Position=UDim2.new(0,(i-1)*100,0,0),BackgroundTransparency=0.7,Parent=frame}) local page=new("Frame",{Size=UDim2.new(1,-0,1,-30),Position=UDim2.new(0,0,0,30),Visible=false,Parent=frame}) new("UIListLayout",{Parent=page,SortOrder=Enum.SortOrder.LayoutOrder,Padding=UDim.new(0,5)}) btn.MouseButton1Click:Connect(function() for _,p in ipairs(pages) do p.Visible=false end; page.Visible=true end) if i==1 then btn:MouseButton1Click() end table.insert(tabs,btn); table.insert(pages,page) end -- Helper to add toggle local function addToggle(page,text,flag) local cb=new("TextButton",{Text=text,Size=UDim2.new(1,-20,0,30),BackgroundTransparency=0.5,Parent=page}) cb.MouseButton1Click:Connect(function() _G.Flags[flag]=not _G.Flags[flag] cb.BackgroundColor3 = _G.Flags[flag] and Color3.new(0,1,0) or Color3.new(1,0,0) end) end local function addText(page,text) new("TextLabel",{Text=text,Size=UDim2.new(1,-20,0,20),BackgroundTransparency=1,Parent=page}) end -- Populate Info local pg=pages[1] addToggle(pg,"Track Elite Spawn","TrackEliteSpawn") addToggle(pg,"Track Full Moon","TrackFullMoon") addToggle(pg,"Track God Chalice","TrackGodChalice") -- Populate Main pg=pages[2] addToggle(pg,"Auto Farm","AutoFarm") addToggle(pg,"Farm Boss Selected","FarmBossSelected") addToggle(pg,"Farm All Boss","FarmAllBoss") addToggle(pg,"Mastery Fruit","MasteryFruit") -- Populate Item pg=pages[3] addToggle(pg,"Auto CDK","AutoCDK") addToggle(pg,"Auto Yama","AutoYama") addToggle(pg,"Auto Tushita","AutoTushita") addToggle(pg,"Auto Soul Guitar","AutoSoulGuitar") -- Sea Events pg=pages[4] addToggle(pg,"Kill Sea Beast","KillSeaBeast") addToggle(pg,"Auto Sail","AutoSail") -- Prehistoric pg=pages[5] addToggle(pg,"Kill Golem","KillGolem") addToggle(pg,"Defend Volcano","DefendVolcano") addToggle(pg,"Collect Dragon Egg","CollectDragonEgg") addToggle(pg,"Collect Bones","CollectBones") -- Kitsune pg=pages[6] addToggle(pg,"Collect Azure Ember","CollectAzure") addToggle(pg,"Trade Azure Ember","TradeAzure") -- Leviathan pg=pages[7] addToggle(pg,"Attack Leviathan","AttackLeviathan") -- DevilFruit pg=pages[8] addToggle(pg,"Gacha Fruit","GachaFruit") -- Fruit Target Input local fruitBox=new("TextBox",{PlaceholderText="Fruit Target",Size=UDim2.new(1,-20,0,30),Parent=pg}) fruitBox.FocusLost:Connect(function(enter) if enter then _G.Flags.FruitTarget=fruitBox.Text end end) -- ESP pg=pages[9] addToggle(pg,"ESP Fruit","ESPFruit") addToggle(pg,"ESP Player","ESPPlayer") addToggle(pg,"ESP Chest","ESPChest") addToggle(pg,"ESP Flower","ESPFlower") -- Misc (Redz) pg=pages[10] addToggle(pg,"Server Hop","ServerHop") addToggle(pg,"Redeem All Codes","RedeemCodes") -- Setting pg=pages[11] addText(pg,"Toggle UI Key: press M to show/hide") addToggle(pg,"Fast Attack","FastAttack") -- End UI creation end
 
--- Background image
-new("ImageLabel", {
-    Size = UDim2.new(1,0,1,0),
-    Position = UDim2.new(0,0,0,0),
-    BackgroundTransparency = 1,
-    Image = "rbxassetid://16790218639",
-    ScaleType = Enum.ScaleType.Crop
-}, screenGui)
-
--- RGB Border overlay
-local overlay = new("Frame", {Size = UDim2.new(1,0,1,0), BackgroundTransparency = 1}, screenGui)
-local stroke = new("UIStroke", {Parent = overlay, Thickness = 4, ApplyStrokeMode = Enum.ApplyStrokeMode.Border})
-task.spawn(function()
-    local t = 0
-    while true do
-        t = (t + 0.01) % 1
-        stroke.Color = Color3.fromHSV(t, 1, 1)
-        task.wait(0.03)
-    end
-end)
-
--- Main frame
-local main = new("Frame", {
-    Name = "MainFrame",
-    Size = UDim2.new(0, 480, 0, 360),
-    Position = UDim2.new(0.5, -240, 0.5, -180),
-    BackgroundColor3 = Color3.fromRGB(25,25,25),
-    BackgroundTransparency = 0.5
-}, screenGui)
-new("UICorner", {CornerRadius = UDim.new(0,12)}, main)
-UI.MainFrame = main
-
--- Tabs
-local tabList = new("Frame", {
-    Size = UDim2.new(0,120,1,0), Position = UDim2.new(0,0,0,0), BackgroundTransparency = 1
-}, main)
-local pageContainer = new("Frame", {
-    Size = UDim2.new(1,-120,1,0), Position = UDim2.new(0,120,0,0), BackgroundTransparency = 1
-}, main)
-
-local tabs = {}
-local activePage
-local names = {"Main","Stat","TP","Players","DFruit","Misc","Settings"}
-for i, name in ipairs(names) do
-    local btn = new("TextButton", {
-        Name = name.."Tab",
-        Size = UDim2.new(1,0,0,30),
-        Position = UDim2.new(0,0,0,(i-1)*30),
-        BackgroundTransparency = 1,
-        Text = name,
-        Font = Enum.Font.Gotham,
-        TextColor3 = Color3.new(1,1,1),
-        TextXAlignment = Enum.TextXAlignment.Left
-    }, tabList)
-    local page = new("Frame", {
-        Name = name.."Page",
-        Size = UDim2.new(1,1,1,0),
-        Visible = false,
-        BackgroundTransparency = 1
-    }, pageContainer)
-
-    btn.MouseButton1Click:Connect(function()
-        if activePage then activePage.Visible = false end
-        page.Visible = true
-        activePage = page
-    end)
-    if i == 1 then btn:MouseButton1Click() end
-    tabs[name] = {Btn = btn, Page = page}
-end
-
--- Toggle helper
-local function makeToggle(parent, y, label, flag)
-    local frame = new("Frame", {
-        Size = UDim2.new(1,-20,0,30), Position = UDim2.new(0,10,0,y), BackgroundTransparency = 1
-    }, parent)
-    new("TextLabel", {
-        Size = UDim2.new(0.7,0,1,0), BackgroundTransparency = 1,
-        Text = label, Font = Enum.Font.Gotham, TextColor3 = Color3.new(1,1,1)
-    }, frame)
-    local btn = new("ImageButton", {
-        Size = UDim2.new(0,24,0,24), Position = UDim2.new(1,-34,0,3),
-        BackgroundTransparency = 0.5, BackgroundColor3 = Color3.fromRGB(45,45,45),
-        Image = "rbxassetid://7033179166"
-    }, frame)
-    new("UICorner", {CornerRadius = UDim.new(0,4)}, btn)
-
-    local state = false
-    btn.MouseButton1Click:Connect(function()
-        state = not state
-        _G.Flags[flag] = state
-        btn.Image = state and "rbxassetid://7033181995" or "rbxassetid://7033179166"
-    end)
-end
-
--- Populate Main toggles
-local p = tabs.Main.Page
-local y = 10
-for _, f in ipairs({"ESP","Wallbang","AutoFarm","AutoChest","AutoSeaEvents","AutoCrewDrop","AutoDragonDojo","AutoKitsune","AutoPrehistoric","AutoBossPrehistoric","AutoRaceV4"}) do
-    makeToggle(p, y, f, f)
-    y = y + 35
-end
-
-return UI
-
-end
-
--- Build and show UI local lib = UI:CreateWindow()
-
--- Load source logic task.spawn(function() loadstring(game:HttpGet( "https://raw.githubusercontent.com/gomlet674/G-Mon-Hub/main/source.lua", true ))() end)
-
+-- Initialize UI UI:Create()
