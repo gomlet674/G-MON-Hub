@@ -13,23 +13,27 @@ local playerGui          = Players.LocalPlayer:WaitForChild("PlayerGui")
 local function showCenterNotification(title, message, displayTime)
     displayTime = displayTime or 3
 
+    -- Buat ScreenGui
     local screenGui = Instance.new("ScreenGui")
-    screenGui.Name           = "CenterNotificationGui"
-    screenGui.ResetOnSpawn   = false
-    screenGui.Parent         = playerGui
+    screenGui.Name = "CenterNotificationGui"
+    screenGui.ResetOnSpawn = false
+    screenGui.Parent = playerGui
 
+    -- Frame notifikasi
     local frame = Instance.new("Frame", screenGui)
-    frame.Size               = UDim2.new(0,300,0,100)
-    frame.AnchorPoint        = Vector2.new(0.5,0.5)
-    frame.Position           = UDim2.new(0.5,0.5,0.5,0)
-    frame.BackgroundColor3   = Color3.fromRGB(25,25,25)
+    frame.Size              = UDim2.new(0, 300, 0, 100)
+    frame.AnchorPoint       = Vector2.new(0.5, 0.5)
+    frame.Position          = UDim2.new(0.5, 0.5, 0.5, 0)
+    frame.BackgroundColor3  = Color3.fromRGB(25, 25, 25)
     frame.BackgroundTransparency = 0.4
-    frame.BorderSizePixel    = 0
-    Instance.new("UICorner", frame).CornerRadius = UDim.new(0,12)
+    frame.BorderSizePixel   = 0
 
+    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 12)
+
+    -- Judul
     local titleLabel = Instance.new("TextLabel", frame)
-    titleLabel.Size               = UDim2.new(1,-20,0,30)
-    titleLabel.Position           = UDim2.new(0,10,0,10)
+    titleLabel.Size               = UDim2.new(1, -20, 0, 30)
+    titleLabel.Position           = UDim2.new(0, 10, 0, 10)
     titleLabel.Text               = title
     titleLabel.Font               = Enum.Font.GothamBold
     titleLabel.TextSize           = 18
@@ -37,9 +41,10 @@ local function showCenterNotification(title, message, displayTime)
     titleLabel.BackgroundTransparency = 1
     titleLabel.TextXAlignment     = Enum.TextXAlignment.Center
 
+    -- Pesan
     local msgLabel = Instance.new("TextLabel", frame)
-    msgLabel.Size               = UDim2.new(1,-20,0,50)
-    msgLabel.Position           = UDim2.new(0,10,0,40)
+    msgLabel.Size               = UDim2.new(1, -20, 0, 50)
+    msgLabel.Position           = UDim2.new(0, 10, 0, 40)
     msgLabel.Text               = message
     msgLabel.Font               = Enum.Font.Gotham
     msgLabel.TextSize           = 14
@@ -48,14 +53,16 @@ local function showCenterNotification(title, message, displayTime)
     msgLabel.TextWrapped        = true
     msgLabel.TextXAlignment     = Enum.TextXAlignment.Center
 
-    frame.Size = UDim2.new(0,0,0,0)
+    -- Animasi muncul
+    frame.Size = UDim2.new(0, 0, 0, 0)
     TweenService:Create(frame, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-        Size = UDim2.new(0,300,0,100)
+        Size = UDim2.new(0, 300, 0, 100)
     }):Play()
 
+    -- Hapus setelah displayTime detik
     delay(displayTime, function()
         TweenService:Create(frame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-            Size = UDim2.new(0,0,0,0),
+            Size = UDim2.new(0, 0, 0, 0),
             BackgroundTransparency = 1
         }):Play()
         wait(0.3)
@@ -63,12 +70,9 @@ local function showCenterNotification(title, message, displayTime)
     end)
 end
 
--- Ambil nama game dengan pcall
-local ok, info = pcall(function()
-    return MarketplaceService:GetProductInfo(game.PlaceId, Enum.InfoType.Place)
-end)
-local gameName = ok and info.Name or "Unknown Game"
-showCenterNotification("[Game Detected]", gameName, 5)
+-- Panggil notifikasi segera setelah script jalan
+local info = MarketplaceService:GetProductInfo(game.PlaceId, Enum.InfoType.Asset)
+showCenterNotification("[Game Detected]", info.Name, 5)
 
 -- GUI Elements
 local ScreenGui = Instance.new("ScreenGui")
