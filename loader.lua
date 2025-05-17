@@ -209,17 +209,90 @@ else
     fallback()
 end
 
--- Key yang valid
+-- Konfigurasi key valid
 local VALID_KEY = "GmonHub311851f3c742a8f78dce99e56992555609d23497928e9b33802e7127610c2e"
+local HttpService = game:GetService("HttpService")
+local PlaceId = tostring(game.PlaceId)
 
-local function submitKey(key)
-    if key == VALID_KEY then
-        writefile(savedKeyPath, key)
-        ScreenGui:Destroy()
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/gomlet674/G-Mon-Hub/main/main.lua"))()
-        return true
+-- Path penyimpanan key (jika executor support)
+local savedKeyPath = "GMON_HUB_KEY.txt"
+
+-- UI Key sederhana
+local function createKeyGUI()
+    local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
+    local Frame = Instance.new("Frame", ScreenGui)
+    Frame.Size = UDim2.new(0, 300, 0, 150)
+    Frame.Position = UDim2.new(0.5, -150, 0.5, -75)
+    Frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+
+    local TextBox = Instance.new("TextBox", Frame)
+    TextBox.PlaceholderText = "Enter Key Here"
+    TextBox.Size = UDim2.new(0.8, 0, 0, 30)
+    TextBox.Position = UDim2.new(0.1, 0, 0.3, 0)
+    TextBox.Text = ""
+
+    local Button = Instance.new("TextButton", Frame)
+    Button.Text = "Submit"
+    Button.Size = UDim2.new(0.5, 0, 0, 30)
+    Button.Position = UDim2.new(0.25, 0, 0.65, 0)
+
+    Button.MouseButton1Click:Connect(function()
+        if TextBox.Text == VALID_KEY then
+            if writefile then pcall(function() writefile(savedKeyPath, TextBox.Text) end) end
+            ScreenGui:Destroy()
+            loadGameScript() -- lanjut ke fungsi utama
+        else
+            Button.Text = "Key Salah!"
+        end
+    end)
+end
+
+-- Fungsi untuk load script sesuai game
+function loadGameScript()
+    local baseUrl = "https://raw.githubusercontent.com/gomlet674/G-Mon-Hub/main/"
+    local gameFile = "main_" .. PlaceId .. ".lua"
+    local fallbackFile = "main.lua"
+
+    local success, result = pcall(function()
+        return game:HttpGet(baseUrl .. gameFile)
+    end)
+
+    if success and result and #result > 5 then
+        loadstring(result)()
+    else
+        -- Jika tidak ada script untuk game ini
+        warn("G-MON: Game ini tidak terdeteksi. Gunakan script utama.")
+        local ok, fallback = pcall(function()
+            return game:HttpGet(baseUrl .. fallbackFile)
+        end)
+        if ok and fallback and #fallback > 5 then
+            loadstring(fallback)()
+        else
+            -- Tidak ada fallback juga
+            game.StarterGui:SetCore("SendNotification", {
+                Title = "G-MON Hub",
+                Text = "This game is not detected!",
+                Duration = 5
+            })
+        end
     end
-    return false
+end
+
+-- Eksekusi awal
+local hasKey = false
+
+-- Coba baca file key lokal jika ada
+if isfile and isfile(savedKeyPath) then
+    local saved = readfile(savedKeyPath)
+    if saved == VALID_KEY then
+        hasKey = true
+    end
+end
+
+if hasKey then
+    loadGameScript()
+else
+    createKeyGUI()
 end
 
 -- Cek apakah key sudah tersimpan dan valid
