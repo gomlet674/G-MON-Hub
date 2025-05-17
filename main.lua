@@ -190,7 +190,7 @@ end
 local pg = pages[1]
 AddToggle(pg, "Kill Elite Spawn", "TrackEliteSpawn")
 AddToggle(pg, "lock Full Moon", "TrackFullMoon")
-AddToggle(pgT " Farm God Chalice", "TrackGodChalice")
+AddToggle(pg, " Farm God Chalice", "TrackGodChalice")
 
 -- Main
 pg = pages[2]
@@ -260,9 +260,44 @@ UserInput.InputBegan:Connect(function(input, gpe)
     end
 end)
 
--- Dynamic info updates
- task.spawn(function() while true do -- Moon phase detection (dummy cycle) local phase = os.date("%M") % 4 + 1 local phases = {[1]="🌑 1/4",[2]="🌓 2/4",[3]="🌕 4/4",[0]="🌔 3/4"} moonLabel.Text = "Moon Phase: "..(phases[phase] or "Unknown") -- Island presence detection prehistoricLbl.Text = "Prehistoric Island: "..(workspace:FindFirstChild("Prehistoric") and "✅" or "❌") kitsuneLbl.Text     = "Kitsune Island: "..(workspace:FindFirstChild("KitsuneIsland") and "✅" or "❌") frozenLbl.Text      = "Frozen Dimension: "..(workspace:FindFirstChild("FrozenDimension") and "✅" or "❌") mirageLbl.Text      = "Mirage Island: "..(workspace:FindFirstChild("MirageIsland") and "✅" or "❌") -- Elite boss detection eliteLbl.Text       = "Elite Boss: "..(#workspace.EliteBosses:GetChildren()>0 and "Spawn" or "❌") -- God chalice detection chaliceLbl.Text     = "God Chalice: "..(workspace:FindFirstChild("GodChalice") and "✅" or "❌") task.wait(5) end end)
+local moonLabel = New("TextLabel", {
+    Text = "Moon Phase: Loading...",
+    Size = UDim2.new(1, 0, 0, 20),
+    BackgroundTransparency = 1,
+    TextColor3 = Color3.new(1, 1, 1),
+    TextXAlignment = Enum.TextXAlignment.Left,
+    Parent = pages[1]
+})
+local prehistoricLbl = New("TextLabel", {
+    Text = "Prehistoric Island: Checking...",
+    Size = UDim2.new(1, 0, 0, 20),
+    BackgroundTransparency = 1,
+    TextColor3 = Color3.new(1, 1, 1),
+    TextXAlignment = Enum.TextXAlignment.Left,
+    Parent = pages[1]
+})
+local kitsuneLbl = New("TextLabel", {
+    Text = "Kitsune Island: Checking...",
+    Size = UDim2.new(1, 0, 0, 20),
+    BackgroundTransparency = 1,
+    TextColor3 = Color3.new(1, 1, 1),
+    TextXAlignment = Enum.TextXAlignment.Left,
+    Parent = pages[1]
+})
 
--- Load source logic loadstring(game:HttpGet("https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/source.lua"))() print("GMON Hub UI Loaded with Info Tab")
+task.spawn(function()
+    while true do
+        local phase = os.date("*t").min % 4
+        local phases = {[0]="🌑 0/4",[1]="🌘 1/4",[2]="🌗 2/4",[3]="🌖 3/4", [4]="🌕 4/4"}
+        moonLabel.Text = "Moon Phase: " .. (phases[phase] or "Unknown")
 
-print("GMON Hub UI Loaded")
+        prehistoricLbl.Text = "Prehistoric Island: " .. (workspace:FindFirstChild("Prehistoric") and "✅" or "❌")
+        kitsuneLbl.Text = "Kitsune Island: " .. (workspace:FindFirstChild("Kitsune") and "✅" or "❌")
+
+        task.wait(10)
+    end
+end)
+
+-- Load source logic loadstring(game:HttpGet("https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/source.lua"))()
+
+ print("GMON Hub UI Loaded with Info Tab")
