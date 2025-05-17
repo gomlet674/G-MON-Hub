@@ -46,6 +46,39 @@ Position = UDim2.new(0.5, -290, 0.5, -160),
 
 New("UICorner", {CornerRadius = UDim.new(0, 12)}, frame)
 
+-- Setelah New("UICorner", {CornerRadius = UDim.new(0, 12)}, frame)
+
+-- Judul UI G-Mon Hub
+local titleLabel = New("TextLabel", {
+    Text = "G-Mon Hub",
+    Font = Enum.Font.GothamBold,
+    TextSize = 24,
+    TextColor3 = Color3.fromRGB(255, 255, 255),
+    BackgroundTransparency = 1,
+    Size = UDim2.new(1, 0, 0, 30),
+    Position = UDim2.new(0, 0, 0, 5),
+    ZIndex = 2
+}, frame)
+
+-- (Optional) Garis bawah kecil di bawah judul
+local underline = New("Frame", {
+    Size = UDim2.new(0.3, 0, 0, 2),
+    Position = UDim2.new(0.35, 0, 0, 35),
+    BackgroundColor3 = Color3.fromRGB(0, 170, 255),
+    ZIndex = 2
+}, frame)
+
+-- Kemudian baru buat tabScroll
+local tabScroll = New("ScrollingFrame", {
+    Size = UDim2.new(1, 0, 0, 30),
+    Position = UDim2.new(0, 0, 0, 45), -- geser ke bawah agar tidak tertutup judul
+    BackgroundTransparency = 1,
+    ScrollBarThickness = 4,
+    ScrollingDirection = Enum.ScrollingDirection.X,
+    CanvasSize = UDim2.new(0, #tabNames * 105, 0, 30),
+    Parent = frame
+})
+
 local stroke = New("UIStroke", {Thickness = 3, ApplyStrokeMode = Enum.ApplyStrokeMode.Border}, frame)
 task.spawn(function()
     local hue = 0
