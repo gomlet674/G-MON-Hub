@@ -1,4 +1,5 @@
--- library.lua -- G-Mon Hub UI Library (IsnaHamzah + Redz Hub style) -- Usage: local UI = loadstring(game:HttpGet("https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/library.lua",true))()
+-- library.lua -- G-Mon Hub UI Library (IsnaHamzah + Redz Hub style) -- Usage: 
+local UI = loadstring(game:HttpGet("https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/library.lua",true))()
 
 local UI = {} UI.__index = UI
 
@@ -26,6 +27,22 @@ local Main = new("Frame", {
 }, SGui)
 new("UICorner", {CornerRadius=UDim.new(0, radius)}, Main)
 UI.MainFrame = Main
+
+-- setelah new(\"Frame\", ... ) untuk MainFrame
+local stroke = Instance.new("UIStroke", Main)
+stroke.Thickness = 2
+-- animasi RGB
+task.spawn(function()
+  local t = 0
+  while true do
+    t = (t + 0.01) % 1
+    local r = math.sin(t*2*math.pi)*0.5 + 0.5
+    local g = math.sin(t*2*math.pi + 2) *0.5 + 0.5
+    local b = math.sin(t*2*math.pi + 4) *0.5 + 0.5
+    stroke.Color = Color3.new(r, g, b)
+    task.wait(0.03)
+  end
+end)
 
 -- Title Bar
 local Top = new("Frame", {
