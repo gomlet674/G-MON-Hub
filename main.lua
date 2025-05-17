@@ -188,27 +188,31 @@ end
 -- Populate Tabs
 -- Info
 local pg = pages[1]
-AddToggle(pg, "Kill Elite Spawn", "TrackEliteSpawn")
-AddToggle(pg, "lock Full Moon", "TrackFullMoon")
-AddToggle(pg, " Farm God Chalice", "TrackGodChalice")
+AddToggle(pg, "Kill Elite Spawn Off", "Kill elite Spawn On")
+AddToggle(pg, "Lock Full Moon Off", "Lock Full Moon On")
+AddToggle(pg, " Farm God Chalice Off", "Farm God Chalice On")
 
 -- Main
 pg = pages[2]
-AddToggle(pg, "Auto Farm", "AutoFarm")
+AddToggle(pg, "Auto Farm Off", "AutoFarm On")
+AddInput(pg, "Select Boss", function(text)
+    _G.Flags.SelectBoss = text
+end)
 AddToggle(pg, "Farm Boss Selected", "FarmBossSelected")
-AddToggle(pg, "Farm All Boss", "FarmAllBoss")
-AddToggle(pg, "Mastery Fruit", "MasteryFruit")
+AddToggle(pg, "Farm All Boss Off", "FarmAllBoss On")
+AddToggle(pg, "Mastery Fruit Off", "MasteryFruit On")
+AddToggle(pg, "Aimbot Off", "Aimbot On") 
 
 -- Item
 pg = pages[3]
-AddToggle(pg, "Auto CDK", "AutoCDK")
-AddToggle(pg, "Auto Yama", "AutoYama")
-AddToggle(pg, "Auto Tushita", "AutoTushita")
-AddToggle(pg, "Auto Soul Guitar", "AutoSoulGuitar")
+AddToggle(pg, "Auto CDK Off", "AutoCDK On")
+AddToggle(pg, "Auto Yama Off", "AutoYama On")
+AddToggle(pg, "Auto Tushita Off", "AutoTushita On")
+AddToggle(pg, "Auto Soul Guitar Off", "AutoSoulGuitar On")
 
 -- Sea
 pg = pages[4]
-AddToggle(pg, "Kill Sea Beast", "KillSeaBeast")
+AddToggle(pg, "Kill Sea beast", "KillSeaBeast")
 AddToggle(pg, "Auto Sail", "AutoSail")
 
 -- Prehistoric
