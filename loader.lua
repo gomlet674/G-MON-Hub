@@ -1,6 +1,6 @@
 -- GMON_Loader.lua (StarterPlayerScripts)
 
-repeat task.wait() until game:IsLoaded()
+repeat wait() until game:IsLoaded()
 
 -- Services
 local Players            = game:GetService("Players")
