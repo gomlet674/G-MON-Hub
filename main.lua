@@ -35,6 +35,46 @@ end
 function UI:Create()
     local gui = new("ScreenGui", { Name = "GMonHub_UI", ResetOnSpawn = false }, Players.LocalPlayer:WaitForChild("PlayerGui"))
 
+-- UI Toggle Kiri & Draggable
+local toggleBtn = new("TextButton", {
+    Text = "G",
+    Size = UDim2.new(0, 30, 0, 30),
+    Position = UDim2.new(0, 10, 0.5, -15),
+    BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+    TextColor3 = Color3.fromRGB(255, 255, 255),
+    BackgroundTransparency = 0.3,
+    Parent = gui
+})
+new("UICorner", {CornerRadius = UDim.new(0, 6)}, toggleBtn)
+local dragging, dragInput, startPos, startInputPos
+toggleBtn.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        startPos = toggleBtn.Position
+        startInputPos = input.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+toggleBtn.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement then
+        dragInput = input
+    end
+end)
+UserInput.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        local delta = input.Position - startInputPos
+        toggleBtn.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+toggleBtn.MouseButton1Click:Connect(function()
+    UI.Visible = not UI.Visible
+    UI.MainFrame.Visible = UI.Visible
+end)
+
     -- RGB Background
     local bg = new("Frame", { Size = UDim2.new(1, 0, 1, 0), BackgroundColor3 = Color3.fromRGB(0, 0, 0), BackgroundTransparency = 1, Parent = gui })
     local bgStroke = new("UIStroke", { Thickness = 4, Transparency = 0.2, Parent = bg })
