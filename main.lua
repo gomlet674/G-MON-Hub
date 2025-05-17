@@ -279,6 +279,13 @@ UserInput.InputBegan:Connect(function(input, gpe)
     end
 end)
 
+-- M Key toggle
+UserInput.InputBegan:Connect(function(input, gpe)
+    if not gpe and input.KeyCode == Enum.KeyCode.M then
+        frame.Visible = not frame.Visible
+    end
+end)
+
 -- Memuat semua fitur dari source.lua
 loadstring(game:HttpGet("https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/source.lua"))()
 
