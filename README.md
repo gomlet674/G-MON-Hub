@@ -1,6 +1,3 @@
-Berikut contoh README.md yang bisa kamu pakai untuk repositori GitHub script GMON Roblox Blox Fruits, lengkap dengan penjelasan fitur dan placeholder gambar. Kamu tinggal ganti link gambar sesuai dengan file gambar yang kamu upload di repo kamu.
-
-
 ---
 
 # GMON Hub - Roblox Blox Fruits Script
