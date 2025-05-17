@@ -131,7 +131,10 @@ local Players = game:GetService("Players") local Replicated = game:GetService("R
 
 local function getHRP() local char = Players.LocalPlayer.Character return char and char:FindFirstChild("HumanoidRootPart") end
 
--- Utility local function serverHop() -- Dummy server hop logic print("[GMON] Server hop...") end
+-- Utility 
+local function serverHop() -- Dummy server hop logic 
+print("[GMON] Server hop...")
+ end
 
 local function redeemAllCodes() -- Dummy redeem logic print("[GMON] Redeeming all codes...") end
 
