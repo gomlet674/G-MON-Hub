@@ -99,19 +99,36 @@ GetKey.TextColor3 = Color3.new(1, 1, 1)
 
 Instance.new("UICorner", GetKey).CornerRadius = UDim.new(0, 8)
 
--- Key File
+-- Key File Path
 local savedKeyPath = "gmon_key.txt"
-local savedKey
-if isfile(savedKeyPath) then
-    savedKey = readfile(savedKeyPath)
+
+-- Valid Key (bisa kamu ganti sesuai sistemmu)
+local validKey = "GmonHub311851f3c742a8f78dce99e56992555609d23497928e9b33802e7127610c2e"
+
+-- Fungsi submit otomatis
+local function submitKey(key)
+    if key == validKey then
+        writefile(savedKeyPath, key)
+        ScreenGui:Destroy()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/gomlet674/G-Mon-Hub/main/main.lua"))()
+        return true
+    end
+    return false
 end
 
--- Get Key Linkvertise
+-- Cek apakah key sudah tersimpan dan valid
+if isfile(savedKeyPath) then
+    local savedKey = readfile(savedKeyPath)
+    if submitKey(savedKey) then
+        return -- Hentikan eksekusi lanjutan karena sudah berhasil auto-submit
+    end
+end
+
+-- Jika belum berhasil auto-submit, lanjut tampilkan UI dan event handler
 GetKey.MouseButton1Click:Connect(function()
     setclipboard("https://link-target.net/1209226/get-key-gmon-hub-script")
 end)
 
--- Submit Key Verification
 Submit.MouseButton1Click:Connect(function()
     local inputKey = KeyBox.Text
 
@@ -122,11 +139,8 @@ Submit.MouseButton1Click:Connect(function()
         return
     end
 
-    -- Gantilah "GMON-123KEY" sesuai key buatanmu
-    if inputKey == "GmonHub311851f3c742a8f78dce99e56992555609d23497928e9b33802e7127610c2e" then
-        writefile(savedKeyPath, inputKey)
-        ScreenGui:Destroy()
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/gomlet674/G-Mon-Hub/main/main.lua"))()
+    if submitKey(inputKey) then
+        -- Berhasil, tidak perlu apa-apa lagi di sini
     else
         Submit.Text = "Invalid!"
         task.wait(2)
