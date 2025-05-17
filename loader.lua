@@ -100,30 +100,17 @@ GetKey.TextColor3 = Color3.new(1, 1, 1)
 Instance.new("UICorner", GetKey).CornerRadius = UDim.new(0, 8)
 
 GetKey.MouseButton1Click:Connect(function()
-    setclipboard("https://pandadevelopment.net/getkey/ee311851f3c742a8f78dce99e56992555609d23497928e9b33802e7127610c2e")
+    setclipboard("https://linkvertise.com/1209226/get-key-gmon-hub-script")
 end)
 
 -- Key File Path
 local savedKeyPath = "gmon_key.txt"
 
--- Ganti validKey dengan nil karena akan dicek lewat API
-local validKey = nil
-
-local function checkKeyWithPanda(key)
-    local HttpService = game:GetService("HttpService")
-    local success, response = pcall(function()
-        return game:HttpGet("https://pandadevelopment.net/api/checkKey?script_key="..key.."&api_key=ee311851f3c742a8f78dce99e56992555609d23497928e9b33802e7127610c2e")
-    end)
-
-    if success then
-        local data = HttpService:JSONDecode(response)
-        return data.status == "success"
-    end
-    return false
-end
+-- Key yang valid
+local VALID_KEY = "GmonHub311851f3c742a8f78dce99e56992555609d23497928e9b33802e7127610c2e"
 
 local function submitKey(key)
-    if checkKeyWithPanda(key) then
+    if key == VALID_KEY then
         writefile(savedKeyPath, key)
         ScreenGui:Destroy()
         loadstring(game:HttpGet("https://raw.githubusercontent.com/gomlet674/G-Mon-Hub/main/main.lua"))()
@@ -136,15 +123,11 @@ end
 if isfile(savedKeyPath) then
     local savedKey = readfile(savedKeyPath)
     if submitKey(savedKey) then
-        return -- Hentikan eksekusi lanjutan karena sudah berhasil auto-submit
+        return -- Berhenti eksekusi loader jika key valid
     end
 end
 
--- Jika belum berhasil auto-submit, lanjut tampilkan UI dan event handler
-GetKey.MouseButton1Click:Connect(function()
-    setclipboard("https://link-target.net/1209226/get-key-gmon-hub-script")
-end)
-
+-- Event Handlers jika belum ada key valid
 Submit.MouseButton1Click:Connect(function()
     local inputKey = KeyBox.Text
 
@@ -156,7 +139,7 @@ Submit.MouseButton1Click:Connect(function()
     end
 
     if submitKey(inputKey) then
-        -- Berhasil, tidak perlu apa-apa lagi di sini
+        -- berhasil submit
     else
         Submit.Text = "Invalid!"
         task.wait(2)
