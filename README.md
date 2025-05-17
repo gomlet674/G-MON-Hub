@@ -57,7 +57,7 @@ Script ini hanya untuk penggunaan pribadi dan edukasi. Gunakan dengan bijak sesu
 
 ## License
 
-MIT License © 2025 YourName
+MIT License © 2025 Gomlet Golin
 
 ---
 
@@ -70,7 +70,4 @@ Jika kamu ingin request fitur atau melaporkan bug, silakan buat issue di reposit
 
 ---
 
-Kalau kamu ingin, aku bisa bantu buatkan banner dan screenshot dummy untuk dimasukkan ke folder images agar README lebih menarik.
-
-Mau?
 
