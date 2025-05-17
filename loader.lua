@@ -66,14 +66,15 @@ local function showCenterNotification(title, message, displayTime)
 
     -- Setelah beberapa detik, tween keluar dan hapus
     delay(displayTime, function()
-        game:GetService("TweenService"):Create(frame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-            Size = UDim2.new(0, 0, 0, 0),
-            BackgroundTransparency = 1
-        }):Play():Destroy()
-        wait(0.3)
+    local tween = game:GetService("TweenService"):Create(frame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+        Size = UDim2.new(0, 0, 0, 0),
+        BackgroundTransparency = 1
+    })
+    tween:Play()
+    tween.Completed:Connect(function()
         screenGui:Destroy()
     end)
-end
+end)
 
 -- Contoh penggunaan:
 showCenterNotification("[Game Detected]", game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId, Enum.InfoType.Game).Name, 5)
