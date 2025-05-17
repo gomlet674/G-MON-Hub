@@ -180,21 +180,33 @@ end)
 -- Key File Path
 local savedKeyPath = "gmon_key.txt"
 
--- ➊ Daftar skrip per game (PlaceId → URL skrip)
-local GAME_SCRIPTS = {
-    [4442272183] = "https://raw.githubusercontent.com/gomlet674/G-Mon-Hub/main/main.lua",       -- Block-Fruit
-    [3233893879] = "https://raw.githubusercontent.com/gomlet674/G-Mon-Hub/main/main_arena.lua", -- Contoh game lain
-    -- Tambahkan PlaceId dan URL lain sesuai kebutuhan...
-}
+-- Auto generate main script untuk semua game
+local HttpService = game:GetService("HttpService")
+local PlaceId = tostring(game.PlaceId)
+local baseUrl = "https://raw.githubusercontent.com/gomlet674/G-Mon-Hub/main/"
 
--- Fungsi untuk memuat skrip sesuai game
-local function loadGameScript()
-    local url = GAME_SCRIPTS[game.PlaceId]
-    if not url then
-        warn("GMON Loader: Game PlaceId tidak dikenali:", game.PlaceId)
-        return
-    end
-    loadstring(game:HttpGet(url, true))()
+-- Tentukan nama file berdasarkan PlaceId
+local fileName = "main_" .. PlaceId .. ".lua"
+
+-- Coba ambil script khusus untuk game ini
+local url = baseUrl .. fileName
+
+local function fallback()
+    -- Jika tidak ada, gunakan default main.lua
+    local defaultUrl = baseUrl .. "main.lua"
+    local defaultScript = game:HttpGet(defaultUrl)
+    loadstring(defaultScript)()
+end
+
+-- Coba ambil dan jalankan script berdasarkan PlaceId
+local success, result = pcall(function()
+    return game:HttpGet(url)
+end)
+
+if success and result and #result > 0 then
+    loadstring(result)()
+else
+    fallback()
 end
 
 -- Key yang valid
