@@ -1,8 +1,22 @@
 -- Center‐Screen Notification
 -- Letakkan ini di StarterPlayerScripts sebagai LocalScript
 
+-- CenterNotifier.lua (StarterPlayerScripts)
+
 repeat task.wait() until game:IsLoaded()
 
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local Marketplace = game:GetService("MarketplaceService")
+local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
+
+local function showCenterNotification(title, message, displayTime)
+    -- [seluruh implementasi fungsi yang sudah kita bahas]
+end
+
+-- langsung panggil saat load:
+local info = Marketplace:GetProductInfo(game.PlaceId, Enum.InfoType.Place)
+showCenterNotification("[Game Detected]", info.Name, 5)
 local Players = game:GetService("Players")
 local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
 
