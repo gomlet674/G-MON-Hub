@@ -1,32 +1,82 @@
--- Auto‐Detect Roblox Game with On‐Screen Notification
--- Place this in a LocalScript inside StarterPlayerScripts (or similar)
+-- Center‐Screen Notification
+-- Letakkan ini di StarterPlayerScripts sebagai LocalScript
 
 repeat task.wait() until game:IsLoaded()
 
-local Players            = game:GetService("Players")
-local StarterGui         = game:GetService("StarterGui")
-local MarketplaceService = game:GetService("MarketplaceService")
+local Players = game:GetService("Players")
+local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
 
-local function notify(title, text, duration)
-    StarterGui:SetCore("SendNotification", {
-        Title = title,
-        Text = text,
-        Duration = duration or 5,
-        Button1 = "OK"
-    })
-end
+-- Fungsi untuk memunculkan notifikasi
+local function showCenterNotification(title, message, displayTime)
+    displayTime = displayTime or 3
 
--- Try to get the game's name from its PlaceId
-local function getGameName(placeId)
-    local success, info = pcall(function()
-        return MarketplaceService:GetProductInfo(placeId, Enum.InfoType.Game)
+    -- Buat ScreenGui
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "CenterNotificationGui"
+    screenGui.ResetOnSpawn = false
+    screenGui.Parent = playerGui
+
+    -- Container Frame
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(0, 300, 0, 100)
+    frame.AnchorPoint = Vector2.new(0.5, 0.5)
+    frame.Position = UDim2.new(0.5, 0.5, 0.5, 0)  -- tengah layar
+    frame.BackgroundColor3 = Color3.fromRGB(25,25,25)
+    frame.BackgroundTransparency = 0.4
+    frame.BorderSizePixel = 0
+    frame.Parent = screenGui
+
+    -- Rounded corners
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 12)
+    corner.Parent = frame
+
+    -- Title Label
+    local titleLabel = Instance.new("TextLabel")
+    titleLabel.Size = UDim2.new(1, -20, 0, 30)
+    titleLabel.Position = UDim2.new(0, 10, 0, 10)
+    titleLabel.Text = title
+    titleLabel.Font = Enum.Font.GothamBold
+    titleLabel.TextSize = 18
+    titleLabel.TextColor3 = Color3.new(1,1,1)
+    titleLabel.BackgroundTransparency = 1
+    titleLabel.TextXAlignment = Enum.TextXAlignment.Center
+    titleLabel.Parent = frame
+
+    -- Message Label
+    local msgLabel = Instance.new("TextLabel")
+    msgLabel.Size = UDim2.new(1, -20, 0, 50)
+    msgLabel.Position = UDim2.new(0, 10, 0, 40)
+    msgLabel.Text = message
+    msgLabel.Font = Enum.Font.Gotham
+    msgLabel.TextSize = 14
+    msgLabel.TextColor3 = Color3.new(1,1,1)
+    msgLabel.BackgroundTransparency = 1
+    msgLabel.TextWrapped = true
+    msgLabel.TextXAlignment = Enum.TextXAlignment.Center
+    msgLabel.Parent = frame
+
+    -- Mulai dengan scale kecil (menghilang)
+    frame.Size = UDim2.new(0, 0, 0, 0)
+
+    -- Tween untuk muncul
+    game:GetService("TweenService"):Create(frame, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+        Size = UDim2.new(0, 300, 0, 100)
+    }):Play()
+
+    -- Setelah beberapa detik, tween keluar dan hapus
+    delay(displayTime, function()
+        game:GetService("TweenService"):Create(frame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+            Size = UDim2.new(0, 0, 0, 0),
+            BackgroundTransparency = 1
+        }):Play():Destroy()
+        wait(0.3)
+        screenGui:Destroy()
     end)
-    if success and info and info.Name then
-        return info.Name
-    else
-        return "Unknown Game"
-    end
 end
+
+-- Contoh penggunaan:
+showCenterNotification("[Game Detected]", game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId, Enum.InfoType.Game).Name, 5)
 
 -- Main
 local placeId = game.PlaceId
