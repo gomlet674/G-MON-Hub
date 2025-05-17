@@ -1,98 +1,145 @@
--- source.lua
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local TweenService = _G.GMONHub.TweenService
-local LocalPlayer = _G.GMONHub.LocalPlayer
+-- source.lua | GMON-Redz Logic
 
--- Helper: Get closest mob or chest within range
-local function GetNearestTarget()
-    local nearest
-    local nearestDist = math.huge
-    for _, mob in pairs(workspace:GetChildren()) do
-        if mob:IsA("Model") and mob:FindFirstChild("Humanoid") and mob.Humanoid.Health > 0 then
-            local root = mob:FindFirstChild("HumanoidRootPart")
-            if root then
-                local dist = (LocalPlayer.Character.HumanoidRootPart.Position - root.Position).Magnitude
-                if dist < nearestDist and dist < 100 then -- max range 100 studs
-                    nearestDist = dist
-                    nearest = mob
-                end
-            end
+local TweenService    = game:GetService("TweenService")
+local RunService      = game:GetService("RunService")
+local Players         = game:GetService("Players")
+
+local LP              = Players.LocalPlayer
+local HRP             = LP.Character and LP.Character:WaitForChild("HumanoidRootPart")
+local Camera          = workspace.CurrentCamera
+
+-- Utility: TweenTo
+local function TweenTo(pos, speed)
+    speed = speed or 200
+    if not HRP then return end
+    local dist = (HRP.Position - pos).Magnitude
+    local ti = TweenInfo.new(dist/speed, Enum.EasingStyle.Linear)
+    local tw = TweenService:Create(HRP,ti,{CFrame=CFrame.new(pos)})
+    tw:Play(); tw.Completed:Wait()
+end
+
+-- Find nearest enemy
+local function GetNearestEnemy()
+    local nearest, nd = nil, math.huge
+    for _,m in ipairs(workspace.Enemies:GetChildren()) do
+        if m:FindFirstChild("HumanoidRootPart") and m:FindFirstChild("Humanoid")
+           and m.Humanoid.Health>0 then
+            local d=(HRP.Position-m.HumanoidRootPart.Position).Magnitude
+            if d<nd then nd,nearest=d,m end
         end
     end
     return nearest
 end
 
--- Tween to position function
-local function TweenToPosition(targetPos)
-    local character = LocalPlayer.Character
-    if not character or not character:FindFirstChild("HumanoidRootPart") then return end
-    local hrp = character.HumanoidRootPart
-    local tweenInfo = TweenInfo.new((hrp.Position - targetPos).Magnitude / 30, Enum.EasingStyle.Linear)
-    local tween = TweenService:Create(hrp, tweenInfo, {CFrame = CFrame.new(targetPos) + Vector3.new(0,3,0)})
-    tween:Play()
-    tween.Completed:Wait()
+-- Find nearest chest part
+local function GetNearestChest()
+    local nearest, nd = nil, math.huge
+    for _,o in ipairs(workspace:GetDescendants()) do
+        if o:IsA("Part") and o.Name:lower():find("chest") then
+            local d=(HRP.Position-o.Position).Magnitude
+            if d<nd then nd,nearest=d,o end
+        end
+    end
+    return nearest
 end
 
--- Farming loop
-spawn(function()
+-- Attack function
+local function AttackLoop()
     while true do
-        if _G.GMONHub.AutoFarmEnabled() then
-            local target = GetNearestTarget()
-            if target then
-                local hrp = target:FindFirstChild("HumanoidRootPart")
-                if hrp then
-                    TweenToPosition(hrp.Position)
-                    wait(0.3)
-                    -- Attack logic, depending on SelectedWeapon
-                    local weapon = _G.GMONHub.SelectedWeapon()
-                    if weapon == "Melee" then
-                        -- Example melee attack function call
-                        pcall(function()
-                            LocalPlayer.Character.Humanoid:MoveTo(hrp.Position)
-                            -- Simulate melee attack
-                        end)
-                    elseif weapon == "Fruit" then
-                        -- Use fruit skill (needs implementation)
-                    elseif weapon == "Sword" then
-                        -- Use sword skill (needs implementation)
-                    elseif weapon == "Gun" then
-                        -- Use gun skill (needs implementation)
-                    end
+        if _G.AutoFarm or _G.AutoChest then
+            if _G.AutoFarm then
+                local m=GetNearestEnemy()
+                if m then
+                    TweenTo(m.HumanoidRootPart.Position+Vector3.new(0,3,0),250)
+                    LP.Character.Humanoid:MoveTo(m.HumanoidRootPart.Position)
+                    task.wait(0.3)
+                    pcall(function() LP.Character.Humanoid:EquipTool(LP.Backpack:FindFirstChild(_G.SelectedWeapon)) end)
+                    task.wait(0.2)
                 end
-            else
-                wait(1)
             end
-        else
-            wait(0.5)
+            if _G.AutoChest then
+                local c=GetNearestChest()
+                if c then
+                    TweenTo(c.Position+Vector3.new(0,3,0),250)
+                    task.wait(1)
+                end
+            end
         end
-        wait(0.1)
+        task.wait(0.1)
     end
-end)
+end
 
--- Aimbot Logic (simple)
-local mouse = LocalPlayer:GetMouse()
-RunService.RenderStepped:Connect(function()
-    if _G.GMONHub.AimbotEnabled() then
-        local closestPlayer
-        local closestDist = math.huge
-        for _, plr in pairs(Players:GetPlayers()) do
-            if plr ~= LocalPlayer and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") and plr.Character.Humanoid.Health > 0 then
-                local pos = plr.Character.HumanoidRootPart.Position
-                local screenPos, onScreen = workspace.CurrentCamera:WorldToScreenPoint(pos)
-                if onScreen then
-                    local dist = (Vector2.new(mouse.X, mouse.Y) - Vector2.new(screenPos.X, screenPos.Y)).Magnitude
-                    if dist < closestDist then
-                        closestDist = dist
-                        closestPlayer = plr
+-- Aimbot
+local function Aimbot()
+    RunService.RenderStepped:Connect(function()
+        if _G.Aimbot then
+            local nearest,md = nil,math.huge
+            local mouse=LP:GetMouse()
+            for _,plr in ipairs(Players:GetPlayers()) do
+                if plr~=LP and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+                    local sp,pos = Camera:WorldToScreenPoint(plr.Character.HumanoidRootPart.Position)
+                    if pos and _G.Aimbot then
+                        local d=(Vector2.new(mouse.X,mouse.Y)-Vector2.new(sp.X,sp.Y)).Magnitude
+                        if d<md then md,nearest=d,plr end
                     end
                 end
             end
+            if nearest then
+                Camera.CFrame = CFrame.new(Camera.CFrame.Position, nearest.Character.HumanoidRootPart.Position)
+            end
         end
-        if closestPlayer and closestPlayer.Character and closestPlayer.Character:FindFirstChild("HumanoidRootPart") then
-            local targetPos = closestPlayer.Character.HumanoidRootPart.Position
-            local camera = workspace.CurrentCamera
-            camera.CFrame = CFrame.new(camera.CFrame.Position, targetPos)
+    end)
+end
+
+-- Fruit Mastery
+local function FruitMastery()
+    spawn(function()
+        while true do
+            if _G.FruitMastery then
+                pcall(function()  _G.GMONHub.TweenTo(HRP.Position,200) end) -- dummy
+                -- simulate fruit skill here
+            end
+            task.wait(5)
         end
-    end
-end)
+    end)
+end
+
+-- Fast Attack & Auto Click
+local function FastClick()
+    spawn(function()
+        while true do
+            if _G.FastAttack or _G.AutoClick then
+                pcall(function()
+                    local tool = LP.Character:FindFirstChildOfClass("Tool")
+                    if tool then tool:Activate() end
+                end)
+            end
+            task.wait(0.2)
+        end
+    end)
+end
+
+-- Auto Equip Accessory
+local function EquipAccessory()
+    spawn(function()
+        while true do
+            if _G.AutoEquipAccessory then
+                for _,it in ipairs(LP.Backpack:GetChildren()) do
+                    if it:IsA("Tool") and it.Name:lower():find("accessory") then
+                        LP.Character.Humanoid:EquipTool(it)
+                    end
+                end
+            end
+            task.wait(30)
+        end
+    end)
+end
+
+-- Initialization
+FruitMastery()
+FastClick()
+EquipAccessory()
+Aimbot()
+spawn(AttackLoop)
+
+print("GMON Redz Hub logic loaded!")
