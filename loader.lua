@@ -180,6 +180,24 @@ end)
 -- Key File Path
 local savedKeyPath = "gmon_key.txt"
 
+if isfile(savedKeyPath) then
+    local savedKey = readfile(savedKeyPath)
+    if savedKey == VALID_KEY then
+        ScreenGui:Destroy()
+        showCenterNotification("Welcome Back", "Key Auto Loaded", 3)
+        
+        local success, result = pcall(function()
+            return game:HttpGet(url)
+        end)
+        if success and result and #result > 0 then
+            loadstring(result)()
+        else
+            fallback()
+        end
+        return -- stop lanjut ke tampilan key
+    end
+end
+
 -- Auto generate main script untuk semua game
 local HttpService = game:GetService("HttpService")
 local PlaceId = tostring(game.PlaceId)
@@ -306,20 +324,22 @@ end
 -- Event Handlers jika belum ada key valid
 Submit.MouseButton1Click:Connect(function()
     local inputKey = KeyBox.Text
-
-    if inputKey == nil or inputKey == "" then
-        Submit.Text = "Enter Key"
-        task.wait(2)
-        Submit.Text = "Submit"
-        return
-    end
-
-    if submitKey(inputKey) then
-        -- berhasil submit
+    if inputKey == VALID_KEY then
+        writefile(savedKeyPath, inputKey)
+        showCenterNotification("Access Granted", "Key Valid! Loading...", 3)
+        ScreenGui:Destroy()
+        
+        -- Jalankan script utama lagi setelah validasi berhasil
+        local success, result = pcall(function()
+            return game:HttpGet(url)
+        end)
+        if success and result and #result > 0 then
+            loadstring(result)()
+        else
+            fallback()
+        end
     else
-        Submit.Text = "Invalid!"
-        task.wait(2)
-        Submit.Text = "Submit"
+        showCenterNotification("Invalid Key", "Please get a valid key!", 3)
     end
 end)
 
