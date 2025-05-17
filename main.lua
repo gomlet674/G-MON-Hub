@@ -303,6 +303,15 @@ task.spawn(function()
     end
 end)
 
+local prehistoricLbl = New("TextLabel", {
+    Text = "Prehistoric Island: Checking...",
+    Size = UDim2.new(1, 0, 0, 20),
+    BackgroundTransparency = 1,
+    TextColor3 = Color3.new(1, 1, 1),
+    TextXAlignment = Enum.TextXAlignment.Left,
+    Parent = pages[1]
+})
+
 local kitsuneLbl = New("TextLabel", {
     Text = "Kitsune Island: Checking...",
     Size = UDim2.new(1, 0, 0, 20),
