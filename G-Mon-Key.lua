@@ -90,13 +90,15 @@ getKeyBtn.TextScaled = true
 Instance.new("UICorner", getKeyBtn)
 
 getKeyBtn.MouseButton1Click:Connect(function()
-	setclipboard("https://yourkeylink.site")
+	setclipboard("https://linkvertise.com/1209226/get-key-gmon-hub-script")
 	StarterGui:SetCore("SendNotification", {
 		Title = "G-Mon Hub",
 		Text = "Key copied to clipboard!",
 		Duration = 4
 	})
 end)
+
+local validKey = "GmonHub311851f3c742a8f78dce99e56992555609d23497928e9b33802e7127610c2e"
 
 checkBtn.MouseButton1Click:Connect(function()
 	if input.Text == VALID_KEY then
@@ -107,7 +109,7 @@ checkBtn.MouseButton1Click:Connect(function()
 		})
 		wait(0.5)
 		screenGui:Destroy()
-		loadstring(game:HttpGet("https://yourdomain.com/main.lua"))()
+		loadstring(game:HttpGet("https://raw.githubusercontent.com/gomlet674/G-Mon-Hub/main/main.lua"))()
 	else
 		StarterGui:SetCore("SendNotification", {
 			Title = "Invalid Key!",
