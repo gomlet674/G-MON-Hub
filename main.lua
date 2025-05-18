@@ -6,11 +6,12 @@ repeat task.wait() until game:IsLoaded()
 local Players       = game:GetService("Players")
 local TweenService  = game:GetService("TweenService")
 local Replicated    = game:GetService("ReplicatedStorage")
+local UserInput     = game:GetService("UserInputService")
 
 -- GLOBAL CONFIG
 _G.Flags  = _G.Flags  or {}
-_G.Config = _G.Config or {
-    FarmInterval = 0.5,
+_G.Config = {
+    FarmInterval  = 0.5,
     MaxQuestLevel = 2650,
 }
 
@@ -23,12 +24,11 @@ local function New(cls, props, parent)
 end
 
 -- DRAGGABLE MAKER
-local UserInput = game:GetService("UserInputService")
 local function makeDraggable(gui)
     local dragging, startPos, startInput
     gui.InputBegan:Connect(function(inp)
         if inp.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = true
+            dragging   = true
             startPos   = gui.Position
             startInput = inp.Position
             inp.Changed:Connect(function()
@@ -49,9 +49,8 @@ local function makeDraggable(gui)
     end)
 end
 
--- CONTROL HELPERS
+-- CONTROL HELPERS (Switch / Dropdown / Toggle / Text)
 local function AddSwitch(page, label, flag)
-    -- frame + text
     local ctr = New("Frame", {
         Size = UDim2.new(1,0,0,30),
         BackgroundTransparency = 1,
@@ -64,9 +63,9 @@ local function AddSwitch(page, label, flag)
         TextColor3 = Color3.new(1,1,1),
         TextXAlignment = Enum.TextXAlignment.Left,
     }, ctr)
-    -- actual switch
+
     local sw = New("TextButton", {
-        Text = "",            -- Hapus tulisan default
+        Text = "",            -- kosongkan tulisan
         Size = UDim2.new(0,40,0,20),
         Position = UDim2.new(1,-50,0,5),
         BackgroundColor3 = Color3.new(1,1,1),
@@ -184,11 +183,12 @@ local gui = New("ScreenGui", {
     ZIndexBehavior = Enum.ZIndexBehavior.Global,
 }, Players.LocalPlayer:WaitForChild("PlayerGui"))
 
--- BG ANIMATION
+-- BACKGROUND (INPUT TRANSPARENT supaya drag terdeteksi)
 New("ImageLabel", {
     Image = "rbxassetid://16790218639",
     Size = UDim2.new(1,0,1,0),
     BackgroundTransparency = 1,
+    InputTransparent = true,
     ZIndex = 0,
 }, gui)
 
@@ -203,7 +203,7 @@ local frame = New("Frame", {
 New("UICorner", { CornerRadius = UDim.new(0,12) }, frame)
 makeDraggable(frame)
 
--- RGB BORDER
+-- RGB BORDER ANIM
 local stroke = New("UIStroke", {
     Parent = frame,
     Thickness = 4,
@@ -218,7 +218,7 @@ task.spawn(function()
     end
 end)
 
--- TOGGLE BUTTON
+-- TOGGLE BUTTON (GMON)
 local toggle = New("TextButton", {
     Text = "GMON",
     Size = UDim2.new(0,70,0,35),
@@ -238,7 +238,7 @@ UserInput.InputBegan:Connect(function(inp, gp)
     end
 end)
 
--- TABS & PAGES
+-- TABS & PAGES SETUP
 local tabNames = {"Info","Main","Item","Sea","Prehistoric","Kitsune","Leviathan","DevilFruit","ESP","Misc","Setting"}
 local pages = {}
 local tabScroll = New("ScrollingFrame", {
@@ -289,31 +289,27 @@ for i,name in ipairs(tabNames) do
     end)
 end
 
--- INFO LOGIC (update setiap 5 detik)
+-- INFO TAB LOGIC (update tiap 5 detik)
 task.spawn(function()
     while true do
         local info = pages.Info
         info:ClearAllChildren()
         AddText(info, "Toggle GUI: Press M or click GMON")
-        -- fase bulan
         local m = os.date("*t").min % 8
         local phases = {"🌑","🌒","🌓","🌔","🌕","🌖","🌗","🌘"}
         AddText(info, "Moon Phase: "..phases[m+1].." ("..m.."/4)")
-        -- spawn island
         local function chk(name) return workspace:FindFirstChild(name) and "✅" or "❌" end
         AddText(info, "Kitsune Island: "..chk("KitsuneIsland"))
         AddText(info, "Prehistoric Island: "..chk("PrehistoricIsland"))
         AddText(info, "Mirage Island: "..chk("MirageIsland"))
         AddText(info, "Tyrant of the Skies: "..chk("TyrantOfTheSkies"))
-        -- god chalice
         local hasChalice = Players.LocalPlayer.Backpack:FindFirstChild("GodChalice") and "✅" or "❌"
         AddText(info, "God Chalice: "..hasChalice)
-
         task.wait(5)
     end
 end)
 
--- MAIN LOGIC: Farm Quest, Boss, Chest
+-- MAIN LOGIC: AutoQuest, FarmBoss, FarmChest
 task.spawn(function()
     while true do
         if _G.Flags.AutoFarm then
@@ -325,9 +321,10 @@ task.spawn(function()
         end
         if _G.Flags.FarmBossSelected and _G.Flags.SelectedBoss then
             local boss = workspace:FindFirstChild(_G.Flags.SelectedBoss)
-            local hrp  = Players.LocalPlayer.Character and Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-            if boss and boss.PrimaryPart and hrp then
-                Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid"):MoveTo(boss.PrimaryPart.Position + Vector3.new(0,5,0))
+            local char = Players.LocalPlayer.Character
+            local hum  = char and char:FindFirstChildOfClass("Humanoid")
+            if boss and boss.PrimaryPart and hum then
+                hum:MoveTo(boss.PrimaryPart.Position + Vector3.new(0,5,0))
             end
         end
         if _G.Flags.FarmChest then
@@ -351,14 +348,14 @@ end)
 
 -- POPULATE MAIN TAB
 do
-    local main = pages.Main
-    AddSwitch(main, "Auto Farm",           "AutoFarm")
-    AddDropdown(main,"Select Boss",        {"Gorilla King","Bobby","Saw","Yeti","Ice Admiral"}, "SelectedBoss")
-    AddSwitch(main, "Farm Boss Selected",  "FarmBossSelected")
-    AddSwitch(main, "Farm Chest",          "FarmChest")
+    local m = pages.Main
+    AddSwitch(m, "Auto Farm",          "AutoFarm")
+    AddDropdown(m,"Select Boss",       {"Gorilla King","Bobby","Saw","Yeti","Ice Admiral"}, "SelectedBoss")
+    AddSwitch(m, "Farm Boss Selected","FarmBossSelected")
+    AddSwitch(m, "Farm Chest",        "FarmChest")
 end
 
--- OTHER TABS (contoh, tinggal sesuaikan logic jika perlu)
+-- OTHER TABS (logic placeholder)
 do local p = pages.Item
     AddToggle(p,"Auto Get Yama","AutoYama")
     AddToggle(p,"Auto Tushita","AutoTushita")
@@ -384,7 +381,7 @@ do local p = pages.Leviathan
 end
 do local p = pages.DevilFruit
     AddToggle(p,"Gacha Fruit","GachaFruit")
-    AddText(p,"Fruit Target:")
+    AddText   (p,"Fruit Target:")
     AddDropdown(p,"",{"Bomb","Flame","Quake"},"FruitTarget")
 end
 do local p = pages.ESP
@@ -401,7 +398,7 @@ do local p = pages.Misc
 end
 do local p = pages.Setting
     AddToggle(p,"Fast Attack","FastAttack")
-    AddText(p,"Version: vFinal")
+    AddText   (p,"Version: vFinal")
 end
 
 print("GMON Hub UI Loaded (Ultimate)")
