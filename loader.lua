@@ -43,23 +43,32 @@ end)
 
 end
 
--- Tampilkan deteksi game local ok, info = pcall(function() return MarketplaceService:GetProductInfo(game.PlaceId, Enum.InfoType.Game) end) local gameName = ok and info.Name or "Unknown" showCenterNotification("Detected Game: " .. gameName, 4) print("[GMON Loader] Detected game:", gameName)
+-- Tampilkan deteksi game 
+local ok, info = pcall(function() return MarketplaceService:GetProductInfo(game.PlaceId, Enum.InfoType.Game) end) local gameName = ok and info.Name or "Unknown" showCenterNotification("Detected Game: " .. gameName, 4) print("[GMON Loader] Detected game:", gameName)
 
--- Loader GUI via CoreGui (pertama kali) atau PlayerGui local guiRoot = CoreGui or playerGui
+-- Loader GUI via CoreGui (pertama kali) atau PlayerGui
+ local guiRoot = CoreGui or playerGui
 
--- UI Elements local loaderGui = Instance.new("ScreenGui") loaderGui.Name = "GMON_LoaderGui" loaderGui.ResetOnSpawn = false loaderGui.Parent = guiRoot
+-- UI Elements 
+local loaderGui = Instance.new("ScreenGui") loaderGui.Name = "GMON_LoaderGui" loaderGui.ResetOnSpawn = false loaderGui.Parent = guiRoot
 
--- Background semi dark local bg = Instance.new("Frame", loaderGui) bg.Size = UDim2.new(1,0,1,0) bg.BackgroundColor3 = Color3.fromRGB(0,0,0) bg.BackgroundTransparency = 0.6 bg.ZIndex = 1
+-- Background semi dark
+ local bg = Instance.new("Frame", loaderGui) bg.Size = UDim2.new(1,0,1,0) bg.BackgroundColor3 = Color3.fromRGB(0,0,0) bg.BackgroundTransparency = 0.6 bg.ZIndex = 1
 
--- Main container local frame = Instance.new("Frame", loaderGui) frame.Name = "Container" frame.Size = UDim2.new(0, 350, 0, 150) frame.Position = UDim2.new(0.5, -175, 0.5, -75) frame.BackgroundColor3 = Color3.fromRGB(20,20,20) frame.ZIndex = 2 frame.Active = true
+-- Main container 
+local frame = Instance.new("Frame", loaderGui) frame.Name = "Container" frame.Size = UDim2.new(0, 350, 0, 150) frame.Position = UDim2.new(0.5, -175, 0.5, -75) frame.BackgroundColor3 = Color3.fromRGB(20,20,20) frame.ZIndex = 2 frame.Active = true
 
--- Rounded corners Instance.new("UICorner", frame).CornerRadius = UDim.new(0,8)
+-- Rounded corners 
+Instance.new("UICorner", frame).CornerRadius = UDim.new(0,8)
 
--- Title local title = Instance.new("TextLabel", frame) title.Size = UDim2.new(1,0,0,30) title.Position = UDim2.new(0,0,0,5) title.Text = "GMON Hub Key" title.Font = Enum.Font.GothamBold title.TextSize = 18 title.TextColor3 = Color3.new(1,1,1) title.BackgroundTransparency = 1
+-- Title
+ local title = Instance.new("TextLabel", frame) title.Size = UDim2.new(1,0,0,30) title.Position = UDim2.new(0,0,0,5) title.Text = "GMON Hub Key" title.Font = Enum.Font.GothamBold title.TextSize = 18 title.TextColor3 = Color3.new(1,1,1) title.BackgroundTransparency = 1
 
--- Key input local keyBox = Instance.new("TextBox", frame) keyBox.Size = UDim2.new(0.9,0,0,30) keyBox.Position = UDim2.new(0.05,0,0,50) keyBox.PlaceholderText = "Enter your key..." keyBox.Font = Enum.Font.Gotham tkeyBox.TextColor3 = Color3.new(1,1,1) keyBox.BackgroundColor3 = Color3.fromRGB(40,40,40) Instance.new("UICorner", keyBox).CornerRadius = UDim.new(0,5)
+-- Key input
+ local keyBox = Instance.new("TextBox", frame) keyBox.Size = UDim2.new(0.9,0,0,30) keyBox.Position = UDim2.new(0.05,0,0,50) keyBox.PlaceholderText = "Enter your key..." keyBox.Font = Enum.Font.Gotham tkeyBox.TextColor3 = Color3.new(1,1,1) keyBox.BackgroundColor3 = Color3.fromRGB(40,40,40) Instance.new("UICorner", keyBox).CornerRadius = UDim.new(0,5)
 
--- Submit button local submitBtn = Instance.new("TextButton", frame) submitBtn.Size = UDim2.new(0.4,0,0,30) submitBtn.Position = UDim2.new(0.05,0,1, -40) submitBtn.Text = "Submit" submitBtn.Font = Enum.Font.GothamSemibold submitBtn.TextSize = 16 submitBtn.TextColor3 = Color3.new(1,1,1) submitBtn.BackgroundColor3 = Color3.fromRGB(0,170,127) Instance.new("UICorner", submitBtn).CornerRadius = UDim.new(0,5)
+-- Submit button 
+local submitBtn = Instance.new("TextButton", frame) submitBtn.Size = UDim2.new(0.4,0,0,30) submitBtn.Position = UDim2.new(0.05,0,1, -40) submitBtn.Text = "Submit" submitBtn.Font = Enum.Font.GothamSemibold submitBtn.TextSize = 16 submitBtn.TextColor3 = Color3.new(1,1,1) submitBtn.BackgroundColor3 = Color3.fromRGB(0,170,127) Instance.new("UICorner", submitBtn).CornerRadius = UDim.new(0,5)
 
 -- Map PlaceId to scripts
  local GAME_SCRIPTS = { [4442272183] = "https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/main.lua", [3233893879] = "https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/main_arena.lua", [537413528]  = "https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/build.lua", }
