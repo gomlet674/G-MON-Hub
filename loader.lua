@@ -82,5 +82,11 @@ task.wait(5.5)
 -- Panggil G-Mon-Key.lua dari GitHub
 local keyScript = Instance.new("LocalScript")
 keyScript.Name = "GMonKey"
-keyScript.Source = game:HttpGet("https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/G-Mon-Key.lua")
-keyScript.Parent = playerGui
+local keySource = game:HttpGet("https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/G-Mon-Key.lua")
+local success, err = pcall(function()
+    loadstring(keySource)()
+end)
+
+if not success then
+    warn("GMonKey error:", err)
+end
