@@ -288,21 +288,36 @@ for i,name in ipairs(tabNames) do
 end
 
 -- POPULATE TABS
+… (AddText/AddSwitch/AddDropdown/AddToggle) …
 
--- Info
-AddText(pages[1],"Toggle GUI: Press M or click GMON")
-AddText(pages[1],"Moon Phase: Loading…")
-AddText(pages[1],"Kitsune Island: Loading…")
-AddText(pages[1],"Prehistoric Island: Loading…")
-AddText(pages[1],"Mirage Island: Loading…")
-AddText(pages[1],"Tyrant of the Skies: Loading…")
-AddText(pages[1],"God Chalice: Loading…")
+-- 1) Update dinamis untuk tab Info setiap 10 detik
+spawn(function()
+    while task.wait(10) do
+        local phase     = source.getMoonPhase()
+        local kitsune   = source.islandSpawned("KitsuneIsland")     and "✅" or "❌"
+        local prehistoric= source.islandSpawned("PrehistoricIsland") and "✅" or "❌"
+        local mirage    = source.islandSpawned("MirageIsland")      and "✅" or "❌"
+        local tyrant    = source.islandSpawned("TyrantOfTheSkies")  and "✅" or "❌"
+        local chalice   = source.hasGodChalice()                    and "✅" or "❌"
 
--- Main
-AddSwitch(pages[2],"Auto Farm","AutoFarm")
-AddDropdown(pages[2],"Select Boss",{"Gorilla King","Bobby","Saw","Yeti","Ice Admiral"},"SelectedBoss")
+        local infoPage = pages[1]:GetChildren()
+        -- pastikan urutan AddText sama dengan ini
+        infoPage[1].Text = "Moon Phase: "..phase
+        infoPage[2].Text = "Kitsune Island: "..kitsune
+        infoPage[3].Text = "Prehistoric Island: "..prehistoric
+        infoPage[4].Text = "Mirage Island: "..mirage
+        infoPage[5].Text = "Tyrant of the Skies: "..tyrant
+        infoPage[6].Text = "God Chalice: "..chalice
+    end
+end)
 
--- 2) Loop utama untuk tab Main
+-- Main Tab Controls
+AddSwitch(pages[2], "Auto Farm",           "AutoFarm")
+AddDropdown(pages[2], "Select Boss",      {"Gorilla King","Bobby","Saw","Yeti","Ice Admiral"}, "SelectedBoss")
+AddSwitch(pages[2], "Farm Boss Selected", "FarmBossSelected")
+AddSwitch(pages[2], "Farm Chest",         "FarmChest")
+
+-- 2) Loop utama untuk tab Main (jalankan setelah semua kontrol dibuat)
 spawn(function()
     local plr = Players.LocalPlayer
     while task.wait(_G.Config.FarmInterval) do
@@ -316,9 +331,7 @@ spawn(function()
             source.farmChest(plr)
         end
     end
-end)
-AddSwitch(pages[2],"Farm Boss Selected","FarmBossSelected")
-AddSwitch(pages[2],("Farm Chest","FarmChest") 
+end) 
 
 -- Item
 AddToggle(pages[3],"Auto Get Yama","AutoYama")
