@@ -1,6 +1,7 @@
 -- loader.lua -- LocalScript di StarterPlayerScripts
 
--- Debug print untuk line error print("[GMON Loader] Script mulai dieksekusi")
+-- Debug print untuk line error
+ print("[GMON Loader] Script mulai dieksekusi")
 
 -- Tunggu game siap: gunakan event Load
  if game:IsLoaded then repeat task.wait() until game:IsLoaded() else game.Loaded:Wait() end print("[GMON Loader] Game loaded, PlaceId =", game.PlaceId)
