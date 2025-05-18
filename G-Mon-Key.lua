@@ -127,7 +127,28 @@ checkBtn.MouseButton1Click:Connect(function()
         screenGui:Destroy()
         -- jalankan main.lua
         local ok, err = pcall(function()
-            loadstring(game:HttpGet("https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/main.lua", true))()
+            -- Ganti ini:
+-- loadstring(game:HttpGet("https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/main.lua", true))()
+
+-- Dengan yang ini:
+local url = "https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/main.lua"
+local ok, source = pcall(function()
+    return game:HttpGet(url, true)
+end)
+
+if not ok or not source then
+    warn("Gagal fetch main.lua:", source)
+    return
+end
+
+local fn, err = loadstring(source)
+if not fn then
+    warn("Loadstring error:", err)
+    return
+end
+
+-- Sekarang baru panggil
+fn()
         end)
         if not ok then
             warn("Failed to load main.lua:", err)
