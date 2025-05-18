@@ -27,10 +27,18 @@ tryLoadRemote()
 -- HELPER: Instance.new + properti
 local function New(cls, props, parent)
     local inst = Instance.new(cls)
-    for k,v in pairs(props) do inst[k] = v end
+    for k,v in pairs(props) do
+        inst[k] = v
+    end
     if parent then inst.Parent = parent end
     return inst
 end
+
+-- Pemanggilan:
+local frame = New("Frame", {
+    Size = UDim2.new(1, 0, 1, 0),
+    BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+}, game.Players.LocalPlayer:WaitForChild("PlayerGui"))
 
 -- DRAGGABLE MAKER
 local function makeDraggable(guiObject)
