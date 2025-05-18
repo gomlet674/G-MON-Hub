@@ -41,7 +41,8 @@ local function showCustomNotification(text, duration)
     textLabel.BackgroundTransparency = 1
     textLabel.Text = text
     textLabel.TextColor3 = Color3.fromRGB(0, 0, 0)
-    textLabel.TextScaled = true
+    textLabel.TextScaled = false
+    textLabel.TextSize = 16
     textLabel.Font = Enum.Font.GothamBold
 
     local tweenIn = TweenService:Create(frame, TweenInfo.new(0.8, Enum.EasingStyle.Sine), {
