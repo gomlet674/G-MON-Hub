@@ -53,7 +53,9 @@ end
 -- BUILD GUI -- [Sisipkan kode pembuatan gui, frame, toggle, tabs] ...
 
 -- MAIN.LOGIC: INFO & AUTO FARM -- Info Logic: update moon phase dll di loop setiap 10 detik 
-spawn(function() while task.wait(10) do -- contoh moon_phase local m = os.date("*t").min % 8 local phases = {[0]="🌑 0/4",[1]="🌒 -1/4",[2]="🌓 -2/4",[3]="🌔 -3/4", [4]="🌕 4/4",[5]="🌖 3/4",[6]="🌗 2/4",[7]="🌘 1/4"} _G.Flags.MoonPhase = phases[m]
+spawn(function() while task.wait(10) do
+ -- contoh moon_phase 
+local m = os.date("*t").min % 8 local phases = {[0]="🌑 0/4",[1]="🌒 -1/4",[2]="🌓 -2/4",[3]="🌔 -3/4", [4]="🌕 4/4",[5]="🌖 3/4",[6]="🌗 2/4",[7]="🌘 1/4"} _G.Flags.MoonPhase = phases[m]
  -- Kitsune, Prehistoric, Mirage: cek workspace 
 _G.Flags.Kitsune = workspace:FindFirstChild("KitsuneIsland")=nil _G.Flags.Mirage = workspace:FindFirstChild("MirageIsland")~=nil end end)
 
@@ -64,9 +66,14 @@ if _G.Flags.AutoFarm then local plr = Players.LocalPlayer local sea = plr:FindFi
  for lvl=1,2650 do 
 -- lakukan pengambilan quest sesuai sea dan lvl -- contoh: 
 game.ReplicatedStorage.Remotes.Quest:InvokeServer(sea, lvl) end end if _G.Flags.FarmChest then -- cari chest di workspace sesuai sea 
-for _, chest in ipairs(workspace:GetDescendants()) do if chest.Name == "Chest" and chest:FindFirstChild("Sea") then -- misal chest.Sea.Value == plr.SeaLevel -- game.ReplicatedStorage.Remotes.OpenChest:InvokeServer(chest) end end end end end)
+for _, chest in ipairs(workspace:GetDescendants()) do if chest.Name == "Chest" and chest:FindFirstChild("Sea") then
+ -- misal
+ chest.Sea.Value == plr.SeaLevel 
+--
+game.ReplicatedStorage.Remotes.OpenChest:InvokeServer(chest) end end end end end)
 
 print("GMON Hub UI Loaded and Logic Active")
 
--- source.lua (Placeholder untuk logic kickstart) -- Sumber utama telah di-load via tryLoadRemote()
+-- source.lua (Placeholder untuk logic kickstart)
+ -- Sumber utama telah di-load via tryLoadRemote()
 
