@@ -5,8 +5,6 @@ local rgbSpeed = 0.5
 -- UI Setup
 local TweenService = game:GetService("TweenService")
 local StarterGui = game:GetService("StarterGui")
-local player =
-game.Players.LocalPlayer
 
 local screenGui = Instance.new("ScreenGui", game.CoreGui)
 screenGui.Name = "GMon_KeyUI"
