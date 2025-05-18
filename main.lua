@@ -326,7 +326,7 @@ AddText(pages[1], "God Chalice: Loading...")
 -- Main
 AddSwitch(pages[2], "Auto Farm", "AutoFarm")
 AddDropdown(pages[2], "Select Boss", {
-    "Gorilla King","Bobby","Saw","Yeti","Vice Admiral"
+    "Gorilla King","Bobby","Saw","Yeti","ice Admiral"
 }, "SelectedBoss")
 AddSwitch(pages[2], "Farm Boss Selected", "FarmBossSelected")
 
