@@ -63,7 +63,8 @@ end
 -- cari chest di workspace sesuai sea 
 for _, chest in ipairs(workspace:GetDescendants()) do 
 if chest.Name == "Chest" and chest:FindFirstChild("Sea") then
- -- misal chest.Sea.Value == plr.SeaLevel 
+ -- misal chest.Sea.Value == 
+plr.SeaLevel 
 -- game.ReplicatedStorage.Remotes.OpenChest:InvokeServer(chest) end end end end end)
 
 print("GMON Hub UI Loaded and Logic Active")
