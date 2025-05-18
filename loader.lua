@@ -78,7 +78,8 @@ local VALID_KEY = "GmonHub311851f3c742a8f78dce99e56992555609d23497928e9b33802e71
 -- Function load game script
  local function loadGameScript() local url = GAME_SCRIPTS[game.PlaceId] if not url then warn("[GMON Loader] Game tidak dikenali: " .. tostring(game.PlaceId)) showCenterNotification("Game not supported!", 3) return end showCenterNotification("Loading script...", 2) print("[GMON Loader] Loading URL: "..url) local ok, err = pcall(function() loadstring(game:HttpGet(url, true))() end) if not ok then warn("[GMON Loader] Error load script:", err) end end
 
--- Handle submit submitBtn.MouseButton1Click:Connect(function() local key = keyBox.Text:match("%S+") or "" if key == "" then showCenterNotification("Please enter a key!", 2) return end if key == VALID_KEY then writefile(keyFile, key) loaderGui:Destroy() loadGameScript() else showCenterNotification("Invalid Key!", 2) print("[GMON Loader] Invalid key entered:", key) end end)
+-- Handle submit
+ submitBtn.MouseButton1Click:Connect(function() local key = keyBox.Text:match("%S+") or "" if key == "" then showCenterNotification("Please enter a key!", 2) return end if key == VALID_KEY then writefile(keyFile, key) loaderGui:Destroy() loadGameScript() else showCenterNotification("Invalid Key!", 2) print("[GMON Loader] Invalid key entered:", key) end end)
 
 -- Auto-check saved key 
 if isfile(keyFile) then local saved = readfile(keyFile) if saved == VALID_KEY then loaderGui:Destroy() loadGameScript() else print("[GMON Loader] Saved key invalid, removing file.") delfile(keyFile) end end
