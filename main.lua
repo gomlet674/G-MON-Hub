@@ -288,18 +288,6 @@ for i,name in ipairs(tabNames) do
     table.insert(pages, page)
 end
 
-local function AddSwitch(page, text, flag)
-    -- … kode frame & label tetap sama …
-    local sw = New("TextButton", {
-        Text            = "",            -- <— kosongkan text
-        Size            = UDim2.new(0,40,0,20),
-        Position        = UDim2.new(1,-50,0,5),
-        BackgroundColor3= Color3.new(1,1,1),
-        AutoButtonColor = false,
-    }, ctr)
-    -- … sisanya tween knob tetap sama …
-end
-
 -- POPULATE TABS
 
 -- Info
