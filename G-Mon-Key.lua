@@ -58,7 +58,10 @@ end)
 -- TextBox for Key
 local input = Instance.new("TextBox", frame)
 input.PlaceholderText = "Enter Your Key..."
-input.Size = UDim2.new(0.8, 0, 0, 40)
+input.Size = UDim2.new(0.8, 0, 0, 30)
+ -- Sebelumnya 40
+input.TextSize = 14 
+-- Tambahkan jika ingin kontrol manual
 input.Position = UDim2.new(0.1, 0, 0.35, 0)
 input.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 input.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -101,7 +104,7 @@ end)
 local validKey = "GmonHub311851f3c742a8f78dce99e56992555609d23497928e9b33802e7127610c2e"
 
 checkBtn.MouseButton1Click:Connect(function()
-	if input.Text == VALID_KEY then
+	if input.Text == validKey then
 		StarterGui:SetCore("SendNotification", {
 			Title = "Key Valid!",
 			Text = "Welcome to G-Mon Hub",
