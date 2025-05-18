@@ -373,12 +373,4 @@ task.spawn(function()
     end
 end)
 
-print("GMON Hub UI Loaded (Ultimate)")```
-
-Dengan perubahan di atas:
-
-- **`pagesByName.Info`** benar–benar menunjuk ke page “Info”, sehingga `:ClearAllChildren()` tidak nil lagi.  
-- Semua switch/toggle menulis ke `_G.Flags[...]` sesuai yang di-klik, dan logic background (AutoFarm, FastAttack, dsb) berjalan nonstop di `task.spawn`.  
-- Scrollbar vertikal pada tiap page sudah aktif, dan konten akan mengalir ke bawah jika panjang.  
-
-Cukup copy–paste utuh, semoga langsung jalan tanpa error!
+print("GMON Hub UI Loaded (Ultimate)")
