@@ -5,10 +5,13 @@ local rgbSpeed = 0.5
 -- UI Setup
 local TweenService = game:GetService("TweenService")
 local StarterGui = game:GetService("StarterGui")
+local screenGui = 
+Instance.new("ScreenGui", game.CoreGui)
 
-local screenGui = Instance.new("ScreenGui", game.CoreGui)
+local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "GMon_KeyUI"
 screenGui.ResetOnSpawn = false
+screenGui.Parent = player:WaitForChild("PlayerGui")
 
 local frame = Instance.new("Frame", screenGui)
 frame.AnchorPoint = Vector2.new(0.5, 0.5)
