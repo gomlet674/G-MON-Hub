@@ -2,8 +2,7 @@
 -- LocalScript in StarterPlayerScripts
 
 -- Tunggu game siap
- if game:IsLoaded then game.Loaded:Wait() else repeat task.wait() until (game.IsLoaded and game:IsLoaded()) 
-end
+game.Loaded:Wait()
 
 local Players = game:GetService("Players") local MarketplaceService = game:GetService("MarketplaceService") local TweenService = game:GetService("TweenService") local UIS = game:GetService("UserInputService")
 
