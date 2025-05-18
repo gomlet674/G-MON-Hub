@@ -1,5 +1,4 @@
 -- main.lua – GMON Hub UI Final (Ultimate)
-
 repeat task.wait() until game:IsLoaded()
 
 -- SERVICES
@@ -31,8 +30,7 @@ local function tryLoadRemote()
             return module
         end
     end
-    warn("GMON: Gagal memuat source.lua, pakai fallback")
-    -- fallback require jika Anda meletakkan source.lua sebagai ModuleScript
+    warn("GMON: Gagal memuat source.lua, pakai fallback ModuleScript if ada")
     if script:FindFirstChild("source") then
         return require(script.source)
     end
@@ -41,7 +39,7 @@ end
 
 local source = tryLoadRemote()
 if not source then
-    error("GMON: source.lua tidak berhasil di-load, fitur logic akan gagal.")
+    error("GMON: source.lua tidak berhasil di-load, logic akan gagal.")
 end
 
 -- HELPER: Instance.new + properti
@@ -51,16 +49,6 @@ local function New(cls, props, parent)
     if parent then inst.Parent = parent end
     return inst
 end
-
--- -------------------------------------------------------------------
--- [Lanjut dengan define makeDraggable, AddSwitch, AddDropdown, dll.]
--- -------------------------------------------------------------------
-
--- PASTIKAN Anda tidak memanggil source.* sebelum variabel `source` di atas.
-
--- Setelah mendefinisikan UI dan popup tabs, barulah:
--- 1) Loop Info menggunakan source.getMoonPhase(), source.islandSpawned(), dll.
--- 2) Loop Main menggunakan source.autoFarm(), source.farmBoss(), source.farmChest()
 
 -- DRAGGABLE MAKER
 local function makeDraggable(guiObject)
@@ -102,7 +90,8 @@ local function AddSwitch(page, text, flag)
         TextXAlignment = Enum.TextXAlignment.Left,
     }, ctr)
     local sw = New("TextButton", {
-        Size = UDim2.new(0,40,0,20), Position = UDim2.new(1,-50,0,5),
+        Text = "", Size = UDim2.new(0,40,0,20),
+        Position = UDim2.new(1,-50,0,5),
         BackgroundColor3 = Color3.new(1,1,1), AutoButtonColor = false,
     }, ctr)
     New("UICorner", { CornerRadius = UDim.new(0,10) }, sw)
@@ -117,20 +106,17 @@ local function AddSwitch(page, text, flag)
     local tweenInfo = TweenInfo.new(0.15, Enum.EasingStyle.Quad)
     local function toggle()
         _G.Flags[flag] = not _G.Flags[flag]
-        local goal = { Position = _G.Flags[flag]
-            and UDim2.new(1,-19,0,1)
-            or UDim2.new(0,1,0,1) }
         sw.BackgroundColor3 = _G.Flags[flag]
             and Color3.fromRGB(0,170,0)
             or Color3.new(1,1,1)
+        local goal = { Position = _G.Flags[flag]
+            and UDim2.new(1,-19,0,1)
+            or UDim2.new(0,1,0,1) }
         TweenService:Create(knob, tweenInfo, goal):Play()
     end
     sw.Activated:Connect(toggle)
     -- init state
-    if _G.Flags[flag] then
-        sw.BackgroundColor3 = Color3.fromRGB(0,170,0)
-        knob.Position = UDim2.new(1,-19,0,1)
-    end
+    toggle()
 end
 
 local function AddDropdown(page, label, list, flag)
@@ -210,7 +196,6 @@ local gui = New("ScreenGui", {
     ZIndexBehavior = Enum.ZIndexBehavior.Global,
 }, Players.LocalPlayer:WaitForChild("PlayerGui"))
 
--- Background Animation
 New("ImageLabel", {
     Image = "rbxassetid://16790218639",
     Size = UDim2.new(1,0,1,0),
@@ -218,7 +203,6 @@ New("ImageLabel", {
     ZIndex = 0,
 }, gui)
 
--- Main Frame
 local frame = New("Frame", {
     Size = UDim2.new(0,600,0,450),
     Position = UDim2.new(0.5,-300,0.5,-225),
@@ -227,12 +211,10 @@ local frame = New("Frame", {
     Visible = false,
 }, gui)
 New("UICorner", { CornerRadius = UDim.new(0,12) }, frame)
+makeDraggable(frame)
 
--- RGB BORDER
 local stroke = New("UIStroke", {
-    Thickness = 4,
-    ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-    Parent = frame,
+    Thickness = 4, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Parent = frame,
 })
 task.spawn(function()
     local hue = 0
@@ -243,10 +225,6 @@ task.spawn(function()
     end
 end)
 
--- Make draggable
-makeDraggable(frame)
-
--- Toggle Button “GMON”
 local toggle = New("TextButton", {
     Text = "GMON", Size = UDim2.new(0,70,0,35),
     Position = UDim2.new(0,20,0,20),
@@ -266,20 +244,12 @@ end)
 local tabNames = {"Info","Main","Item","Sea","Prehistoric","Kitsune","Leviathan","DevilFruit","ESP","Misc","Setting"}
 local pages = {}
 local tabScroll = New("ScrollingFrame", {
-    Size = UDim2.new(1,0,0,40),
-    Position = UDim2.new(0,0,0,0),
-    BackgroundTransparency = 1,
-    ScrollingDirection = Enum.ScrollingDirection.X,
-    ScrollBarThickness = 6,
-    CanvasSize = UDim2.new(0,#tabNames*110,0,40),
+    Size = UDim2.new(1,0,0,40), Position = UDim2.new(0,0,0,0),
+    BackgroundTransparency = 1, ScrollingDirection = Enum.ScrollingDirection.X,
+    ScrollBarThickness = 6, CanvasSize = UDim2.new(0,#tabNames*110,0,40),
     Parent = frame,
 })
-New("UIListLayout", {
-    Parent = tabScroll,
-    FillDirection = Enum.FillDirection.Horizontal,
-    SortOrder = Enum.SortOrder.LayoutOrder,
-    Padding = UDim.new(0,5),
-}, tabScroll)
+New("UIListLayout", { Parent = tabScroll, FillDirection = Enum.FillDirection.Horizontal, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0,5) }, tabScroll)
 
 for i,name in ipairs(tabNames) do
     local btn = New("TextButton", {
@@ -290,17 +260,11 @@ for i,name in ipairs(tabNames) do
     New("UICorner", { CornerRadius = UDim.new(0,8) }, btn)
 
     local page = New("ScrollingFrame", {
-        Size = UDim2.new(1,-20,1,-80),
-        Position = UDim2.new(0,10,0,50),
-        BackgroundTransparency = 1,
-        Visible = (i==1), ScrollBarThickness = 6,
+        Size = UDim2.new(1,-20,1,-80), Position = UDim2.new(0,10,0,50),
+        BackgroundTransparency = 1, Visible = (i==1), ScrollBarThickness = 6,
         Parent = frame,
     })
-    New("UIListLayout", {
-        Parent = page,
-        SortOrder = Enum.SortOrder.LayoutOrder,
-        Padding = UDim.new(0,5),
-    }, page)
+    New("UIListLayout", { Parent = page, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0,5) }, page)
 
     btn.Activated:Connect(function()
         for _,p in ipairs(pages) do p.Visible = false end
@@ -315,36 +279,40 @@ for i,name in ipairs(tabNames) do
 end
 
 -- POPULATE TABS
-… (AddText/AddSwitch/AddDropdown/AddToggle) …
+-- Info
+AddText(pages[1],"Toggle GUI: Press M or click GMON")
+AddText(pages[1],"Moon Phase: Loading…")
+AddText(pages[1],"Kitsune Island: Loading…")
+AddText(pages[1],"Prehistoric Island: Loading…")
+AddText(pages[1],"Mirage Island: Loading…")
+AddText(pages[1],"Tyrant of the Skies: Loading…")
+AddText(pages[1],"God Chalice: Loading…")
 
--- 1) Update dinamis untuk tab Info setiap 10 detik
+-- Dynamic Info
 spawn(function()
     while task.wait(10) do
-        local phase     = source.getMoonPhase()
-        local kitsune   = source.islandSpawned("KitsuneIsland")     and "✅" or "❌"
+        local phase      = source.getMoonPhase()
+        local kitsune    = source.islandSpawned("KitsuneIsland")     and "✅" or "❌"
         local prehistoric= source.islandSpawned("PrehistoricIsland") and "✅" or "❌"
-        local mirage    = source.islandSpawned("MirageIsland")      and "✅" or "❌"
-        local tyrant    = source.islandSpawned("TyrantOfTheSkies")  and "✅" or "❌"
-        local chalice   = source.hasGodChalice()                    and "✅" or "❌"
-
-        local infoPage = pages[1]:GetChildren()
-        -- pastikan urutan AddText sama dengan ini
-        infoPage[1].Text = "Moon Phase: "..phase
-        infoPage[2].Text = "Kitsune Island: "..kitsune
-        infoPage[3].Text = "Prehistoric Island: "..prehistoric
-        infoPage[4].Text = "Mirage Island: "..mirage
-        infoPage[5].Text = "Tyrant of the Skies: "..tyrant
-        infoPage[6].Text = "God Chalice: "..chalice
+        local mirage     = source.islandSpawned("MirageIsland")      and "✅" or "❌"
+        local tyrant     = source.islandSpawned("TyrantOfTheSkies")  and "✅" or "❌"
+        local chalice    = source.hasGodChalice()                    and "✅" or "❌"
+        local labels = pages[1]:GetChildren()
+        labels[1].Text = "Moon Phase: "..phase
+        labels[2].Text = "Kitsune Island: "..kitsune
+        labels[3].Text = "Prehistoric Island: "..prehistoric
+        labels[4].Text = "Mirage Island: "..mirage
+        labels[5].Text = "Tyrant of the Skies: "..tyrant
+        labels[6].Text = "God Chalice: "..chalice
     end
 end)
 
--- Main Tab Controls
-AddSwitch(pages[2], "Auto Farm",           "AutoFarm")
-AddDropdown(pages[2], "Select Boss",      {"Gorilla King","Bobby","Saw","Yeti","Ice Admiral"}, "SelectedBoss")
-AddSwitch(pages[2], "Farm Boss Selected", "FarmBossSelected")
-AddSwitch(pages[2], "Farm Chest",         "FarmChest")
+-- Main
+AddSwitch(pages[2],"Auto Farm","AutoFarm")
+AddDropdown(pages[2],"Select Boss", source.allBosses(), "SelectedBoss")
+AddSwitch(pages[2],"Farm Boss Selected","FarmBossSelected")
+AddSwitch(pages[2],"Farm Chest","FarmChest")
 
--- 2) Loop utama untuk tab Main (jalankan setelah semua kontrol dibuat)
 spawn(function()
     local plr = Players.LocalPlayer
     while task.wait(_G.Config.FarmInterval) do
@@ -358,7 +326,7 @@ spawn(function()
             source.farmChest(plr)
         end
     end
-end) 
+end)
 
 -- Item
 AddToggle(pages[3],"Auto Get Yama","AutoYama")
@@ -386,7 +354,7 @@ AddToggle(pages[7],"Attack Leviathan","AttackLeviathan")
 -- DevilFruit
 AddToggle(pages[8],"Gacha Fruit","GachaFruit")
 AddText(pages[8],"Fruit Target:")
-AddDropdown(pages[8],"",{"Bomb","Flame","Quake"},"FruitTarget")
+AddDropdown(pages[8],"Select Fruit",{"Bomb","Flame","Quake"},"FruitTarget")
 
 -- ESP
 AddToggle(pages[9],"ESP Fruit","ESPFruit")
