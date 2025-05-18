@@ -1,158 +1,169 @@
--- G-Mon-Key.lua
+-- GMON_Loader.lua (StarterPlayerScripts)
+
 repeat task.wait() until game:IsLoaded()
 
-local UserInputService = game:GetService("UserInputService")
-local StarterGui       = game:GetService("StarterGui")
-local RunService       = game:GetService("RunService")
+-- Services
+local Players            = game:GetService("Players")
+local TweenService       = game:GetService("TweenService")
+local UIS                = game:GetService("UserInputService")
+local TeleportService    = game:GetService("TeleportService")
+local MarketplaceService = game:GetService("MarketplaceService")
+local StarterGui         = game:GetService("StarterGui")
 
--- load fallback
-local loader = loadstring or load
+local LOCAL_PLAYER = Players.LocalPlayer
+local PLAYER_GUI   = LOCAL_PLAYER:WaitForChild("PlayerGui")
 
-local VALID_KEY = "GmonHub311851f3c742a8f78dce99e56992555609d23497928e9b33802e7127610c2e"
-local rgbSpeed  = 0.5
+-- Settings
+local VALID_KEY     = "GmonHub311851f3c742a8f78dce99e56992555609d23497928e9b33802e7127610c2e"
+local SAVED_KEYFILE = "gmon_key.txt"
+local GET_KEY_URL   = "https://linkvertise.com/1209226/get-key-gmon-hub-script"
 
--- Parent ke CoreGui (atau PlayerGui di Studio)
-local parentGui = (RunService:IsStudio() and
-    game.Players.LocalPlayer:WaitForChild("PlayerGui")) or
-    game:GetService("CoreGui")
+-- Game scripts map by PlaceId
+local GAME_SCRIPTS = {
+    [4442272183] = "https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/main.lua",       -- Blox Fruits
+    [3233893879] = "https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/main_arena.lua", -- Arena
+    [537413528] =  "https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/build.lua",      -- Build A Boat
+}
 
--- SCREEN GUI
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name         = "GMon_KeyUI"
-screenGui.ResetOnSpawn = false
-screenGui.Parent       = parentGui
-
--- FRAME
-local frame = Instance.new("Frame", screenGui)
-frame.AnchorPoint            = Vector2.new(0.5,0.5)
-frame.Position               = UDim2.new(0.5,0,0.5,-20)
-frame.Size                   = UDim2.new(0,400,0,160)
-frame.BackgroundColor3       = Color3.fromRGB(20,20,20)
-frame.BackgroundTransparency = 0.1
-frame.ClipsDescendants       = true
-frame.Active                 = true
-frame.Selectable             = true
-Instance.new("UICorner", frame).CornerRadius = UDim.new(0,12)
-
--- RGB BORDER
-local border = Instance.new("UIStroke", frame)
-border.Thickness       = 2
-border.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-task.spawn(function()
-    while frame.Parent do
-        for h=0,1,0.01 do
-            border.Color = Color3.fromHSV(h,1,1)
-            task.wait(rgbSpeed)
-        end
-    end
-end)
-
--- TITLE
-local title = Instance.new("TextLabel", frame)
-title.Size                  = UDim2.new(1,-20,0,30)
-title.Position              = UDim2.new(0,10,0,10)
-title.BackgroundTransparency= 1
-title.Font                  = Enum.Font.GothamBold
-title.TextSize              = 18
-title.TextColor3            = Color3.new(1,1,1)
-title.TextXAlignment        = Enum.TextXAlignment.Left
-title.Text                  = "G-Mon Hub Key"
-
--- CLOSE
-local closeBtn = Instance.new("TextButton", frame)
-closeBtn.Size                 = UDim2.new(0,24,0,24)
-closeBtn.Position             = UDim2.new(1,-30,0,8)
-closeBtn.BackgroundTransparency=1
-closeBtn.Font                 = Enum.Font.GothamBold
-closeBtn.TextSize             = 18
-closeBtn.TextColor3           = Color3.new(1,1,1)
-closeBtn.Text                 = "X"
-closeBtn.MouseButton1Click:Connect(function()
-    screenGui:Destroy()
-end)
-
--- TEXTBOX (gunakan Text, bukan PlaceholderText)
-local input = Instance.new("TextBox", frame)
-input.Size             = UDim2.new(0.7,0,0,28)
-input.Position         = UDim2.new(0.15,0,0.4,0)
-input.Text             = "Enter Key"
-input.ClearTextOnFocus = true
-input.BackgroundColor3 = Color3.fromRGB(30,30,30)
-input.TextColor3       = Color3.new(1,1,1)
-input.Font             = Enum.Font.Gotham
-input.TextSize         = 14
-Instance.new("UICorner", input).CornerRadius = UDim.new(0,6)
-
--- BUTTONS
-local function newBtn(parent, txt, col, posX)
-    local b = Instance.new("TextButton", parent)
-    b.Size             = UDim2.new(0.35,0,0,28)
-    b.Position         = UDim2.new(posX,0,0.75,0)
-    b.Font             = Enum.Font.GothamBold
-    b.TextSize         = 14
-    b.TextColor3       = Color3.new(1,1,1)
-    b.Text             = txt
-    b.BackgroundColor3 = col
-    Instance.new("UICorner", b).CornerRadius = UDim.new(0,6)
-    return b
-end
-
-local checkBtn = newBtn(frame, "Check Key", Color3.fromRGB(50,100,50), 0.1)
-local getKeyBtn = newBtn(frame, "Get Key", Color3.fromRGB(50,50,100), 0.55)
-
--- LOGIC
-getKeyBtn.MouseButton1Click:Connect(function()
-    pcall(function()
-        setclipboard("https://linkvertise.com/1209226/get-key-gmon-hub-script")
-    end)
+-- Center notification
+local function showNotification(title, text, duration)
     StarterGui:SetCore("SendNotification", {
-        Title="G-Mon Hub", Text="Link key copied!", Duration=2
+        Title    = title,
+        Text     = text,
+        Duration = duration or 3,
     })
-end)
+end
 
-checkBtn.MouseButton1Click:Connect(function()
-    local key = input.Text or ""
+-- Load the correct game script
+local function loadGameScript()
+    local url = GAME_SCRIPTS[game.PlaceId]
+    if not url then
+        warn("GMON Loader: Unrecognized PlaceId:", game.PlaceId)
+        return
+    end
+    local ok, err = pcall(function()
+        loadstring(game:HttpGet(url, true))()
+    end)
+    if not ok then
+        warn("GMON Loader: Failed to load game script:", err)
+    end
+end
+
+-- Validate & submit key
+local function submitKey(key)
     if key == VALID_KEY then
-        StarterGui:SetCore("SendNotification", {
-            Title="Key Valid", Text="Loading…", Duration=2
-        })
+        writefile(SAVED_KEYFILE, key)
+        showNotification("Key Valid", "Loading G-Mon Hub…", 2)
         task.wait(0.5)
-        screenGui:Destroy()
-        if loader then
-            local ok,err = pcall(function()
-                loader(game:HttpGet("https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/main.lua",true))()
-            end)
-            if not ok then warn("Load main.lua gagal:",err) end
-        end
-    else
-        StarterGui:SetCore("SendNotification", {
-            Title="Invalid Key", Text="Please get a valid key.", Duration=2
-        })
-        input.Text = ""
+        loaderGui:Destroy()
+        loadGameScript()
+        return true
+    end
+    return false
+end
+
+-- Auto-submit if already saved
+if isfile(SAVED_KEYFILE) then
+    local saved = readfile(SAVED_KEYFILE)
+    if submitKey(saved) then
+        return
+    end
+end
+
+-- Build GUI
+local loaderGui = Instance.new("ScreenGui")
+loaderGui.Name               = "GMON_Loader"
+loaderGui.ResetOnSpawn       = false
+loaderGui.ZIndexBehavior     = Enum.ZIndexBehavior.Sibling
+loaderGui.Parent             = game:GetService("CoreGui")
+
+local bg = Instance.new("ImageLabel", loaderGui)
+bg.Name                     = "AnimeBackground"
+bg.BackgroundTransparency   = 1
+bg.Size                     = UDim2.new(1,0,1,0)
+bg.Position                 = UDim2.new(0,0,0,0)
+bg.Image                    = "rbxassetid://16790218639"
+bg.ScaleType                = Enum.ScaleType.Crop
+
+local frame = Instance.new("Frame", loaderGui)
+frame.Size                  = UDim2.new(0,420,0,200)
+frame.Position              = UDim2.new(0.5,-210,0.5,-100)
+frame.BackgroundColor3      = Color3.fromRGB(20,20,20)
+frame.Active                = true
+frame.Draggable             = true
+Instance.new("UICorner", frame).CornerRadius = UDim.new(0,15)
+
+local stroke = Instance.new("UIStroke", frame)
+stroke.Thickness            = 2
+stroke.ApplyStrokeMode      = Enum.ApplyStrokeMode.Border
+-- RGB border animation
+task.spawn(function()
+    local hue = 0
+    while frame.Parent do
+        hue = (hue + 0.01) % 1
+        stroke.Color = Color3.fromHSV(hue,1,1)
+        task.wait(0.03)
     end
 end)
 
--- DRAGGABLE
-do
-    local dragging,dragInput,dragStart,startPos
-    frame.InputBegan:Connect(function(i)
-        if i.UserInputType==Enum.UserInputType.MouseButton1 then
-            dragging=true; dragStart=i.Position; startPos=frame.Position
-            i.Changed:Connect(function()
-                if i.UserInputState==Enum.UserInputState.End then dragging=false end
-            end)
-        end
-    end)
-    frame.InputChanged:Connect(function(i)
-        if i.UserInputType==Enum.UserInputType.MouseMovement then dragInput=i end
-    end)
-    UserInputService.InputChanged:Connect(function(i)
-        if dragging and i==dragInput then
-            local delta=i.Position-dragStart
-            frame.Position=UDim2.new(
-                startPos.X.Scale, startPos.X.Offset+delta.X,
-                startPos.Y.Scale, startPos.Y.Offset+delta.Y
-            )
-        end
-    end)
-end
+-- Title
+local title = Instance.new("TextLabel", frame)
+title.Size                  = UDim2.new(1,0,0,40)
+title.Position              = UDim2.new(0,0,0,0)
+title.BackgroundTransparency= 1
+title.Text                  = "GMON HUB KEY SYSTEM"
+title.Font                  = Enum.Font.GothamBold
+title.TextSize              = 20
+title.TextColor3            = Color3.new(1,1,1)
+
+-- KeyBox
+local KeyBox = Instance.new("TextBox", frame)
+KeyBox.PlaceholderText      = "Enter Your Key..."
+KeyBox.Text                 = ""
+KeyBox.Size                 = UDim2.new(0.9,0,0,35)
+KeyBox.Position             = UDim2.new(0.05,0,0.35,0)
+KeyBox.BackgroundColor3     = Color3.fromRGB(40,40,40)
+KeyBox.Font                 = Enum.Font.Gotham
+KeyBox.TextColor3           = Color3.new(1,1,1)
+Instance.new("UICorner", KeyBox).CornerRadius = UDim.new(0,8)
+
+-- Submit button
+local Submit = Instance.new("TextButton", frame)
+Submit.Text                = "Submit"
+Submit.Size                = UDim2.new(0.42,0,0,35)
+Submit.Position            = UDim2.new(0.05,0,0.65,0)
+Submit.BackgroundColor3    = Color3.fromRGB(0,170,127)
+Submit.Font                = Enum.Font.GothamSemibold
+Submit.TextColor3          = Color3.new(1,1,1)
+Instance.new("UICorner", Submit).CornerRadius = UDim.new(0,8)
+
+-- GetKey button
+local GetKey = Instance.new("TextButton", frame)
+GetKey.Text                = "Get Key"
+GetKey.Size                = UDim2.new(0.42,0,0,35)
+GetKey.Position            = UDim2.new(0.53,0,0.65,0)
+GetKey.BackgroundColor3    = Color3.fromRGB(255,85,0)
+GetKey.Font                = Enum.Font.GothamSemibold
+GetKey.TextColor3          = Color3.new(1,1,1)
+Instance.new("UICorner", GetKey).CornerRadius = UDim.new(0,8)
+
+-- Button behaviors
+GetKey.MouseButton1Click:Connect(function()
+    setclipboard(GET_KEY_URL)
+    showNotification("G-Mon Hub", "Get Key link copied!", 2)
+end)
+
+Submit.MouseButton1Click:Connect(function()
+    local k = KeyBox.Text or ""
+    if k == "" then
+        Submit.Text = "Enter Key"
+        task.wait(2)
+        Submit.Text = "Submit"
+        return
+    end
+    if not submitKey(k) then
+        Submit.Text = "Invalid!"
+        task.wait(2)
+        Submit.Text = "Submit"
+    end
+end)
