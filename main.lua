@@ -1,26 +1,48 @@
--- main.lua – GMON Hub UI Final
+-- main.lua – GMON Hub UI Final (Perbaikan Bug)
 repeat task.wait() until game:IsLoaded()
 
--- Source utama
-local success, sourceScript = pcall(function()
-    return game:HttpGet("https://raw.githubusercontent.com/gomlet674/G-Mon-Hub/main/source.lua")
-end)
-if success then
-    loadstring(sourceScript)()
+-- Aktifkan HttpService kalau perlu (Studio saja; di runtime biasanya sudah aktif)
+local HttpService = game:GetService("HttpService")
+if not HttpService.HttpEnabled then
+    pcall(function() HttpService.HttpEnabled = true end)
+end
+
+-- Load Source utama dengan fallback lokal
+local SourceURL = "https://raw.githubusercontent.com/gomlet674/G-Mon-Hub/main/source.lua"
+local function fetchSource()
+    local ok, src = pcall(function()
+        return HttpService:GetAsync(SourceURL)
+    end)
+    if ok and src:sub(1,10) ~= "<!DOCTYPE" then
+        return src
+    end
+    -- Fallback: cari di ReplicatedStorage jika ada Value
+    local rs = game:GetService("ReplicatedStorage")
+    local localSrc = rs:FindFirstChild("GMON_LocalSource")
+    if localSrc and localSrc:IsA("StringValue") then
+        return localSrc.Value
+    end
+    error("GMON Hub: Gagal memuat source.lua dari internet & fallback!")
+end
+
+local sourceScript = fetchSource()
+local loadedFunc = loadstring(sourceScript)
+if type(loadedFunc) == "function" then
+    loadedFunc()
 else
-    warn("GMON Hub: Gagal memuat source.lua!")
+    warn("GMON Hub: loadstring(source) bukan fungsi!")
 end
 
 -- Services
-local Players     = game:GetService("Players")
-local UserInput   = game:GetService("UserInputService")
-local RunService  = game:GetService("RunService")
+local Players    = game:GetService("Players")
+local UserInput  = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
 
--- Config Global
+-- Global Config
 _G.Flags  = _G.Flags  or {}
 _G.Config = _G.Config or { FarmInterval = 0.5 }
 
--- Helper: create instance with properties
+-- Helper: New Instance
 local function New(class, props, parent)
     local inst = Instance.new(class)
     for k,v in pairs(props) do inst[k] = v end
@@ -28,7 +50,7 @@ local function New(class, props, parent)
     return inst
 end
 
--- AddSwitch: toggle styled like a switch
+-- Switch-style Toggle
 local function AddSwitch(page, text, flag)
     local container = New("Frame", {
         Size = UDim2.new(1,0,0,30),
@@ -42,7 +64,7 @@ local function AddSwitch(page, text, flag)
         BackgroundTransparency = 1,
         TextColor3 = Color3.new(1,1,1),
         TextXAlignment = Enum.TextXAlignment.Left,
-        Parent = container
+        Parent = container,
     })
 
     local sw = New("Frame", {
@@ -61,7 +83,6 @@ local function AddSwitch(page, text, flag)
     })
     New("UICorner", { CornerRadius = UDim.new(0,9) }, knob)
 
-    -- init
     _G.Flags[flag] = _G.Flags[flag] or false
     local function update()
         if _G.Flags[flag] then
@@ -74,7 +95,6 @@ local function AddSwitch(page, text, flag)
     end
     update()
 
-    -- click
     sw.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             _G.Flags[flag] = not _G.Flags[flag]
@@ -83,7 +103,7 @@ local function AddSwitch(page, text, flag)
     end)
 end
 
--- AddToggle: simple on/off button
+-- Simple Toggle Button
 local function AddToggle(page, text, flag)
     local btn = New("TextButton", {
         Text = text,
@@ -101,7 +121,7 @@ local function AddToggle(page, text, flag)
     end)
 end
 
--- AddText: plain label
+-- Plain Label
 local function AddText(page, text)
     New("TextLabel", {
         Text = text,
@@ -113,7 +133,7 @@ local function AddText(page, text)
     }, page)
 end
 
--- AddInput: textbox with callback
+-- Input Box
 local function AddInput(page, placeholder, callback)
     local box = New("TextBox", {
         PlaceholderText = placeholder,
@@ -123,15 +143,12 @@ local function AddInput(page, placeholder, callback)
         LayoutOrder = #page:GetChildren(),
     }, page)
     New("UICorner", {}, box)
-
     box.FocusLost:Connect(function(enter)
-        if enter and box.Text ~= "" then
-            callback(box.Text)
-        end
+        if enter and box.Text ~= "" then callback(box.Text) end
     end)
 end
 
--- AddDropdown: simple dropdown menu
+-- Dropdown Menu
 local function AddDropdown(page, title, list, callback)
     AddText(page, title)
     local dropdown = New("TextButton", {
@@ -171,13 +188,13 @@ local function AddDropdown(page, title, list, callback)
     end)
 end
 
--- Create main GUI
+-- Build GUI
 local gui = New("ScreenGui", {
     Name = "GMONHub_UI",
     ResetOnSpawn = false,
 }, Players.LocalPlayer:WaitForChild("PlayerGui"))
 
--- Background animation
+-- Background
 New("ImageLabel", {
     Image = "rbxassetid://16790218639",
     Size = UDim2.new(1,0,1,0),
@@ -185,15 +202,41 @@ New("ImageLabel", {
     ZIndex = 0,
 }, gui)
 
--- Main frame + RGB stroke
+-- Main Frame
 local frame = New("Frame", {
     Size = UDim2.new(0,580,0,420),
     Position = UDim2.new(0.5,-290,0.5,-210),
-    BackgroundColor3 = Color3.fromRGB(25,25,25),
+    BackgroundColor3 = Color3.new(25,25,25),
     BackgroundTransparency = 0.2,
     Name = "MainFrame",
 }, gui)
 New("UICorner", { CornerRadius = UDim.new(0,12) }, frame)
+
+-- Manual Dragging
+do
+    local dragging, startPos, startInput
+    frame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            startPos = frame.Position
+            startInput = input.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+    UserInput.InputChanged:Connect(function(input)
+        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            local delta = input.Position - startInput
+            frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X,
+                                       startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+end
+
+-- RGB Stroke
 local stroke = New("UIStroke", {
     Thickness = 3,
     ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
@@ -207,99 +250,48 @@ task.spawn(function()
     end
 end)
 
--- Toggle button
+-- Toggle Button & Keybind
 local toggleBtn = New("TextButton", {
-    Text = "GMON",
-    Size = UDim2.new(0,60,0,30),
+    Text = "GMON", Size = UDim2.new(0,60,0,30),
     Position = UDim2.new(0,20,0.5,-15),
-    BackgroundColor3 = Color3.fromRGB(40,40,40),
+    BackgroundColor3 = Color3.new(40,40,40),
     TextColor3 = Color3.new(1,1,1),
-    Active = true,
     Name = "ToggleBtn",
 }, gui)
 New("UICorner", {}, toggleBtn)
-toggleBtn.MouseButton1Click:Connect(function()
-    frame.Visible = not frame.Visible
-end)
--- Keybind M
-UserInput.InputBegan:Connect(function(inp, gp)
-    if not gp and inp.KeyCode == Enum.KeyCode.M then
-        frame.Visible = not frame.Visible
-    end
+toggleBtn.MouseButton1Click:Connect(function() frame.Visible = not frame.Visible end)
+UserInput.InputBegan:Connect(function(inp,gp)
+    if not gp and inp.KeyCode==Enum.KeyCode.M then frame.Visible = not frame.Visible end
 end)
 
--- Tabs setup
+-- Tabs & Pages (Horizontal scroll + Vertical pages)
 local tabNames = {"Info","Main","Item","Sea","Prehistoric","Kitsune","Leviathan","DevilFruit","ESP","Misc","Setting"}
-local tabs, pages = {}, {}
+local pages = {}
 local tabScroll = New("ScrollingFrame", {
-    Size = UDim2.new(1,0,0,30),
-    Position = UDim2.new(0,0,0,0),
-    BackgroundTransparency = 1,
-    ScrollBarThickness = 4,
-    ScrollingDirection = Enum.ScrollingDirection.X,
-    CanvasSize = UDim2.new(0,#tabNames*105,0,30),
-    Parent = frame,
+    Size=UDim2.new(1,0,0,30), Position=UDim2.new(0,0,0,0),
+    BackgroundTransparency=1, ScrollingDirection=Enum.ScrollingDirection.X,
+    ScrollBarThickness=4, CanvasSize=UDim2.new(0,#tabNames*105,0,30),
+    Parent=frame,
 })
-New("UIListLayout", {
-    Parent = tabScroll,
-    FillDirection = Enum.FillDirection.Horizontal,
-    SortOrder = Enum.SortOrder.LayoutOrder,
-    Padding = UDim.new(0,5),
-}, tabScroll)
-
+New("UIListLayout",{Parent=tabScroll,FillDirection=Enum.FillDirection.Horizontal,SortOrder=Enum.SortOrder.LayoutOrder,Padding=UDim.new(0,5)},tabScroll)
 for i,name in ipairs(tabNames) do
-    local btn = New("TextButton", {
-        Text = name,
-        Size = UDim2.new(0,100,0,30),
-        BackgroundTransparency = 0.5,
-        BackgroundColor3 = Color3.fromRGB(40,40,40),
-        TextColor3 = Color3.new(1,1,1),
-        Parent = tabScroll,
-    })
-    New("UICorner", {}, btn)
-
-    local page = New("ScrollingFrame", {
-        Size = UDim2.new(1,-20,1,-50),
-        Position = UDim2.new(0,10,0,40),
-        BackgroundTransparency = 1,
-        Visible = false,
-        ScrollBarThickness = 4,
-        Parent = frame,
-    })
-    New("UIListLayout", {
-        Parent = page,
-        SortOrder = Enum.SortOrder.LayoutOrder,
-        Padding = UDim.new(0,5),
-    }, page)
-
+    local btn = New("TextButton",{Text=name,Size=UDim2.new(0,100,0,30),BackgroundTransparency=0.5,BackgroundColor3=Color3.new(40,40,40),TextColor3=Color3.new(1,1,1),Parent=tabScroll})
+    New("UICorner",{},btn)
+    local page = New("ScrollingFrame",{Size=UDim2.new(1,-20,1,-50),Position=UDim2.new(0,10,0,40),BackgroundTransparency=1,Visible=false,ScrollBarThickness=4,Parent=frame})
+    New("UIListLayout",{Parent=page,SortOrder=Enum.SortOrder.LayoutOrder,Padding=UDim.new(0,5)},page)
     btn.MouseButton1Click:Connect(function()
-        for _,p in ipairs(pages) do p.Visible = false end
-        page.Visible = true
+        for _,p in ipairs(pages) do p.Visible=false end
+        page.Visible=true
     end)
-
-    table.insert(tabs, btn)
-    table.insert(pages, page)
-    if i == 1 then
-        page.Visible = true
-    end
+    pages[i] = page
+    if i==1 then page.Visible=true end
 end
 
--- Populate Info tab
-AddText(pages[1], "Toggle GUI: Press M or click GMON")
--- … you can add dynamic labels here like moonLabel, mirageLabel, etc.
-
--- Example switches & toggles
-AddSwitch(pages[2], "Auto Farm", "AutoFarm")
-AddSwitch(pages[2], "Farm Boss Selected", "FarmBossSelected")
-AddSwitch(pages[2], "Farm All Boss", "FarmAllBoss")
-AddSwitch(pages[2], "Mastery Fruit", "MasteryFruit")
-AddSwitch(pages[2], "Aimbot", "Aimbot")
-
+-- Populate Example Controls
+AddText(pages[1],"Toggle GUI: Press M or click GMON")
+AddSwitch(pages[2],"Auto Farm","AutoFarm")
+AddSwitch(pages[2],"Farm All Boss","FarmAllBoss")
 AddToggle(pages[3],"Auto CDK","AutoCDK")
-AddToggle(pages[3],"Auto Yama","AutoYama")
-AddToggle(pages[3],"Auto Tushita","AutoTushita")
-AddToggle(pages[3],"Auto Soul Guitar","AutoSoulGuitar")
-
--- … lanjutkan sesuai kebutuhan…
+-- …lanjutkan sesuai kebutuhan…
 
 print("GMON Hub UI Loaded")
