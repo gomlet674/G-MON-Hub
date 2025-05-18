@@ -3,10 +3,10 @@
 repeat task.wait() until game:IsLoaded()
 
 -- SERVICES
-local Players       = game:GetService("Players")
-local TweenService  = game:GetService("TweenService")
-local Replicated    = game:GetService("ReplicatedStorage")
-local UserInput     = game:GetService("UserInputService")
+local Players      = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local Replicated   = game:GetService("ReplicatedStorage")
+local UserInput    = game:GetService("UserInputService")
 
 -- GLOBAL CONFIG
 _G.Flags  = _G.Flags  or {}
@@ -49,7 +49,7 @@ local function makeDraggable(gui)
     end)
 end
 
--- CONTROL HELPERS (Switch / Dropdown / Toggle / Text)
+-- CONTROL HELPERS
 local function AddSwitch(page, label, flag)
     local ctr = New("Frame", {
         Size = UDim2.new(1,0,0,30),
@@ -65,7 +65,7 @@ local function AddSwitch(page, label, flag)
     }, ctr)
 
     local sw = New("TextButton", {
-        Text = "",            -- kosongkan tulisan
+        Text = "",
         Size = UDim2.new(0,40,0,20),
         Position = UDim2.new(1,-50,0,5),
         BackgroundColor3 = Color3.new(1,1,1),
@@ -183,25 +183,27 @@ local gui = New("ScreenGui", {
     ZIndexBehavior = Enum.ZIndexBehavior.Global,
 }, Players.LocalPlayer:WaitForChild("PlayerGui"))
 
--- BACKGROUND (INPUT TRANSPARENT supaya drag terdeteksi)
-New("ImageLabel", {
-    Image = "rbxassetid://16790218639",
-    Size = UDim2.new(1,0,1,0),
-    BackgroundTransparency = 1,
-    InputTransparent = true,
-    ZIndex = 0,
-}, gui)
-
 -- MAIN FRAME
 local frame = New("Frame", {
     Size = UDim2.new(0,600,0,450),
     Position = UDim2.new(0.5,-300,0.5,-225),
     BackgroundColor3 = Color3.new(0,0,0),
     BackgroundTransparency = 0.5,
+    ZIndex = 1,
     Visible = false,
 }, gui)
 New("UICorner", { CornerRadius = UDim.new(0,12) }, frame)
 makeDraggable(frame)
+
+-- BACKGROUND IMAGE (sekarang di dalam frame, ZIndex=0 sehingga tidak blok drag)
+local bg = New("ImageLabel", {
+    Image = "rbxassetid://16790218639",
+    Size = UDim2.new(1,0,1,0),
+    BackgroundTransparency = 1,
+    ZIndex = 0,
+    Active = false,
+    Selectable = false,
+}, frame)
 
 -- RGB BORDER ANIM
 local stroke = New("UIStroke", {
@@ -225,7 +227,7 @@ local toggle = New("TextButton", {
     Position = UDim2.new(0,20,0,20),
     BackgroundColor3 = Color3.fromRGB(40,40,40),
     TextColor3 = Color3.new(1,1,1),
-    ZIndex = 10,
+    ZIndex = 2,
 }, gui)
 New("UICorner", { CornerRadius = UDim.new(0,8) }, toggle)
 makeDraggable(toggle)
@@ -248,6 +250,7 @@ local tabScroll = New("ScrollingFrame", {
     ScrollingDirection = Enum.ScrollingDirection.X,
     ScrollBarThickness = 0,
     CanvasSize = UDim2.new(#tabNames*80,0,0,40),
+    ZIndex = 2,
     Parent = frame,
 })
 New("UIListLayout", {
@@ -264,6 +267,7 @@ for i,name in ipairs(tabNames) do
         BackgroundColor3 = Color3.new(30,30,30),
         TextColor3 = Color3.new(1,1,1),
         LayoutOrder = i,
+        ZIndex = 2,
         Parent = tabScroll,
     })
     New("UICorner", { CornerRadius = UDim.new(0,6) }, tbtn)
@@ -273,6 +277,7 @@ for i,name in ipairs(tabNames) do
         Size = UDim2.new(1,0,1,-40),
         Position = UDim2.new(0,0,0,40),
         BackgroundTransparency = 1,
+        ZIndex = 2,
         Visible = (i==1),
         Parent = frame,
     })
@@ -349,32 +354,32 @@ end)
 -- POPULATE MAIN TAB
 do
     local m = pages.Main
-    AddSwitch(m, "Auto Farm",          "AutoFarm")
-    AddDropdown(m,"Select Boss",       {"Gorilla King","Bobby","Saw","Yeti","Ice Admiral"}, "SelectedBoss")
-    AddSwitch(m, "Farm Boss Selected","FarmBossSelected")
-    AddSwitch(m, "Farm Chest",        "FarmChest")
+    AddSwitch(m, "Auto Farm",           "AutoFarm")
+    AddDropdown(m,"Select Boss",        {"Gorilla King","Bobby","Saw","Yeti","Ice Admiral"}, "SelectedBoss")
+    AddSwitch(m, "Farm Boss Selected",  "FarmBossSelected")
+    AddSwitch(m, "Farm Chest",          "FarmChest")
 end
 
--- OTHER TABS (logic placeholder)
+-- OTHER TABS
 do local p = pages.Item
-    AddToggle(p,"Auto Get Yama","AutoYama")
-    AddToggle(p,"Auto Tushita","AutoTushita")
+    AddToggle(p,"Auto Get Yama",   "AutoYama")
+    AddToggle(p,"Auto Tushita",    "AutoTushita")
     AddToggle(p,"Auto Soul Guitar","AutoSoulGuitar")
-    AddToggle(p,"Auto CDK","AutoCDK")
+    AddToggle(p,"Auto CDK",        "AutoCDK")
 end
 do local p = pages.Sea
     AddSwitch(p,"Kill Sea Beast","KillSeaBeast")
-    AddSwitch(p,"Auto Sail","AutoSail")
+    AddSwitch(p,"Auto Sail",    "AutoSail")
 end
 do local p = pages.Prehistoric
-    AddToggle(p,"Kill Golem","KillGolem")
-    AddToggle(p,"Defend Volcano","DefendVolcano")
-    AddToggle(p,"Collect Dragon Egg","CollectDragonEgg")
-    AddToggle(p,"Collect Bones","CollectBones")
+    AddToggle(p,"Kill Golem",         "KillGolem")
+    AddToggle(p,"Defend Volcano",     "DefendVolcano")
+    AddToggle(p,"Collect Dragon Egg", "CollectDragonEgg")
+    AddToggle(p,"Collect Bones",      "CollectBones")
 end
 do local p = pages.Kitsune
     AddToggle(p,"Collect Azure Ember","CollectAzure")
-    AddToggle(p,"Trade Azure Ember","TradeAzure")
+    AddToggle(p,"Trade Azure Ember",  "TradeAzure")
 end
 do local p = pages.Leviathan
     AddToggle(p,"Attack Leviathan","AttackLeviathan")
@@ -385,15 +390,15 @@ do local p = pages.DevilFruit
     AddDropdown(p,"",{"Bomb","Flame","Quake"},"FruitTarget")
 end
 do local p = pages.ESP
-    AddToggle(p,"ESP Fruit","ESPFruit")
-    AddToggle(p,"ESP Player","ESPPlayer")
-    AddToggle(p,"ESP Chest","ESPChest")
-    AddToggle(p,"ESP Flower","ESPFlower")
+    AddToggle(p,"ESP Fruit",  "ESPFruit")
+    AddToggle(p,"ESP Player", "ESPPlayer")
+    AddToggle(p,"ESP Chest",  "ESPChest")
+    AddToggle(p,"ESP Flower", "ESPFlower")
 end
 do local p = pages.Misc
-    AddToggle(p,"Server Hop","ServerHop")
+    AddToggle(p,"Server Hop",      "ServerHop")
     AddToggle(p,"Redeem All Codes","RedeemCodes")
-    AddToggle(p,"FPS Booster","FPSBooster")
+    AddToggle(p,"FPS Booster",     "FPSBooster")
     AddToggle(p,"Auto Awaken Fruit","AutoAwaken")
 end
 do local p = pages.Setting
