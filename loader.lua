@@ -1,5 +1,4 @@
 -- loader.lua
--- Menunggu game loaded, deteksi nama + player count, lalu panggil G-Mon-Key.lua
 repeat task.wait() until game:IsLoaded()
 
 local Players = game:GetService("Players")
@@ -21,12 +20,10 @@ local function showCustomNotification(text, duration)
     frame.BackgroundTransparency = 0.5
     frame.BorderSizePixel = 0
 
-    -- RGB border efek
     local uiStroke = Instance.new("UIStroke", frame)
     uiStroke.Thickness = 2
     uiStroke.Color = Color3.fromRGB(255, 0, 0)
 
-    -- RGB effect animate
     task.spawn(function()
         while frame.Parent do
             for i = 0, 1, 0.01 do
@@ -36,7 +33,6 @@ local function showCustomNotification(text, duration)
         end
     end)
 
-    -- Lingkaran pinggiran
     local uicorner = Instance.new("UICorner", frame)
     uicorner.CornerRadius = UDim.new(1, 999)
 
@@ -48,7 +44,6 @@ local function showCustomNotification(text, duration)
     textLabel.TextScaled = true
     textLabel.Font = Enum.Font.GothamBold
 
-    -- Animasi masuk ke tengah layar
     local tweenIn = TweenService:Create(frame, TweenInfo.new(0.8, Enum.EasingStyle.Sine), {
         Position = UDim2.new(0.5, -150, 0.15, 0)
     })
@@ -57,7 +52,6 @@ local function showCustomNotification(text, duration)
 
     task.wait(duration or 5)
 
-    -- Animasi keluar ke atas
     local tweenOut = TweenService:Create(frame, TweenInfo.new(0.8, Enum.EasingStyle.Sine), {
         Position = UDim2.new(0.5, -150, -0.2, 0)
     })
@@ -76,14 +70,11 @@ local gameName = success and info.Name or "Unknown Game"
 local playerCount = #Players:GetPlayers()
 showCustomNotification(gameName .. " | Players: " .. playerCount, 5)
 
--- Tunggu selesai
 task.wait(5.5)
 
--- Panggil G-Mon-Key.lua dari GitHub
-local keyScript = Instance.new("LocalScript")
-keyScript.Name = "GMonKey"
-local keySource = loadatring(game:HttpGet("https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/G-Mon-Key.lua")
+-- Jalankan G-Mon-Key.lua
 local success, err = pcall(function()
+    local keySource = game:HttpGet("https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/G-Mon-Key.lua")
     loadstring(keySource)()
 end)
 
