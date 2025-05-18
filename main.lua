@@ -12,13 +12,17 @@ local TweenService  = game:GetService("TweenService")
 _G.Flags  = _G.Flags  or {} _G.Config = _G.Config or { FarmInterval = 0.5 }
 
 -- TRY LOAD REMOTE SOURCE (NON-FATAL) 
-local function tryLoadRemote() if not HttpService.HttpEnabled then pcall(function() HttpService.HttpEnabled = true end) end local ok, result = pcall(function() return HttpService:GetAsync("https://raw.githubusercontent.com/gomlet674/G-Mon-Hub/main/source.lua") end) if ok and type(result)=="string" and #result>50 then local fn, err = loadstring(result) if fn then pcall(fn) end end end tryLoadRemote()
+local function tryLoadRemote()
+ if not HttpService.HttpEnabled then pcall(function() HttpService.HttpEnabled = true end) end local ok, result = pcall(function() return HttpService:GetAsync("https://raw.githubusercontent.com/gomlet674/G-Mon-Hub/main/source.lua") end) if ok and type(result)=="string" and #result>50 then local fn, err = loadstring(result) if fn then pcall(fn) end end end tryLoadRemote()
 
 -- HELPER: Instance.new + properti
  local function New(cls, props, parent) local inst = Instance.new(cls) for k,v in pairs(props) do inst[k] = v end if parent then inst.Parent = parent end return inst end
 
 -- DRAGGABLE MAKER
- global function makeDraggable(guiObject) local dragging, startPos, startInput guiObject.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = true startPos   = guiObject.Position startInput = input.Position input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then dragging = false end end) end end) UserInput.InputChanged:Connect(function(input) if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then local delta = input.Position - startInput guiObject.Position = UDim2.new( startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y ) end end) end
+ global function makeDraggable(guiObject) 
+local dragging, startPos, startInput guiObject.InputBegan:Connect(function(input) 
+if input.UserInputType == 
+Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = true startPos   = guiObject.Position startInput = input.Position input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then dragging = false end end) end end) UserInput.InputChanged:Connect(function(input) if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then local delta = input.Position - startInput guiObject.Position = UDim2.new( startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y ) end end) end
 
 -- SWITCH CONTROL
  local function AddSwitch(page, text, flag) local ctr = New("Frame", { Size=UDim2.new(1,0,0,30), BackgroundTransparency=1, LayoutOrder=#page:GetChildren() }, page) New("TextLabel", { Text=text, Size=UDim2.new(0.7,0,1,0), BackgroundTransparency=1, TextColor3=Color3.new(1,1,1), TextXAlignment=Enum.TextXAlignment.Left }, ctr) local sw = New("TextButton", { Size=UDim2.new(0,40,0,20), Position=UDim2.new(1,-50,0,5), BackgroundColor3=Color3.new(1,1,1), AutoButtonColor=false }, ctr) New("UICorner", { CornerRadius=UDim.new(0,10) }, sw) local knob = New("Frame", { Size=UDim2.new(0,18,0,18), Position=UDim2.new(0,1,0,1), BackgroundColor3=Color3.fromRGB(50,50,50) }, sw) New("UICorner", { CornerRadius=UDim.new(0,9) }, knob)
@@ -50,7 +54,8 @@ end
 
 -- MAIN.LOGIC: INFO & AUTO FARM -- Info Logic: update moon phase dll di loop setiap 10 detik 
 spawn(function() while task.wait(10) do -- contoh moon_phase local m = os.date("*t").min % 8 local phases = {[0]="🌑 0/4",[1]="🌒 -1/4",[2]="🌓 -2/4",[3]="🌔 -3/4", [4]="🌕 4/4",[5]="🌖 3/4",[6]="🌗 2/4",[7]="🌘 1/4"} _G.Flags.MoonPhase = phases[m]
- -- Kitsune, Prehistoric, Mirage: cek workspace _G.Flags.Kitsune = workspace:FindFirstChild("KitsuneIsland")=nil _G.Flags.Mirage = workspace:FindFirstChild("MirageIsland")~=nil end end)
+ -- Kitsune, Prehistoric, Mirage: cek workspace 
+_G.Flags.Kitsune = workspace:FindFirstChild("KitsuneIsland")=nil _G.Flags.Mirage = workspace:FindFirstChild("MirageIsland")~=nil end end)
 
 -- Main logic: Auto Farm & Chest 
 spawn(function() while task.wait(_G.Config.FarmInterval) do 
