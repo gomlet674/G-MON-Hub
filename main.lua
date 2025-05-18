@@ -195,7 +195,7 @@ local frame = New("Frame", {
 New("UICorner", { CornerRadius = UDim.new(0,12) }, frame)
 makeDraggable(frame)
 
--- BACKGROUND IMAGE (sekarang di dalam frame, ZIndex=0 sehingga tidak blok drag)
+-- BACKGROUND IMAGE (anak frame, ZIndex=0 supaya drag di atasnya tetap)
 local bg = New("ImageLabel", {
     Image = "rbxassetid://16790218639",
     Size = UDim2.new(1,0,1,0),
@@ -220,7 +220,7 @@ task.spawn(function()
     end
 end)
 
--- TOGGLE BUTTON (GMON)
+-- GMON TOGGLE BUTTON
 local toggle = New("TextButton", {
     Text = "GMON",
     Size = UDim2.new(0,70,0,35),
@@ -294,7 +294,7 @@ for i,name in ipairs(tabNames) do
     end)
 end
 
--- INFO TAB LOGIC (update tiap 5 detik)
+-- INFO TAB LOGIC
 task.spawn(function()
     while true do
         local info = pages.Info
@@ -303,24 +303,26 @@ task.spawn(function()
         local m = os.date("*t").min % 8
         local phases = {"🌑","🌒","🌓","🌔","🌕","🌖","🌗","🌘"}
         AddText(info, "Moon Phase: "..phases[m+1].." ("..m.."/4)")
-        local function chk(name) return workspace:FindFirstChild(name) and "✅" or "❌" end
+        local function chk(n) return workspace:FindFirstChild(n) and "✅" or "❌" end
         AddText(info, "Kitsune Island: "..chk("KitsuneIsland"))
         AddText(info, "Prehistoric Island: "..chk("PrehistoricIsland"))
         AddText(info, "Mirage Island: "..chk("MirageIsland"))
         AddText(info, "Tyrant of the Skies: "..chk("TyrantOfTheSkies"))
-        local hasChalice = Players.LocalPlayer.Backpack:FindFirstChild("GodChalice") and "✅" or "❌"
-        AddText(info, "God Chalice: "..hasChalice)
+        local hasC = Players.LocalPlayer.Backpack:FindFirstChild("GodChalice") and "✅" or "❌"
+        AddText(info, "God Chalice: "..hasC)
         task.wait(5)
     end
 end)
 
--- MAIN LOGIC: AutoQuest, FarmBoss, FarmChest
+-- MAIN LOGIC: Quest / Boss / Chest
 task.spawn(function()
     while true do
         if _G.Flags.AutoFarm then
             for lvl=1, _G.Config.MaxQuestLevel do
                 pcall(function()
-                    Replicated.Remotes.Quest:InvokeServer(Players.LocalPlayer.SeaLevel.Value, lvl)
+                    Replicated.Remotes.Quest:InvokeServer(
+                        Players.LocalPlayer.SeaLevel.Value, lvl
+                    )
                 end)
             end
         end
@@ -338,11 +340,15 @@ task.spawn(function()
             local sea  = Players.LocalPlayer.SeaLevel.Value
             if hum then
                 for _,c in ipairs(workspace:GetDescendants()) do
-                    if c.Name=="Chest" and c:FindFirstChild("Sea") and c.Sea.Value==sea then
-                        local pos = (c.PrimaryPart and c.PrimaryPart.Position) or c.Position
+                    if c.Name=="Chest" and c:FindFirstChild("Sea")
+                    and c.Sea.Value==sea then
+                        local pos = (c.PrimaryPart and c.PrimaryPart.Position)
+                                    or c.Position
                         hum:MoveTo(pos)
                         hum.MoveToFinished:Wait(1)
-                        pcall(function() Replicated.Remotes.OpenChest:InvokeServer(c) end)
+                        pcall(function()
+                            Replicated.Remotes.OpenChest:InvokeServer(c)
+                        end)
                     end
                 end
             end
@@ -355,17 +361,18 @@ end)
 do
     local m = pages.Main
     AddSwitch(m, "Auto Farm",           "AutoFarm")
-    AddDropdown(m,"Select Boss",        {"Gorilla King","Bobby","Saw","Yeti","Ice Admiral"}, "SelectedBoss")
+    AddDropdown(m,"Select Boss",        {"Gorilla King","Bobby","Saw","Yeti","Ice Admiral"},
+                "SelectedBoss")
     AddSwitch(m, "Farm Boss Selected",  "FarmBossSelected")
     AddSwitch(m, "Farm Chest",          "FarmChest")
 end
 
 -- OTHER TABS
 do local p = pages.Item
-    AddToggle(p,"Auto Get Yama",   "AutoYama")
-    AddToggle(p,"Auto Tushita",    "AutoTushita")
+    AddToggle(p,"Auto Get Yama","AutoYama")
+    AddToggle(p,"Auto Tushita","AutoTushita")
     AddToggle(p,"Auto Soul Guitar","AutoSoulGuitar")
-    AddToggle(p,"Auto CDK",        "AutoCDK")
+    AddToggle(p,"Auto CDK","AutoCDK")
 end
 do local p = pages.Sea
     AddSwitch(p,"Kill Sea Beast","KillSeaBeast")
@@ -393,7 +400,7 @@ do local p = pages.ESP
     AddToggle(p,"ESP Fruit",  "ESPFruit")
     AddToggle(p,"ESP Player", "ESPPlayer")
     AddToggle(p,"ESP Chest",  "ESPChest")
-    AddToggle(p,"ESP Flower", "ESPFlower")
+    AddToggle(p,"ESP Flower","ESPFlower")
 end
 do local p = pages.Misc
     AddToggle(p,"Server Hop",      "ServerHop")
