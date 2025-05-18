@@ -23,7 +23,7 @@ local function New(cls, props, parent)
     return inst
 end
 
--- DRAGGABLE MAKER
+-- DRAG & DROP
 local function makeDraggable(gui)
     local dragging, startPos, startInput
     gui.InputBegan:Connect(function(inp)
@@ -49,7 +49,7 @@ local function makeDraggable(gui)
     end)
 end
 
--- CONTROL HELPERS
+-- HELPERS: Switch / Dropdown / Toggle / Text
 local function AddSwitch(page, label, flag)
     local ctr = New("Frame", {
         Size = UDim2.new(1,0,0,30),
@@ -195,8 +195,8 @@ local frame = New("Frame", {
 New("UICorner", { CornerRadius = UDim.new(0,12) }, frame)
 makeDraggable(frame)
 
--- BACKGROUND IMAGE (anak frame, ZIndex=0 supaya drag di atasnya tetap)
-local bg = New("ImageLabel", {
+-- BG IMAGE INSIDE FRAME (ZIndex=0 so it won’t block drag or buttons)
+New("ImageLabel", {
     Image = "rbxassetid://16790218639",
     Size = UDim2.new(1,0,1,0),
     BackgroundTransparency = 1,
@@ -240,8 +240,9 @@ UserInput.InputBegan:Connect(function(inp, gp)
     end
 end)
 
--- TABS & PAGES SETUP
-local tabNames = {"Info","Main","Item","Sea","Prehistoric","Kitsune","Leviathan","DevilFruit","ESP","Misc","Setting"}
+-- TABS BAR
+local tabNames = {"Info","Main","Item","Sea","Prehistoric",
+                  "Kitsune","Leviathan","DevilFruit","ESP","Misc","Setting"}
 local pages = {}
 local tabScroll = New("ScrollingFrame", {
     Size = UDim2.new(1,0,0,40),
@@ -249,17 +250,18 @@ local tabScroll = New("ScrollingFrame", {
     BackgroundTransparency = 1,
     ScrollingDirection = Enum.ScrollingDirection.X,
     ScrollBarThickness = 0,
-    CanvasSize = UDim2.new(#tabNames*80,0,0,40),
+    CanvasSize = UDim2.new(0,#tabNames*80,0,0),  -- FIXED!
     ZIndex = 2,
     Parent = frame,
 })
-New("UIListLayout", {
+local tabLayout = New("UIListLayout", {
     Parent = tabScroll,
     FillDirection = Enum.FillDirection.Horizontal,
     SortOrder = Enum.SortOrder.LayoutOrder,
     Padding = UDim.new(0,5),
 }, tabScroll)
 
+-- PAGES (as ScrollingFrame for vertical scroll)
 for i,name in ipairs(tabNames) do
     local tbtn = New("TextButton", {
         Text = name,
@@ -272,33 +274,43 @@ for i,name in ipairs(tabNames) do
     })
     New("UICorner", { CornerRadius = UDim.new(0,6) }, tbtn)
 
-    local page = New("Frame", {
+    local page = New("ScrollingFrame", {
         Name = name.."Page",
         Size = UDim2.new(1,0,1,-40),
         Position = UDim2.new(0,0,0,40),
         BackgroundTransparency = 1,
         ZIndex = 2,
         Visible = (i==1),
-        Parent = frame,
-    })
-    New("UIListLayout", {
+        CanvasSize = UDim2.new(0,0,0,0),
+        ScrollBarThickness = 6,
+    }, frame)
+    local list = New("UIListLayout", {
         Parent = page,
         SortOrder = Enum.SortOrder.LayoutOrder,
         Padding = UDim.new(0,5),
+        AutomaticCanvasSize = Enum.AutomaticSize.Y,  -- AUTO VERTICAL SCROLL
     }, page)
     pages[name] = page
 
     tbtn.Activated:Connect(function()
         for _,p in pairs(pages) do p.Visible = false end
-        pages[name].Visible = true
+        page.Visible = true
     end)
 end
 
--- INFO TAB LOGIC
+-- INFO TAB
 task.spawn(function()
     while true do
         local info = pages.Info
         info:ClearAllChildren()
+        -- re-add layout
+        New("UIListLayout", {
+            Parent = info,
+            SortOrder = Enum.SortOrder.LayoutOrder,
+            Padding = UDim.new(0,5),
+            AutomaticCanvasSize = Enum.AutomaticSize.Y,
+        })
+
         AddText(info, "Toggle GUI: Press M or click GMON")
         local m = os.date("*t").min % 8
         local phases = {"🌑","🌒","🌓","🌔","🌕","🌖","🌗","🌘"}
@@ -314,7 +326,7 @@ task.spawn(function()
     end
 end)
 
--- MAIN LOGIC: Quest / Boss / Chest
+-- MAIN LOGIC
 task.spawn(function()
     while true do
         if _G.Flags.AutoFarm then
@@ -367,7 +379,7 @@ do
     AddSwitch(m, "Farm Chest",          "FarmChest")
 end
 
--- OTHER TABS
+-- OTHER TABS (logic placeholders)
 do local p = pages.Item
     AddToggle(p,"Auto Get Yama","AutoYama")
     AddToggle(p,"Auto Tushita","AutoTushita")
