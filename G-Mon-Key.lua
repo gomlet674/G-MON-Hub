@@ -72,24 +72,27 @@ Instance.new("UICorner", input)
 
 -- Check Button
 local checkBtn = Instance.new("TextButton", frame)
-checkBtn.Size = UDim2.new(0.35, 0, 0, 35)
+checkBtn.Size = UDim2.new(0.35, 0, 0, 30)
+-- dari 35 ke 30
 checkBtn.Position = UDim2.new(0.1, 0, 0.7, 0)
 checkBtn.Text = "Check Key"
 checkBtn.BackgroundColor3 = Color3.fromRGB(50, 100, 50)
 checkBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 checkBtn.Font = Enum.Font.GothamBold
 checkBtn.TextScaled = true
+checkBtn.TextSize = 14
 Instance.new("UICorner", checkBtn)
 
 -- Get Key Button
 local getKeyBtn = Instance.new("TextButton", frame)
-getKeyBtn.Size = UDim2.new(0.35, 0, 0, 35)
+getKeyBtn.Size = UDim2.new(0.35, 0, 0, 30)
 getKeyBtn.Position = UDim2.new(0.55, 0, 0.7, 0)
 getKeyBtn.Text = "Get Key"
 getKeyBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 100)
 getKeyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 getKeyBtn.Font = Enum.Font.GothamBold
 getKeyBtn.TextScaled = true
+getKeyBtn.TextSize = 14
 Instance.new("UICorner", getKeyBtn)
 
 getKeyBtn.MouseButton1Click:Connect(function()
