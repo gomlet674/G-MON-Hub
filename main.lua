@@ -347,4 +347,41 @@ AddToggle(pages[10],"Auto Awaken Fruit","AutoAwaken")
 AddToggle(pages[11],"Fast Attack","FastAttack")
 AddText(pages[11],"Version: vFinal")
 
+ScrollBarThickness = 0,
+CanvasSize = UDim2.new(0, tabNames[#tabNames] * 80, 0, 40),
+}, frame)
+
+for i, name in ipairs(tabNames) do
+    local tab = New("TextButton", {
+        Text = name,
+        Size = UDim2.new(0,80,1,0),
+        BackgroundColor3 = Color3.fromRGB(30,30,30),
+        TextColor3 = Color3.new(1,1,1),
+        LayoutOrder = i,
+        Parent = tabScroll,
+    })
+    New("UICorner", { CornerRadius = UDim.new(0,6) }, tab)
+
+    local page = New("Frame", {
+        Name = name.."Page",
+        Size = UDim2.new(1,0,1,-40),
+        Position = UDim2.new(0,0,0,40),
+        BackgroundTransparency = 1,
+        Visible = i == 1,
+        Parent = frame,
+    })
+    local layout = New("UIListLayout", {
+        Padding = UDim.new(0,5),
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        Parent = page,
+    })
+
+    pages[name] = page
+
+    tab.Activated:Connect(function()
+        for _, p in pairs(pages) do p.Visible = false end
+        page.Visible = true
+    end)
+end
+
 print("GMON Hub UI Loaded")
