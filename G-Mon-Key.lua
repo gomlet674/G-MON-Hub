@@ -45,8 +45,8 @@ end
 -- Contoh daftar PlaceId
 local GAME_SCRIPTS = {
     [2753915549] = "https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/main.lua",
-    [4442272183] = "https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/main.lua",
-    [7449423635] = "https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/main.lua"
+    [537413528] = "https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/build.lua",
+    [7449423635] = "https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/Arena.lua"
 }
 
 local function loadGameScript()
