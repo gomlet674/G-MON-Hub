@@ -14,13 +14,10 @@ _G.Config = _G.Config or { FarmInterval = 0.5 }
 
 -- TRY LOAD REMOTE SOURCE (NON-FATAL)
 local function tryLoadRemote()
-    if not HttpService.HttpEnabled then
-        pcall(function() HttpService.HttpEnabled = true end)
-    end
     local ok, result = pcall(function()
         return HttpService:GetAsync("https://raw.githubusercontent.com/gomlet674/G-Mon-Hub/main/source.lua")
     end)
-    if ok and type(result)=="string" and #result>50 then
+    if ok and type(result) == "string" and #result > 50 then
         local fn, err = loadstring(result)
         if fn then pcall(fn) end
     end
