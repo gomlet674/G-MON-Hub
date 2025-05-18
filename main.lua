@@ -12,7 +12,7 @@ local TweenService  = game:GetService("TweenService")
 _G.Flags  = _G.Flags  or {}
 _G.Config = _G.Config or { FarmInterval = 0.5 }
 
--- TRY LOAD REMOTE SOURCE (NON-FATAL)
+-- TRY LOAD REMOTE SOURCE (NON-FATAL) & SIMPAN MODUL
 local function tryLoadRemote()
     if not HttpService.HttpEnabled then
         pcall(function() HttpService.HttpEnabled = true end)
@@ -20,12 +20,29 @@ local function tryLoadRemote()
     local ok, result = pcall(function()
         return HttpService:GetAsync("https://raw.githubusercontent.com/gomlet674/G-Mon-Hub/main/source.lua")
     end)
-    if ok and type(result)=="string" and #result>50 then
+    if ok and type(result) == "string" and #result > 50 then
         local fn, err = loadstring(result)
-        if fn then pcall(fn) end
+        if not fn then
+            warn("GMON: loadstring error:", err)
+            return nil
+        end
+        local success, module = pcall(fn)
+        if success and type(module) == "table" then
+            return module
+        end
     end
+    warn("GMON: Gagal memuat source.lua, pakai fallback")
+    -- fallback require jika Anda meletakkan source.lua sebagai ModuleScript
+    if script:FindFirstChild("source") then
+        return require(script.source)
+    end
+    return nil
 end
-tryLoadRemote()
+
+local source = tryLoadRemote()
+if not source then
+    error("GMON: source.lua tidak berhasil di-load, fitur logic akan gagal.")
+end
 
 -- HELPER: Instance.new + properti
 local function New(cls, props, parent)
@@ -34,6 +51,16 @@ local function New(cls, props, parent)
     if parent then inst.Parent = parent end
     return inst
 end
+
+-- -------------------------------------------------------------------
+-- [Lanjut dengan define makeDraggable, AddSwitch, AddDropdown, dll.]
+-- -------------------------------------------------------------------
+
+-- PASTIKAN Anda tidak memanggil source.* sebelum variabel `source` di atas.
+
+-- Setelah mendefinisikan UI dan popup tabs, barulah:
+-- 1) Loop Info menggunakan source.getMoonPhase(), source.islandSpawned(), dll.
+-- 2) Loop Main menggunakan source.autoFarm(), source.farmBoss(), source.farmChest()
 
 -- DRAGGABLE MAKER
 local function makeDraggable(guiObject)
