@@ -243,39 +243,57 @@ end)
 -- Tabs & Pages
 local tabNames = {"Info","Main","Item","Sea","Prehistoric","Kitsune","Leviathan","DevilFruit","ESP","Misc","Setting"}
 local pages = {}
-local tabScroll = New("ScrollingFrame", {
-    Size = UDim2.new(1,0,0,40), Position = UDim2.new(0,0,0,0),
-    BackgroundTransparency = 1, ScrollingDirection = Enum.ScrollingDirection.X,
-    ScrollBarThickness = 6, CanvasSize = UDim2.new(0,#tabNames*110,0,40),
+local tabScroll = New("Frame", {
+    Size = UDim2.new(0,100,1,0),
+    BackgroundColor3 = Color3.fromRGB(25,25,25),
     Parent = frame,
 })
-New("UIListLayout", { Parent = tabScroll, FillDirection = Enum.FillDirection.Horizontal, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0,5) }, tabScroll)
+New("UICorner", { CornerRadius = UDim.new(0,6) }, tabScroll)
 
-for i,name in ipairs(tabNames) do
-    local btn = New("TextButton", {
-        Text = name, Size = UDim2.new(0,100,0,35),
-        BackgroundTransparency = 0.7, BackgroundColor3 = Color3.new(30,30,30),
-        TextColor3 = Color3.new(1,1,1), ZIndex = 5,
-    }, tabScroll)
-    New("UICorner", { CornerRadius = UDim.new(0,8) }, btn)
+local tabLayout = New("UIListLayout", {
+    SortOrder = Enum.SortOrder.LayoutOrder,
+    Padding = UDim.new(0,5),
+}, tabScroll)
 
-    local page = New("ScrollingFrame", {
-        Size = UDim2.new(1,-20,1,-80), Position = UDim2.new(0,10,0,50),
-        BackgroundTransparency = 1, Visible = (i==1), ScrollBarThickness = 6,
-        Parent = frame,
+local contentFrame = New("Frame", {
+    Position = UDim2.new(0,110,0,0),
+    Size = UDim2.new(1,-110,1,0),
+    BackgroundTransparency = 1,
+    Parent = frame,
+})
+
+for _, name in ipairs(tabNames) do
+    local page = New("Frame", {
+        Size = UDim2.new(1,0,1,0),
+        BackgroundTransparency = 1,
+        Visible = false,
+        Parent = contentFrame,
+        Name = name,
     })
-    New("UIListLayout", { Parent = page, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0,5) }, page)
+    New("UIListLayout", {
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        Padding = UDim.new(0,4),
+    }, page)
+    pages[name] = page
 
-    btn.Activated:Connect(function()
-        for _,p in ipairs(pages) do p.Visible = false end
+    local tabBtn = New("TextButton", {
+        Text = name, Size = UDim2.new(1,0,0,30),
+        BackgroundColor3 = Color3.fromRGB(50,50,50),
+        TextColor3 = Color3.new(1,1,1),
+        LayoutOrder = #tabScroll:GetChildren(),
+        Parent = tabScroll,
+    })
+    New("UICorner", { CornerRadius = UDim.new(0,4) }, tabBtn)
+
+    tabBtn.Activated:Connect(function()
+        for _, pg in pairs(pages) do pg.Visible = false end
         page.Visible = true
-        for _,sib in ipairs(tabScroll:GetChildren()) do
-            if sib:IsA("TextButton") then sib.BackgroundColor3 = Color3.new(30,30,30) end
-        end
-        btn.BackgroundColor3 = Color3.fromRGB(0,170,0)
     end)
+end
 
-    table.insert(pages, page)
+-- Auto-open first tab
+if pages[tabNames[1]] then
+    pages[tabNames[1]].Visible = true
 end
 
 -- POPULATE TABS
