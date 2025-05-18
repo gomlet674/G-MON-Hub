@@ -10,10 +10,17 @@ local TweenService  = game:GetService("TweenService")
 
 -- GLOBAL CONFIG
 _G.Flags  = _G.Flags  or {}
-_G.Config = _G.Config or { FarmInterval = 0.5 }
+_G.Config = _G.Config or {
+    FarmInterval = 0.5
+}
 
 -- TRY LOAD REMOTE SOURCE (NON-FATAL)
 local function tryLoadRemote()
+    if not HttpService.HttpEnabled then
+        pcall(function()
+            HttpService.HttpEnabled = true
+        end)
+    end
     local ok, result = pcall(function()
         return HttpService:GetAsync("https://raw.githubusercontent.com/gomlet674/G-Mon-Hub/main/source.lua")
     end)
@@ -24,28 +31,19 @@ local function tryLoadRemote()
 end
 tryLoadRemote()
 
--- HELPER: Instance.new + properti
+-- HELPER: Instance.new + properties
 local function New(cls, props, parent)
     local inst = Instance.new(cls)
-    for k,v in pairs(props) do
-        inst[k] = v
-    end
+    for k, v in pairs(props) do inst[k] = v end
     if parent then inst.Parent = parent end
     return inst
 end
-
--- Pemanggilan:
-local frame = New("Frame", {
-    Size = UDim2.new(1, 0, 1, 0),
-    BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-}, game.Players.LocalPlayer:WaitForChild("PlayerGui"))
 
 -- DRAGGABLE MAKER
 local function makeDraggable(guiObject)
     local dragging, startPos, startInput
     guiObject.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1
-        or input.UserInputType == Enum.UserInputType.Touch then
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true
             startPos   = guiObject.Position
             startInput = input.Position
@@ -57,8 +55,7 @@ local function makeDraggable(guiObject)
         end
     end)
     UserInput.InputChanged:Connect(function(input)
-        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement
-           or input.UserInputType == Enum.UserInputType.Touch) then
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
             local delta = input.Position - startInput
             guiObject.Position = UDim2.new(
                 startPos.X.Scale, startPos.X.Offset + delta.X,
@@ -71,22 +68,30 @@ end
 -- CONTROL HELPERS
 local function AddSwitch(page, text, flag)
     local ctr = New("Frame", {
-        Size = UDim2.new(1,0,0,30), BackgroundTransparency = 1,
+        Size = UDim2.new(1, 0, 0, 30),
+        BackgroundTransparency = 1,
         LayoutOrder = #page:GetChildren(),
     }, page)
+
     New("TextLabel", {
-        Text = text, Size = UDim2.new(0.7,0,1,0),
-        BackgroundTransparency = 1, TextColor3 = Color3.new(1,1,1),
+        Text = text,
+        Size = UDim2.new(0.7, 0, 1, 0),
+        BackgroundTransparency = 1,
+        TextColor3 = Color3.new(1,1,1),
         TextXAlignment = Enum.TextXAlignment.Left,
     }, ctr)
+
     local sw = New("TextButton", {
-        Size = UDim2.new(0,40,0,20), Position = UDim2.new(1,-50,0,5),
-        BackgroundColor3 = Color3.new(1,1,1), AutoButtonColor = false,
+        Size = UDim2.new(0,40,0,20),
+        Position = UDim2.new(1,-50,0,5),
+        BackgroundColor3 = Color3.new(1,1,1),
+        AutoButtonColor = false,
     }, ctr)
     New("UICorner", { CornerRadius = UDim.new(0,10) }, sw)
 
     local knob = New("Frame", {
-        Size = UDim2.new(0,18,0,18), Position = UDim2.new(0,1,0,1),
+        Size = UDim2.new(0,18,0,18),
+        Position = UDim2.new(0,1,0,1),
         BackgroundColor3 = Color3.fromRGB(50,50,50),
     }, sw)
     New("UICorner", { CornerRadius = UDim.new(0,9) }, knob)
@@ -95,16 +100,14 @@ local function AddSwitch(page, text, flag)
     local tweenInfo = TweenInfo.new(0.15, Enum.EasingStyle.Quad)
     local function toggle()
         _G.Flags[flag] = not _G.Flags[flag]
-        local goal = { Position = _G.Flags[flag]
-            and UDim2.new(1,-19,0,1)
-            or UDim2.new(0,1,0,1) }
-        sw.BackgroundColor3 = _G.Flags[flag]
-            and Color3.fromRGB(0,170,0)
-            or Color3.new(1,1,1)
+        local goal = {
+            Position = _G.Flags[flag] and UDim2.new(1,-19,0,1) or UDim2.new(0,1,0,1)
+        }
+        sw.BackgroundColor3 = _G.Flags[flag] and Color3.fromRGB(0,170,0) or Color3.new(1,1,1)
         TweenService:Create(knob, tweenInfo, goal):Play()
     end
     sw.Activated:Connect(toggle)
-    -- init state
+
     if _G.Flags[flag] then
         sw.BackgroundColor3 = Color3.fromRGB(0,170,0)
         knob.Position = UDim2.new(1,-19,0,1)
@@ -113,11 +116,14 @@ end
 
 local function AddDropdown(page, label, list, flag)
     New("TextLabel", {
-        Text = label, Size = UDim2.new(1,0,0,20),
-        BackgroundTransparency = 1, TextColor3 = Color3.new(1,1,1),
+        Text = label,
+        Size = UDim2.new(1,0,0,20),
+        BackgroundTransparency = 1,
+        TextColor3 = Color3.new(1,1,1),
         TextXAlignment = Enum.TextXAlignment.Left,
         LayoutOrder = #page:GetChildren(),
     }, page)
+
     local btn = New("TextButton", {
         Text = list[1] or "Select",
         Size = UDim2.new(1,0,0,30),
@@ -138,11 +144,14 @@ local function AddDropdown(page, label, list, flag)
         }, btn)
         New("UICorner", { CornerRadius = UDim.new(0,6) }, menu)
 
-        for i,v in ipairs(list) do
+        for i, v in ipairs(list) do
             local opt = New("TextButton", {
-                Text = v, Size = UDim2.new(1,0,0,25),
-                BackgroundTransparency = 1, TextColor3 = Color3.new(1,1,1),
-                LayoutOrder = i, Parent = menu,
+                Text = v,
+                Size = UDim2.new(1,0,0,25),
+                BackgroundTransparency = 1,
+                TextColor3 = Color3.new(1,1,1),
+                LayoutOrder = i,
+                Parent = menu,
             })
             opt.Position = UDim2.new(0,0,0,(i-1)*25)
             opt.Activated:Connect(function()
@@ -156,7 +165,8 @@ end
 
 local function AddToggle(page, text, flag)
     local btn = New("TextButton", {
-        Text = text, Size = UDim2.new(1,0,0,30),
+        Text = text,
+        Size = UDim2.new(1,0,0,30),
         BackgroundColor3 = Color3.fromRGB(60,60,60),
         TextColor3 = Color3.new(1,1,1),
         LayoutOrder = #page:GetChildren(),
@@ -166,16 +176,16 @@ local function AddToggle(page, text, flag)
     _G.Flags[flag] = _G.Flags[flag] or false
     btn.Activated:Connect(function()
         _G.Flags[flag] = not _G.Flags[flag]
-        btn.BackgroundColor3 = _G.Flags[flag]
-            and Color3.fromRGB(0,170,0)
-            or Color3.fromRGB(60,60,60)
+        btn.BackgroundColor3 = _G.Flags[flag] and Color3.fromRGB(0,170,0) or Color3.fromRGB(60,60,60)
     end)
 end
 
 local function AddText(page, txt)
     New("TextLabel", {
-        Text = txt, Size = UDim2.new(1,0,0,20),
-        BackgroundTransparency = 1, TextColor3 = Color3.new(1,1,1),
+        Text = txt,
+        Size = UDim2.new(1,0,0,20),
+        BackgroundTransparency = 1,
+        TextColor3 = Color3.new(1,1,1),
         TextXAlignment = Enum.TextXAlignment.Left,
         LayoutOrder = #page:GetChildren(),
     }, page)
@@ -221,24 +231,31 @@ task.spawn(function()
     end
 end)
 
--- Make draggable
 makeDraggable(frame)
 
 -- Toggle Button “GMON”
 local toggle = New("TextButton", {
-    Text = "GMON", Size = UDim2.new(0,70,0,35),
+    Text = "GMON",
+    Size = UDim2.new(0,70,0,35),
     Position = UDim2.new(0,20,0,20),
     BackgroundColor3 = Color3.fromRGB(40,40,40),
-    TextColor3 = Color3.new(1,1,1), ZIndex = 10,
+    TextColor3 = Color3.new(1,1,1),
+    ZIndex = 10,
 }, gui)
 New("UICorner", { CornerRadius = UDim.new(0,8) }, toggle)
 makeDraggable(toggle)
-toggle.Activated:Connect(function() frame.Visible = not frame.Visible end)
-UserInput.InputBegan:Connect(function(inp,gp)
+
+toggle.Activated:Connect(function()
+    frame.Visible = not frame.Visible
+end)
+
+UserInput.InputBegan:Connect(function(inp, gp)
     if not gp and inp.KeyCode == Enum.KeyCode.M then
         frame.Visible = not frame.Visible
     end
 end)
+
+-- TODO: Tambahkan tab halaman dan konten masing-masing di bawah ini
 
 -- Tabs & Pages
 local tabNames = {"Info","Main","Item","Sea","Prehistoric","Kitsune","Leviathan","DevilFruit","ESP","Misc","Setting"}
