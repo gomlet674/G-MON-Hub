@@ -1,32 +1,30 @@
 -- loader.lua
 -- LocalScript di StarterPlayerScripts
 
--- 1) Tunggu sampai game benar-benar loaded
+-- 1) Tunggu hingga game benar-benar loaded
 repeat task.wait() until game:IsLoaded()
 
--- 2) Services
+-- 2) Services & variabel
 local Players            = game:GetService("Players")
 local MarketplaceService = game:GetService("MarketplaceService")
 local TweenService       = game:GetService("TweenService")
+local playerGui          = Players.LocalPlayer:WaitForChild("PlayerGui")
 
-local player    = Players.LocalPlayer
-local playerGui = player:WaitForChild("PlayerGui")
-
--- 3) Center-Screen Notification
+-- 3) Fungsi Center‐Screen Notification
 local function showCenterNotification(title, message, displayTime)
     displayTime = displayTime or 3
-
     local gui = Instance.new("ScreenGui", playerGui)
     gui.Name = "CenterNotificationGui"
     gui.ResetOnSpawn = false
 
     local frame = Instance.new("Frame", gui)
-    frame.Size               = UDim2.new(0,300,0,100)
-    frame.AnchorPoint        = Vector2.new(0.5,0.5)
-    frame.Position           = UDim2.new(0.5,0.5,0.3,0)
-    frame.BackgroundColor3   = Color3.fromRGB(25,25,25)
+    frame.Size = UDim2.new(0,300,0,100)
+    frame.AnchorPoint = Vector2.new(0.5,0.5)
+    -- PERBAIKAN: UDim2.new(scaleX, offsetX, scaleY, offsetY)
+    frame.Position = UDim2.new(0.5, 0, 0.3, 0)
+    frame.BackgroundColor3 = Color3.fromRGB(25,25,25)
     frame.BackgroundTransparency = 0.4
-    frame.BorderSizePixel    = 0
+    frame.BorderSizePixel = 0
     Instance.new("UICorner", frame).CornerRadius = UDim.new(0,12)
 
     local titleLabel = Instance.new("TextLabel", frame)
@@ -67,7 +65,7 @@ local function showCenterNotification(title, message, displayTime)
     end)
 end
 
--- 4) Deteksi game & player count
+-- 4) Tampilkan notifikasi deteksi game + player count
 local ok, info = pcall(function()
     return MarketplaceService:GetProductInfo(game.PlaceId, Enum.InfoType.Game)
 end)
@@ -75,10 +73,10 @@ local gameName   = ok and info.Name or "Unknown Game"
 local playerCount = #Players:GetPlayers()
 showCenterNotification("Game Detected", gameName .. "  |  Players: " .. playerCount, 4)
 
--- tunggu sampai notif benar-benar hilang (4s + 0.4s animasi)
+-- Tunggu sampai notif benar-benar hilang (4s + animasi 0.35s)
 task.wait(4.4)
 
--- 5) Buat Key-Entry UI
+-- 5) Build Key‐Entry UI
 local loaderGui = Instance.new("ScreenGui")
 loaderGui.Name = "GMON_Loader"
 loaderGui.ResetOnSpawn = false
@@ -97,9 +95,8 @@ Instance.new("UICorner", Frame).CornerRadius = UDim.new(0,15)
 local border = Instance.new("UIStroke", Frame)
 border.Thickness = 3
 border.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
--- animasi RGB
 task.spawn(function()
-    while Frame.Parent do
+    while Frame and Frame.Parent do
         for i = 0,1,0.01 do
             border.Color = Color3.fromHSV(i,1,1)
             task.wait(0.02)
@@ -164,24 +161,22 @@ Submit.TextColor3         = Color3.new(1,1,1)
 Submit.BackgroundColor3   = Color3.fromRGB(0,170,127)
 Instance.new("UICorner", Submit).CornerRadius = UDim.new(0,8)
 
--- Key file
+-- Key file path
 local savedKeyPath = "gmon_key.txt"
 
--- Game scripts mapping (support “all games” via fallback to main.lua)
+-- Game scripts mapping
 local GAME_SCRIPTS = {
     [4442272183] = "https://raw.githubusercontent.com/gomlet674/G-Mon-Hub/main/main.lua",
-    [537413528] = "https://raw.githubusercontent.com/gomlet674/G-Mon-Hub/main/build.lua",
-    [116495829188952] = "https://raw.githubusercontent.com/gomlet674/G-Mon-Hub/main/Rail.lua",
+    [3233893879] = "https://raw.githubusercontent.com/gomlet674/G-Mon-Hub/main/build.lua",
+    [116495829188952] = "https://raw.githubusercontent.com/gomlet674/G-Mon-Hub/main/rail.lua",
 }
 local DEFAULT_URL = "https://raw.githubusercontent.com/gomlet674/G-Mon-Hub/main/main.lua"
 
+-- Load game script function
 local function loadGameScript()
     local url = GAME_SCRIPTS[game.PlaceId] or DEFAULT_URL
     loadstring(game:HttpGet(url, true))()
 end
-
--- Valid key
-local VALID_KEY = "GmonHub311851f3c742a8f78dce99e56992555609d23497928e9b33802e7127610c2e"
 
 -- Submit logic
 Submit.MouseButton1Click:Connect(function()
@@ -192,8 +187,7 @@ Submit.MouseButton1Click:Connect(function()
         Submit.Text = "Submit"
         return
     end
-    if key == VALID_KEY then
-        -- success
+    if key == "GmonHub311851f3c742a8f78dce99e56992555609d23497928e9b33802e7127610c2e" then
         Submit.Text = "✔"
         task.wait(0.5)
         loaderGui:Destroy()
@@ -205,13 +199,15 @@ Submit.MouseButton1Click:Connect(function()
     end
 end)
 
--- Auto-load saved key
+-- Auto‐load if saved key valid
 if isfile(savedKeyPath) then
     local saved = readfile(savedKeyPath)
-    if saved == VALID_KEY then
+    if saved == "GmonHub311851f3c742a8f78dce99e56992555609d23497928e9b33802e7127610c2e" then
         loaderGui:Destroy()
         loadGameScript()
     else
         delfile(savedKeyPath)
     end
 end
+
+print("[GMON Loader] Loaded without syntax errors.")
