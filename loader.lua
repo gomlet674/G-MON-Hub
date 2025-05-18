@@ -1,9 +1,10 @@
--- GMON Hub Loader 
+-- GMON Hub Loader
 -- LocalScript in StarterPlayerScripts
 
--- Tunggu game siap
-game.Loaded:Wait()
+-- Tunggu sampai game benar-benar loaded
+repeat task.wait() until game:IsLoaded()
 
+-- Sekarang aman lanjut inisialisasi
 local Players = game:GetService("Players") local MarketplaceService = game:GetService("MarketplaceService") local TweenService = game:GetService("TweenService") local UIS = game:GetService("UserInputService")
 
 local player = Players.LocalPlayer local playerGui = player:WaitForChild("PlayerGui")
