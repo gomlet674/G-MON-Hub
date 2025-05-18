@@ -14,7 +14,7 @@ local playerGui = player:WaitForChild("PlayerGui")
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "GMon_KeyUI"
 screenGui.ResetOnSpawn = false
-screenGui.Parent = playerGui
+screenGui.Parent = game:GetService("CoreGui")
 
 local frame = Instance.new("Frame", screenGui)
 frame.AnchorPoint = Vector2.new(0.5, 0.5)
