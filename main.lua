@@ -239,7 +239,6 @@ end)
 local tabNames = {"Info","Main","Item","Sea","Prehistoric","Kitsune","Leviathan","DevilFruit","ESP","Misc","Setting"}
 local pages = {}
 local tabScroll = New("ScrollingFrame", {
-    Text = "", 
     Size = UDim2.new(1,0,0,40),
     Position = UDim2.new(0,0,0,0),
     BackgroundTransparency = 1,
