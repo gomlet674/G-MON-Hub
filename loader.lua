@@ -61,15 +61,18 @@ end
 
 -- Submit button local submitBtn = Instance.new("TextButton", frame) submitBtn.Size = UDim2.new(0.4,0,0,30) submitBtn.Position = UDim2.new(0.05,0,1, -40) submitBtn.Text = "Submit" submitBtn.Font = Enum.Font.GothamSemibold submitBtn.TextSize = 16 submitBtn.TextColor3 = Color3.new(1,1,1) submitBtn.BackgroundColor3 = Color3.fromRGB(0,170,127) Instance.new("UICorner", submitBtn).CornerRadius = UDim.new(0,5)
 
--- Map PlaceId to scripts local GAME_SCRIPTS = { [4442272183] = "https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/main.lua", [3233893879] = "https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/main_arena.lua", [537413528]  = "https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/build.lua", }
+-- Map PlaceId to scripts
+ local GAME_SCRIPTS = { [4442272183] = "https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/main.lua", [3233893879] = "https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/main_arena.lua", [537413528]  = "https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/build.lua", }
 
 local VALID_KEY = "GmonHub311851f3c742a8f78dce99e56992555609d23497928e9b33802e7127610c2e" local keyFile = "gmon_key.txt"
 
--- Function load game script local function loadGameScript() local url = GAME_SCRIPTS[game.PlaceId] if not url then warn("[GMON Loader] Game tidak dikenali: " .. tostring(game.PlaceId)) showCenterNotification("Game not supported!", 3) return end showCenterNotification("Loading script...", 2) print("[GMON Loader] Loading URL: "..url) local ok, err = pcall(function() loadstring(game:HttpGet(url, true))() end) if not ok then warn("[GMON Loader] Error load script:", err) end end
+-- Function load game script
+ local function loadGameScript() local url = GAME_SCRIPTS[game.PlaceId] if not url then warn("[GMON Loader] Game tidak dikenali: " .. tostring(game.PlaceId)) showCenterNotification("Game not supported!", 3) return end showCenterNotification("Loading script...", 2) print("[GMON Loader] Loading URL: "..url) local ok, err = pcall(function() loadstring(game:HttpGet(url, true))() end) if not ok then warn("[GMON Loader] Error load script:", err) end end
 
 -- Handle submit submitBtn.MouseButton1Click:Connect(function() local key = keyBox.Text:match("%S+") or "" if key == "" then showCenterNotification("Please enter a key!", 2) return end if key == VALID_KEY then writefile(keyFile, key) loaderGui:Destroy() loadGameScript() else showCenterNotification("Invalid Key!", 2) print("[GMON Loader] Invalid key entered:", key) end end)
 
--- Auto-check saved key if isfile(keyFile) then local saved = readfile(keyFile) if saved == VALID_KEY then loaderGui:Destroy() loadGameScript() else print("[GMON Loader] Saved key invalid, removing file.") delfile(keyFile) end end
+-- Auto-check saved key 
+if isfile(keyFile) then local saved = readfile(keyFile) if saved == VALID_KEY then loaderGui:Destroy() loadGameScript() else print("[GMON Loader] Saved key invalid, removing file.") delfile(keyFile) end end
 
 print("[GMON Loader] Script siap digunakan")
 
