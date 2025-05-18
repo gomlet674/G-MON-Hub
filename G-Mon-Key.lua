@@ -8,11 +8,11 @@ local VALID_KEY = "GmonHub311851f3c742a8f78dce99e56992555609d23497928e9b33802e71
 local rgbSpeed  = 0.5
 
 -- SERVICES
-local TweenService      = game:GetService("TweenService")
-local UserInputService  = game:GetService("UserInputService")
+local TweenService       = game:GetService("TweenService")
+local UserInputService   = game:GetService("UserInputService")
 local MarketplaceService = game:GetService("MarketplaceService")
-local RunService        = game:GetService("RunService")
-local StarterGui        = game:GetService("StarterGui")
+local RunService         = game:GetService("RunService")
+local StarterGui         = game:GetService("StarterGui")
 
 -- GUI PARENT (CoreGui untuk executor, PlayerGui untuk Studio)
 local parentGui = (RunService:IsStudio() and
@@ -94,7 +94,7 @@ local function showCenterNotification(title, message, displayTime)
         tw:Play()
         tw.Completed:Wait()
         screenGui:Destroy()
-    end)
+    end)  -- ← pastikan `end)` ini ada
 end
 
 -- Tampilkan notifikasi deteksi game
@@ -131,6 +131,7 @@ task.spawn(function()
     end
 end)
 
+-- Title & Close
 local title = Instance.new("TextLabel", frame)
 title.Size               = UDim2.new(1, -20, 0, 30)
 title.Position           = UDim2.new(0, 10, 0, 10)
@@ -164,10 +165,9 @@ input.TextColor3         = Color3.new(1,1,1)
 input.Font               = Enum.Font.Gotham
 input.TextSize           = 14
 Instance.new("UICorner", input).CornerRadius = UDim.new(0,6)
-
--- Mulai dengan textbox transparan
 input.TextTransparency           = 1
 input.PlaceholderTextTransparency = 0.5
+
 input.Focused:Connect(function()
     input.TextTransparency           = 0
     input.PlaceholderTextTransparency = 0
@@ -179,6 +179,7 @@ input.FocusLost:Connect(function()
     end
 end)
 
+-- Buttons
 local checkBtn = Instance.new("TextButton", frame)
 checkBtn.Size            = UDim2.new(0.35,0,0,28)
 checkBtn.Position        = UDim2.new(0.1,0,0.75,0)
@@ -230,7 +231,7 @@ checkBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- Dragging
+-- Make Frame Draggable
 do
     local dragging, dragInput, dragStart, startPos
     frame.InputBegan:Connect(function(inp)
