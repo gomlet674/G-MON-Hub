@@ -1,179 +1,226 @@
 -- loader.lua
--- LocalScript in StarterPlayerScripts
+-- LocalScript di StarterPlayerScripts
 
--- 1) Tunggu game benar-benar siap
+-- 1) Tunggu hingga game sepenuhnya loaded
 repeat task.wait() until game:IsLoaded()
 
--- Services
+-- 2) Services & variabel
 local Players            = game:GetService("Players")
 local MarketplaceService = game:GetService("MarketplaceService")
 local TweenService       = game:GetService("TweenService")
-local SoundService       = game:GetService("SoundService")
+local playerGui          = Players.LocalPlayer:WaitForChild("PlayerGui")
 
-local player    = Players.LocalPlayer
-local playerGui = player:WaitForChild("PlayerGui")
+-- 3) Fungsi Center-Screen Notification
+local function showCenterNotification(title, message, displayTime)
+    displayTime = displayTime or 3
+    local screenGui = Instance.new("ScreenGui", playerGui)
+    screenGui.Name = "CenterNotificationGui"
+    screenGui.ResetOnSpawn = false
 
--- Util: notifikasi tengah layar
-local function notifyCenter(text, duration)
-    duration = duration or 3
-    local gui = Instance.new("ScreenGui")
-    gui.Name = "GMonNotify"
-    gui.ResetOnSpawn = false
-    gui.Parent = playerGui
+    local frame = Instance.new("Frame", screenGui)
+    frame.Size = UDim2.new(0,300,0,100)
+    frame.AnchorPoint = Vector2.new(0.5,0.5)
+    frame.Position = UDim2.new(0.5, 0.5, 0.3, 0)
+    frame.BackgroundColor3 = Color3.fromRGB(25,25,25)
+    frame.BackgroundTransparency = 0.4
+    frame.BorderSizePixel = 0
+    Instance.new("UICorner", frame).CornerRadius = UDim.new(0,12)
 
-    local frame = Instance.new("Frame", gui)
-    frame.Size = UDim2.new(0, 300, 0, 60)
-    frame.Position = UDim2.new(0.5, -150, 0, 20)
-    frame.BackgroundColor3 = Color3.fromRGB(30,30,30)
-    frame.BackgroundTransparency = 0.2
-    frame.ZIndex = 50
-    Instance.new("UICorner", frame).CornerRadius = UDim.new(0,8)
+    local titleLabel = Instance.new("TextLabel", frame)
+    titleLabel.Size = UDim2.new(1,-20,0,30)
+    titleLabel.Position = UDim2.new(0,10,0,10)
+    titleLabel.Text = title
+    titleLabel.Font = Enum.Font.GothamBold
+    titleLabel.TextSize = 18
+    titleLabel.TextColor3 = Color3.new(1,1,1)
+    titleLabel.BackgroundTransparency = 1
+    titleLabel.TextXAlignment = Enum.TextXAlignment.Center
 
-    local label = Instance.new("TextLabel", frame)
-    label.Size = UDim2.new(1,-20,1,-20)
-    label.Position = UDim2.new(0,10,0,10)
-    label.Text = text
-    label.Font = Enum.Font.GothamSemibold
-    label.TextSize = 18
-    label.TextColor3 = Color3.new(1,1,1)
-    label.BackgroundTransparency = 1
-    label.TextWrapped = true
+    local msgLabel = Instance.new("TextLabel", frame)
+    msgLabel.Size = UDim2.new(1,-20,0,50)
+    msgLabel.Position = UDim2.new(0,10,0,40)
+    msgLabel.Text = message
+    msgLabel.Font = Enum.Font.Gotham
+    msgLabel.TextSize = 14
+    msgLabel.TextColor3 = Color3.new(1,1,1)
+    msgLabel.BackgroundTransparency = 1
+    msgLabel.TextWrapped = true
+    msgLabel.TextXAlignment = Enum.TextXAlignment.Center
 
-    -- tween keluar
-    task.delay(duration, function()
-        TweenService:Create(frame, TweenInfo.new(0.4), {BackgroundTransparency=1}):Play()
-        TweenService:Create(label, TweenInfo.new(0.4), {TextTransparency=1}):Play()
-        frame:TweenSize(UDim2.new(0,0,0,0), "In", "Quad", 0.4, true, function()
-            gui:Destroy()
-        end)
+    -- animasi masuk
+    frame.Size = UDim2.new(0,0,0,0)
+    TweenService:Create(frame, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+        Size = UDim2.new(0,300,0,100)
+    }):Play()
+
+    -- animasi keluar setelah delay
+    delay(displayTime, function()
+        TweenService:Create(frame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+            Size = UDim2.new(0,0,0,0),
+            BackgroundTransparency = 1
+        }):Play()
+        task.wait(0.35)
+        screenGui:Destroy()
     end)
 end
 
--- 2) Tampilkan notifikasi game & player count
+-- 4) Deteksi nama game & jumlah pemain, tampilkan notifikasi
 local ok, info = pcall(function()
     return MarketplaceService:GetProductInfo(game.PlaceId, Enum.InfoType.Game)
 end)
 local gameName = ok and info.Name or "Unknown Game"
 local playerCount = #Players:GetPlayers()
-notifyCenter(("Game: %s  |  Players: %d"):format(gameName, playerCount), 4)
+showCenterNotification("Game Detected", gameName .. " | Players: " .. playerCount, 5)
 
--- 3) Siapkan UI Loader
+-- 5) Buat UI Loader di CoreGui
 local loaderGui = Instance.new("ScreenGui")
-loaderGui.Name = "GMonLoaderUI"
+loaderGui.Name = "GMON_Loader"
 loaderGui.ResetOnSpawn = false
-loaderGui.Parent = playerGui
+loaderGui.Parent = game:GetService("CoreGui")
 
--- suara buka UI
-local sOpen = Instance.new("Sound", SoundService)
-sOpen.SoundId = "rbxassetid://183763515" -- UI click
-sOpen.Volume  = 0.5
-sOpen:Play()
+-- background
+local background = Instance.new("ImageLabel", loaderGui)
+background.Name = "AnimeBackground"
+background.Size = UDim2.new(1,0,1,0)
+background.Position = UDim2.new(0,0,0,0)
+background.BackgroundTransparency = 1
+background.Image = "rbxassetid://16790218639"
+background.ScaleType = Enum.ScaleType.Crop
 
--- overlay gelap
-local overlay = Instance.new("Frame", loaderGui)
-overlay.Size = UDim2.new(1,0,1,0)
-overlay.BackgroundColor3 = Color3.new(0,0,0)
-overlay.BackgroundTransparency = 0.6
-overlay.ZIndex = 1
+-- frame utama
+local Frame = Instance.new("Frame", loaderGui)
+Frame.Size = UDim2.new(0,420,0,200)
+Frame.Position = UDim2.new(0.5,-210,0.5,-100)
+Frame.BackgroundColor3 = Color3.fromRGB(20,20,20)
+Frame.Active = true
+Frame.Draggable = true
+Instance.new("UICorner", Frame).CornerRadius = UDim.new(0,15)
 
--- container utama
-local frameUI = Instance.new("Frame", loaderGui)
-frameUI.Name = "Container"
-frameUI.Size = UDim2.new(0,360,0,180)
-frameUI.Position = UDim2.new(0.5,-180,0.5,-90)
-frameUI.BackgroundColor3 = Color3.fromRGB(25,25,25)
-frameUI.ZIndex = 2
-Instance.new("UICorner", frameUI).CornerRadius = UDim.new(0,10)
+-- border RGB
+local RGBBorder = Instance.new("UIStroke", Frame)
+RGBBorder.Thickness = 2
+RGBBorder.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+task.spawn(function()
+    while true do
+        for i = 0,1,0.01 do
+            local r = math.sin(i*math.pi*2)*127 + 128
+            local g = math.sin(i*math.pi*2+2)*127 + 128
+            local b = math.sin(i*math.pi*2+4)*127 + 128
+            RGBBorder.Color = Color3.fromRGB(r,g,b)
+            task.wait(0.03)
+        end
+    end
+end)
 
--- Title
-local title = Instance.new("TextLabel", frameUI)
-title.Size = UDim2.new(1,0,0,36)
-title.Position = UDim2.new(0,0,0,0)
-title.Text = "G-Mon Hub"
-title.Font = Enum.Font.GothamBold
-title.TextSize = 20
-title.TextColor3 = Color3.new(1,1,1)
-title.BackgroundTransparency = 1
+-- judul
+local Title = Instance.new("TextLabel", Frame)
+Title.Size = UDim2.new(1,0,0,40)
+Title.Position = UDim2.new(0,0,0,0)
+Title.Text = "GMON HUB KEY SYSTEM"
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 20
+Title.TextColor3 = Color3.new(1,1,1)
+Title.BackgroundTransparency = 1
 
--- Tombol [×] close
-local closeBtn = Instance.new("TextButton", frameUI)
-closeBtn.Size = UDim2.new(0,32,0,32)
-closeBtn.Position = UDim2.new(1,-36,0,4)
-closeBtn.Text = "×"
-closeBtn.Font = Enum.Font.GothamBold
-closeBtn.TextSize = 24
-closeBtn.TextColor3 = Color3.new(1,1,1)
-closeBtn.BackgroundTransparency = 1
-closeBtn.ZIndex = 3
-closeBtn.MouseButton1Click:Connect(function()
+-- tombol close [×]
+local CloseBtn = Instance.new("TextButton", Frame)
+CloseBtn.Size = UDim2.new(0,30,0,30)
+CloseBtn.Position = UDim2.new(1,-35,0,5)
+CloseBtn.Text = "×"
+CloseBtn.Font = Enum.Font.GothamBold
+CloseBtn.TextSize = 24
+CloseBtn.TextColor3 = Color3.new(1,1,1)
+CloseBtn.BackgroundTransparency = 1
+CloseBtn.MouseButton1Click:Connect(function()
     loaderGui:Destroy()
 end)
 
--- TextBox enter key
-local keyBox = Instance.new("TextBox", frameUI)
-keyBox.Size = UDim2.new(0.9,0,0,32)
-keyBox.Position = UDim2.new(0.05,0,0,50)
-keyBox.PlaceholderText = "Enter your key..."
-keyBox.ClearTextOnFocus = false
-keyBox.Font = Enum.Font.Gotham
-keyBox.TextColor3 = Color3.new(1,1,1)
-keyBox.BackgroundColor3 = Color3.fromRGB(40,40,40)
-Instance.new("UICorner", keyBox).CornerRadius = UDim.new(0,6)
+-- KeyBox
+local KeyBox = Instance.new("TextBox", Frame)
+KeyBox.Size = UDim2.new(0.9,0,0,35)
+KeyBox.Position = UDim2.new(0.05,0,0.35,0)
+KeyBox.PlaceholderText = "Enter Your Key..."
+KeyBox.Font = Enum.Font.Gotham
+KeyBox.BackgroundColor3 = Color3.fromRGB(40,40,40)
+KeyBox.TextColor3 = Color3.new(1,1,1)
+Instance.new("UICorner", KeyBox).CornerRadius = UDim.new(0,8)
 
--- Tombol Get Key
-local getBtn = Instance.new("TextButton", frameUI)
-getBtn.Size = UDim2.new(0.4,0,0,30)
-getBtn.Position = UDim2.new(0.05,0,1,-50)
-getBtn.Text = "Get Key"
-getBtn.Font = Enum.Font.GothamSemibold
-getBtn.TextSize = 16
-getBtn.TextColor3 = Color3.new(1,1,1)
-getBtn.BackgroundColor3 = Color3.fromRGB(255,85,0)
-Instance.new("UICorner", getBtn).CornerRadius = UDim.new(0,6)
-getBtn.MouseButton1Click:Connect(function()
+-- GetKey button
+local GetKey = Instance.new("TextButton", Frame)
+GetKey.Size = UDim2.new(0.42,0,0,35)
+GetKey.Position = UDim2.new(0.05,0,0.65,0)
+GetKey.Text = "Get Key"
+GetKey.Font = Enum.Font.GothamSemibold
+GetKey.TextColor3 = Color3.new(1,1,1)
+GetKey.BackgroundColor3 = Color3.fromRGB(255,85,0)
+Instance.new("UICorner", GetKey).CornerRadius = UDim.new(0,8)
+GetKey.MouseButton1Click:Connect(function()
     setclipboard("https://linkvertise.com/1209226/get-key-gmon-hub-script")
-    notifyCenter("Link key disalin!",2)
 end)
 
--- Tombol Submit
-local submitBtn = Instance.new("TextButton", frameUI)
-submitBtn.Size = UDim2.new(0.4,0,0,30)
-submitBtn.Position = UDim2.new(0.55,0,1,-50)
-submitBtn.Text = "Submit"
-submitBtn.Font = Enum.Font.GothamSemibold
-submitBtn.TextSize = 16
-submitBtn.TextColor3 = Color3.new(1,1,1)
-submitBtn.BackgroundColor3 = Color3.fromRGB(0,170,127)
-Instance.new("UICorner", submitBtn).CornerRadius = UDim.new(0,6)
+-- Submit button
+local Submit = Instance.new("TextButton", Frame)
+Submit.Size = UDim2.new(0.42,0,0,35)
+Submit.Position = UDim2.new(0.53,0,0.65,0)
+Submit.Text = "Submit"
+Submit.Font = Enum.Font.GothamSemibold
+Submit.TextColor3 = Color3.new(1,1,1)
+Submit.BackgroundColor3 = Color3.fromRGB(0,170,127)
+Instance.new("UICorner", Submit).CornerRadius = UDim.new(0,8)
 
--- Constant valid key
-local VALID_KEY = "GmonHub311851f3c742a8f78dce99e56992555609d23497928e9b33802e7127610c2e"
+-- path file key
+local savedKeyPath = "gmon_key.txt"
 
--- Ketika tekan submit
-submitBtn.MouseButton1Click:Connect(function()
-    local entered = keyBox.Text:match("%S+") or ""
-    if entered == "" then
-        notifyCenter("Please enter a key!",2)
+-- mapping PlaceId → script URL
+local GAME_SCRIPTS = {
+    [4442272183] = "https://raw.githubusercontent.com/gomlet674/G-Mon-Hub/main/main.lua",
+    [3233893879] = "https://raw.githubusercontent.com/gomlet674/G-Mon-Hub/main/main_arena.lua",
+}
+
+-- fungsi load sesuai game
+local function loadGameScript()
+    local url = GAME_SCRIPTS[game.PlaceId]
+    if not url then
+        warn("GMON Loader: PlaceId tidak dikenali:", game.PlaceId)
         return
     end
-    if entered == VALID_KEY then
-        -- suara success
-        local sOK = Instance.new("Sound", SoundService)
-        sOK.SoundId = "rbxassetid://154965325"
-        sOK.Volume  = 0.6
-        sOK:Play()
+    loadstring(game:HttpGet(url, true))()
+end
 
-        notifyCenter("Roblox G-Mon Hub, wait a moment...",3)
-        -- delay sebelum load
-        task.delay(3, function()
-            loaderGui:Destroy()
-            local mainURL = "https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/main.lua"
-            local ok2, err = pcall(function()
-                loadstring(game:HttpGet(mainURL, true))()
-            end)
-            if not ok2 then warn("[GMON Loader] load main.lua error:", err) end
-        end)
-    else
-        notifyCenter("Invalid Key!",2)
+-- valid key
+local VALID_KEY = "GmonHub311851f3c742a8f78dce99e56992555609d23497928e9b33802e7127610c2e"
+
+-- fungsi submit
+local function submitKey(key)
+    if key == VALID_KEY then
+        writefile(savedKeyPath, key)
+        loaderGui:Destroy()
+        loadGameScript()
+        return true
+    end
+    return false
+end
+
+-- auto-check saved key
+if isfile(savedKeyPath) then
+    local saved = readfile(savedKeyPath)
+    if submitKey(saved) then
+        return
+    end
+end
+
+-- klik submit
+Submit.MouseButton1Click:Connect(function()
+    local k = KeyBox.Text
+    if k == "" then
+        Submit.Text = "Enter Key"
+        task.wait(2)
+        Submit.Text = "Submit"
+        return
+    end
+    if not submitKey(k) then
+        Submit.Text = "Invalid!"
+        task.wait(2)
+        Submit.Text = "Submit"
     end
 end)
