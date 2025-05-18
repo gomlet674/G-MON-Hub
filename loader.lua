@@ -1,3 +1,6 @@
+-- Center‐Screen Notification
+-- Letakkan ini di StarterPlayerScripts sebagai LocalScript
+
 repeat task.wait() until game:IsLoaded()
 
 local Players = game:GetService("Players")
@@ -76,7 +79,7 @@ end)
 
 local gameName = success and productInfo.Name or "Unknown Game"
 
-showCenterNotification("[Game Detected]", gameName, 5)
+showCenterNotification("[Game Detected]", gameName, 4)
 
 -- Selanjutnya GUI Loader kamu bisa lanjutkan...
 
@@ -203,16 +206,6 @@ if not url then
 end
 
 loadstring(game:HttpGet(url))()
-
--- Fungsi untuk memuat skrip sesuai game
-local function loadGameScript()
-    local url = GAME_SCRIPTS[game.PlaceId]
-    if not url then
-        warn("GMON Loader: Game PlaceId tidak dikenali:", game.PlaceId)
-        return
-    end
-    loadstring(game:HttpGet(url, true))()
-end
 
 -- Key yang valid
 local VALID_KEY = "GmonHub311851f3c742a8f78dce99e56992555609d23497928e9b33802e7127610c2e"
