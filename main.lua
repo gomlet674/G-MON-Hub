@@ -1,4 +1,5 @@
 -- main.lua – GMON Hub UI Final (Ultimate)
+
 repeat task.wait() until game:IsLoaded()
 
 -- SERVICES
@@ -11,7 +12,7 @@ local TweenService  = game:GetService("TweenService")
 _G.Flags  = _G.Flags  or {}
 _G.Config = _G.Config or { FarmInterval = 0.5 }
 
--- TRY LOAD REMOTE SOURCE (NON-FATAL) & SIMPAN MODUL
+-- TRY LOAD REMOTE SOURCE (NON-FATAL)
 local function tryLoadRemote()
     if not HttpService.HttpEnabled then
         pcall(function() HttpService.HttpEnabled = true end)
@@ -19,28 +20,12 @@ local function tryLoadRemote()
     local ok, result = pcall(function()
         return HttpService:GetAsync("https://raw.githubusercontent.com/gomlet674/G-Mon-Hub/main/source.lua")
     end)
-    if ok and type(result) == "string" and #result > 50 then
+    if ok and type(result)=="string" and #result>50 then
         local fn, err = loadstring(result)
-        if not fn then
-            warn("GMON: loadstring error:", err)
-            return nil
-        end
-        local success, module = pcall(fn)
-        if success and type(module) == "table" then
-            return module
-        end
+        if fn then pcall(fn) end
     end
-    warn("GMON: Gagal memuat source.lua, pakai fallback ModuleScript if ada")
-    if script:FindFirstChild("source") then
-        return require(script.source)
-    end
-    return nil
 end
-
-local source = tryLoadRemote()
-if not source then
-    error("GMON: source.lua tidak berhasil di-load, logic akan gagal.")
-end
+tryLoadRemote()
 
 -- HELPER: Instance.new + properti
 local function New(cls, props, parent)
@@ -90,8 +75,7 @@ local function AddSwitch(page, text, flag)
         TextXAlignment = Enum.TextXAlignment.Left,
     }, ctr)
     local sw = New("TextButton", {
-        Text = "", Size = UDim2.new(0,40,0,20),
-        Position = UDim2.new(1,-50,0,5),
+        Size = UDim2.new(0,40,0,20), Position = UDim2.new(1,-50,0,5),
         BackgroundColor3 = Color3.new(1,1,1), AutoButtonColor = false,
     }, ctr)
     New("UICorner", { CornerRadius = UDim.new(0,10) }, sw)
@@ -106,17 +90,20 @@ local function AddSwitch(page, text, flag)
     local tweenInfo = TweenInfo.new(0.15, Enum.EasingStyle.Quad)
     local function toggle()
         _G.Flags[flag] = not _G.Flags[flag]
-        sw.BackgroundColor3 = _G.Flags[flag]
-            and Color3.fromRGB(0,170,0)
-            or Color3.new(1,1,1)
         local goal = { Position = _G.Flags[flag]
             and UDim2.new(1,-19,0,1)
             or UDim2.new(0,1,0,1) }
+        sw.BackgroundColor3 = _G.Flags[flag]
+            and Color3.fromRGB(0,170,0)
+            or Color3.new(1,1,1)
         TweenService:Create(knob, tweenInfo, goal):Play()
     end
     sw.Activated:Connect(toggle)
     -- init state
-    toggle()
+    if _G.Flags[flag] then
+        sw.BackgroundColor3 = Color3.fromRGB(0,170,0)
+        knob.Position = UDim2.new(1,-19,0,1)
+    end
 end
 
 local function AddDropdown(page, label, list, flag)
@@ -196,6 +183,7 @@ local gui = New("ScreenGui", {
     ZIndexBehavior = Enum.ZIndexBehavior.Global,
 }, Players.LocalPlayer:WaitForChild("PlayerGui"))
 
+-- Background Animation
 New("ImageLabel", {
     Image = "rbxassetid://16790218639",
     Size = UDim2.new(1,0,1,0),
@@ -203,6 +191,7 @@ New("ImageLabel", {
     ZIndex = 0,
 }, gui)
 
+-- Main Frame
 local frame = New("Frame", {
     Size = UDim2.new(0,600,0,450),
     Position = UDim2.new(0.5,-300,0.5,-225),
@@ -211,10 +200,12 @@ local frame = New("Frame", {
     Visible = false,
 }, gui)
 New("UICorner", { CornerRadius = UDim.new(0,12) }, frame)
-makeDraggable(frame)
 
+-- RGB BORDER
 local stroke = New("UIStroke", {
-    Thickness = 4, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Parent = frame,
+    Thickness = 4,
+    ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+    Parent = frame,
 })
 task.spawn(function()
     local hue = 0
@@ -225,6 +216,10 @@ task.spawn(function()
     end
 end)
 
+-- Make draggable
+makeDraggable(frame)
+
+-- Toggle Button “GMON”
 local toggle = New("TextButton", {
     Text = "GMON", Size = UDim2.new(0,70,0,35),
     Position = UDim2.new(0,20,0,20),
@@ -244,12 +239,20 @@ end)
 local tabNames = {"Info","Main","Item","Sea","Prehistoric","Kitsune","Leviathan","DevilFruit","ESP","Misc","Setting"}
 local pages = {}
 local tabScroll = New("ScrollingFrame", {
-    Size = UDim2.new(1,0,0,40), Position = UDim2.new(0,0,0,0),
-    BackgroundTransparency = 1, ScrollingDirection = Enum.ScrollingDirection.X,
-    ScrollBarThickness = 6, CanvasSize = UDim2.new(0,#tabNames*110,0,40),
+    Size = UDim2.new(1,0,0,40),
+    Position = UDim2.new(0,0,0,0),
+    BackgroundTransparency = 1,
+    ScrollingDirection = Enum.ScrollingDirection.X,
+    ScrollBarThickness = 6,
+    CanvasSize = UDim2.new(0,#tabNames*110,0,40),
     Parent = frame,
 })
-New("UIListLayout", { Parent = tabScroll, FillDirection = Enum.FillDirection.Horizontal, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0,5) }, tabScroll)
+New("UIListLayout", {
+    Parent = tabScroll,
+    FillDirection = Enum.FillDirection.Horizontal,
+    SortOrder = Enum.SortOrder.LayoutOrder,
+    Padding = UDim.new(0,5),
+}, tabScroll)
 
 for i,name in ipairs(tabNames) do
     local btn = New("TextButton", {
@@ -260,11 +263,17 @@ for i,name in ipairs(tabNames) do
     New("UICorner", { CornerRadius = UDim.new(0,8) }, btn)
 
     local page = New("ScrollingFrame", {
-        Size = UDim2.new(1,-20,1,-80), Position = UDim2.new(0,10,0,50),
-        BackgroundTransparency = 1, Visible = (i==1), ScrollBarThickness = 6,
+        Size = UDim2.new(1,-20,1,-80),
+        Position = UDim2.new(0,10,0,50),
+        BackgroundTransparency = 1,
+        Visible = (i==1), ScrollBarThickness = 6,
         Parent = frame,
     })
-    New("UIListLayout", { Parent = page, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0,5) }, page)
+    New("UIListLayout", {
+        Parent = page,
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        Padding = UDim.new(0,5),
+    }, page)
 
     btn.Activated:Connect(function()
         for _,p in ipairs(pages) do p.Visible = false end
@@ -279,6 +288,7 @@ for i,name in ipairs(tabNames) do
 end
 
 -- POPULATE TABS
+
 -- Info
 AddText(pages[1],"Toggle GUI: Press M or click GMON")
 AddText(pages[1],"Moon Phase: Loading…")
@@ -288,45 +298,10 @@ AddText(pages[1],"Mirage Island: Loading…")
 AddText(pages[1],"Tyrant of the Skies: Loading…")
 AddText(pages[1],"God Chalice: Loading…")
 
--- Dynamic Info
-spawn(function()
-    while task.wait(10) do
-        local phase      = source.getMoonPhase()
-        local kitsune    = source.islandSpawned("KitsuneIsland")     and "✅" or "❌"
-        local prehistoric= source.islandSpawned("PrehistoricIsland") and "✅" or "❌"
-        local mirage     = source.islandSpawned("MirageIsland")      and "✅" or "❌"
-        local tyrant     = source.islandSpawned("TyrantOfTheSkies")  and "✅" or "❌"
-        local chalice    = source.hasGodChalice()                    and "✅" or "❌"
-        local labels = pages[1]:GetChildren()
-        labels[1].Text = "Moon Phase: "..phase
-        labels[2].Text = "Kitsune Island: "..kitsune
-        labels[3].Text = "Prehistoric Island: "..prehistoric
-        labels[4].Text = "Mirage Island: "..mirage
-        labels[5].Text = "Tyrant of the Skies: "..tyrant
-        labels[6].Text = "God Chalice: "..chalice
-    end
-end)
-
 -- Main
 AddSwitch(pages[2],"Auto Farm","AutoFarm")
-AddDropdown(pages[2],"Select Boss", source.allBosses(), "SelectedBoss")
+AddDropdown(pages[2],"Select Boss",{"Gorilla King","Bobby","Saw","Yeti","Ice Admiral"},"SelectedBoss")
 AddSwitch(pages[2],"Farm Boss Selected","FarmBossSelected")
-AddSwitch(pages[2],"Farm Chest","FarmChest")
-
-spawn(function()
-    local plr = Players.LocalPlayer
-    while task.wait(_G.Config.FarmInterval) do
-        if _G.Flags.AutoFarm then
-            source.autoFarm(plr, 2650)
-        end
-        if _G.Flags.FarmBossSelected and _G.Flags.SelectedBoss then
-            source.farmBoss(plr, _G.Flags.SelectedBoss)
-        end
-        if _G.Flags.FarmChest then
-            source.farmChest(plr)
-        end
-    end
-end)
 
 -- Item
 AddToggle(pages[3],"Auto Get Yama","AutoYama")
@@ -354,7 +329,7 @@ AddToggle(pages[7],"Attack Leviathan","AttackLeviathan")
 -- DevilFruit
 AddToggle(pages[8],"Gacha Fruit","GachaFruit")
 AddText(pages[8],"Fruit Target:")
-AddDropdown(pages[8],"Select Fruit",{"Bomb","Flame","Quake"},"FruitTarget")
+AddDropdown(pages[8],"",{"Bomb","Flame","Quake"},"FruitTarget")
 
 -- ESP
 AddToggle(pages[9],"ESP Fruit","ESPFruit")
