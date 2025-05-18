@@ -301,7 +301,24 @@ AddText(pages[1],"God Chalice: Loading…")
 -- Main
 AddSwitch(pages[2],"Auto Farm","AutoFarm")
 AddDropdown(pages[2],"Select Boss",{"Gorilla King","Bobby","Saw","Yeti","Ice Admiral"},"SelectedBoss")
+
+-- 2) Loop utama untuk tab Main
+spawn(function()
+    local plr = Players.LocalPlayer
+    while task.wait(_G.Config.FarmInterval) do
+        if _G.Flags.AutoFarm then
+            source.autoFarm(plr, 2650)
+        end
+        if _G.Flags.FarmBossSelected and _G.Flags.SelectedBoss then
+            source.farmBoss(plr, _G.Flags.SelectedBoss)
+        end
+        if _G.Flags.FarmChest then
+            source.farmChest(plr)
+        end
+    end
+end)
 AddSwitch(pages[2],"Farm Boss Selected","FarmBossSelected")
+AddSwitch(pages[2],("Farm Chest","FarmChest") 
 
 -- Item
 AddToggle(pages[3],"Auto Get Yama","AutoYama")
