@@ -203,33 +203,39 @@ task.spawn(function()
     end
 end)
 
--- Draggable (mouse & touch)
-do
-    local drag, startPos, startInput
-    frame.InputBegan:Connect(function(i)
-        if i.UserInputType == Enum.UserInputType.MouseButton1 or
-           i.UserInputType == Enum.UserInputType.Touch then
-            drag = true
-            startPos = frame.Position
-            startInput = i.Position
-            i.Changed:Connect(function()
-                if i.UserInputState == Enum.UserInputState.End then
-                    drag = false
+-- DRAGGABLE for any GuiObject (Frame or Button)
+local function makeDraggable(guiObject)
+    local dragging, startPos, startInput
+
+    guiObject.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            startPos = guiObject.Position
+            startInput = input.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
                 end
             end)
         end
     end)
-    UserInput.InputChanged:Connect(function(i)
-        if drag and (i.UserInputType == Enum.UserInputType.MouseMovement or
-                     i.UserInputType == Enum.UserInputType.Touch) then
-            local delta = i.Position - startInput
-            frame.Position = UDim2.new(
+
+    UserInput.InputChanged:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement
+           or input.UserInputType == Enum.UserInputType.Touch) then
+            local delta = input.Position - startInput
+            guiObject.Position = UDim2.new(
                 startPos.X.Scale, startPos.X.Offset + delta.X,
                 startPos.Y.Scale, startPos.Y.Offset + delta.Y
             )
         end
     end)
 end
+
+-- Contoh pemakaian:
+makeDraggable(frame)      -- agar frame bisa digeser
+makeDraggable(toggle)     -- agar tombol “GMON” bisa digeser juga
 
 -- Toggle Button “GMON”
 local toggle = New("TextButton", {
