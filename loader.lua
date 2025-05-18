@@ -4,13 +4,16 @@
 -- 1) Tunggu hingga game benar-benar loaded
 repeat task.wait() until game:IsLoaded()
 
--- 2) Services & variabel
+-- 2) Services
 local Players            = game:GetService("Players")
 local MarketplaceService = game:GetService("MarketplaceService")
 local TweenService       = game:GetService("TweenService")
-local playerGui          = Players.LocalPlayer:WaitForChild("PlayerGui")
+local HttpService        = game:GetService("HttpService")
 
--- 3) Fungsi Center‐Screen Notification
+local player    = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- 3) Center-Screen Notification
 local function showCenterNotification(title, message, displayTime)
     displayTime = displayTime or 3
     local gui = Instance.new("ScreenGui", playerGui)
@@ -18,13 +21,12 @@ local function showCenterNotification(title, message, displayTime)
     gui.ResetOnSpawn = false
 
     local frame = Instance.new("Frame", gui)
-    frame.Size = UDim2.new(0,300,0,100)
-    frame.AnchorPoint = Vector2.new(0.5,0.5)
-    -- PERBAIKAN: UDim2.new(scaleX, offsetX, scaleY, offsetY)
-    frame.Position = UDim2.new(0.5, 0, 0.3, 0)
-    frame.BackgroundColor3 = Color3.fromRGB(25,25,25)
+    frame.Size               = UDim2.new(0,300,0,100)
+    frame.AnchorPoint        = Vector2.new(0.5,0.5)
+    frame.Position           = UDim2.new(0.5, 0, 0.3, 0)
+    frame.BackgroundColor3   = Color3.fromRGB(25,25,25)
     frame.BackgroundTransparency = 0.4
-    frame.BorderSizePixel = 0
+    frame.BorderSizePixel    = 0
     Instance.new("UICorner", frame).CornerRadius = UDim.new(0,12)
 
     local titleLabel = Instance.new("TextLabel", frame)
@@ -48,16 +50,16 @@ local function showCenterNotification(title, message, displayTime)
     msgLabel.TextWrapped        = true
     msgLabel.TextXAlignment     = Enum.TextXAlignment.Center
 
-    -- animasi masuk
+    -- masuk
     frame.Size = UDim2.new(0,0,0,0)
     TweenService:Create(frame, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
         Size = UDim2.new(0,300,0,100)
     }):Play()
 
-    -- animasi keluar setelah delay
+    -- keluar
     delay(displayTime, function()
         TweenService:Create(frame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-            Size               = UDim2.new(0,0,0,0),
+            Size = UDim2.new(0,0,0,0),
             BackgroundTransparency = 1
         }):Play()
         task.wait(0.35)
@@ -65,22 +67,21 @@ local function showCenterNotification(title, message, displayTime)
     end)
 end
 
--- 4) Tampilkan notifikasi deteksi game + player count
+-- 4) Deteksi game + jumlah pemain
 local ok, info = pcall(function()
     return MarketplaceService:GetProductInfo(game.PlaceId, Enum.InfoType.Game)
 end)
 local gameName   = ok and info.Name or "Unknown Game"
 local playerCount = #Players:GetPlayers()
-showCenterNotification("Game Detected", gameName .. "  |  Players: " .. playerCount, 4)
+showCenterNotification("Game Detected", gameName.."  |  Players: "..playerCount, 4)
 
--- Tunggu sampai notif benar-benar hilang (4s + animasi 0.35s)
+-- tunggu hingga notif selesai (4s + 0.35s)
 task.wait(4.4)
 
--- 5) Build Key‐Entry UI
-local loaderGui = Instance.new("ScreenGui")
+-- 5) Build Key-Entry UI
+local loaderGui = Instance.new("ScreenGui", playerGui)
 loaderGui.Name = "GMON_Loader"
 loaderGui.ResetOnSpawn = false
-loaderGui.Parent = playerGui
 
 -- Main Frame
 local Frame = Instance.new("Frame", loaderGui)
@@ -91,13 +92,13 @@ Frame.Active             = true
 Frame.Draggable          = true
 Instance.new("UICorner", Frame).CornerRadius = UDim.new(0,15)
 
--- RGB Border Effect
+-- RGB Border
 local border = Instance.new("UIStroke", Frame)
 border.Thickness = 3
 border.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 task.spawn(function()
-    while Frame and Frame.Parent do
-        for i = 0,1,0.01 do
+    while Frame.Parent do
+        for i=0,1,0.01 do
             border.Color = Color3.fromHSV(i,1,1)
             task.wait(0.02)
         end
@@ -116,12 +117,12 @@ Title.BackgroundTransparency = 1
 
 -- Close [×]
 local CloseBtn = Instance.new("TextButton", Frame)
-CloseBtn.Size       = UDim2.new(0,32,0,32)
-CloseBtn.Position   = UDim2.new(1,-36,0,4)
-CloseBtn.Text        = "×"
-CloseBtn.Font        = Enum.Font.GothamBold
-CloseBtn.TextSize    = 24
-CloseBtn.TextColor3  = Color3.new(1,1,1)
+CloseBtn.Size                 = UDim2.new(0,32,0,32)
+CloseBtn.Position             = UDim2.new(1,-36,0,4)
+CloseBtn.Text                 = "×"
+CloseBtn.Font                 = Enum.Font.GothamBold
+CloseBtn.TextSize             = 24
+CloseBtn.TextColor3           = Color3.new(1,1,1)
 CloseBtn.BackgroundTransparency = 1
 CloseBtn.MouseButton1Click:Connect(function()
     loaderGui:Destroy()
@@ -161,24 +162,29 @@ Submit.TextColor3         = Color3.new(1,1,1)
 Submit.BackgroundColor3   = Color3.fromRGB(0,170,127)
 Instance.new("UICorner", Submit).CornerRadius = UDim.new(0,8)
 
--- Key file path
+-- key storage
 local savedKeyPath = "gmon_key.txt"
 
--- Game scripts mapping
+-- script mapping + fallback
 local GAME_SCRIPTS = {
     [4442272183] = "https://raw.githubusercontent.com/gomlet674/G-Mon-Hub/main/main.lua",
-    [3233893879] = "https://raw.githubusercontent.com/gomlet674/G-Mon-Hub/main/build.lua",
-    [116495829188952] = "https://raw.githubusercontent.com/gomlet674/G-Mon-Hub/main/rail.lua",
+    [3233893879] = "https://raw.githubusercontent.com/gomlet674/G-Mon-Hub/main/main_arena.lua",
 }
 local DEFAULT_URL = "https://raw.githubusercontent.com/gomlet674/G-Mon-Hub/main/main.lua"
 
--- Load game script function
 local function loadGameScript()
     local url = GAME_SCRIPTS[game.PlaceId] or DEFAULT_URL
-    loadstring(game:HttpGet(url, true))()
+    local ok, code = pcall(function()
+        return HttpService:GetAsync(url)
+    end)
+    if ok then
+        loadstring(code)()
+    else
+        warn("[GMON Loader] Failed HTTP:", code)
+    end
 end
 
--- Submit logic
+-- submit logic
 Submit.MouseButton1Click:Connect(function()
     local key = KeyBox.Text:match("%S+") or ""
     if key == "" then
@@ -199,7 +205,7 @@ Submit.MouseButton1Click:Connect(function()
     end
 end)
 
--- Auto‐load if saved key valid
+-- auto-load if saved key exists
 if isfile(savedKeyPath) then
     local saved = readfile(savedKeyPath)
     if saved == "GmonHub311851f3c742a8f78dce99e56992555609d23497928e9b33802e7127610c2e" then
@@ -210,4 +216,4 @@ if isfile(savedKeyPath) then
     end
 end
 
-print("[GMON Loader] Loaded without syntax errors.")
+print("[GMON Loader] Loaded without errors.")
