@@ -126,7 +126,8 @@ checkBtn.MouseButton1Click:Connect(function()
         task.wait(0.5)
         screenGui:Destroy()
         -- jalankan main.lua
-        local ok, err = pcall(function() loadstring(game:HttpGet("https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/main.lua", true))()
+        local ok, err = pcall(function()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/main.lua", true))()
         end
     else
         StarterGui:SetCore("SendNotification", {
