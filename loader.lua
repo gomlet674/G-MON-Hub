@@ -1,14 +1,19 @@
--- loader.lua -- LocalScript di StarterPlayerScripts
+-- loader.lua 
+-- LocalScript di StarterPlayerScripts
 
--- Debug print untuk line error print("[GMON Loader] Script mulai dieksekusi")
+-- Debug print untuk line error
+ print("[GMON Loader] Script mulai dieksekusi")
 
--- Tunggu game siap (loop universal) repeat task.wait() until game:IsLoaded() print("[GMON Loader] Game loaded, PlaceId =", game.PlaceId)
+-- Tunggu game siap (loop universal)
+ repeat task.wait() until game:IsLoaded() print("[GMON Loader] Game loaded, PlaceId =", game.PlaceId)
 
--- Services local Players = game:GetService("Players") local MarketplaceService = game:GetService("MarketplaceService") local TweenService = game:GetService("TweenService") local HttpService = game:GetService("HttpService")
+-- Services 
+local Players = game:GetService("Players") local MarketplaceService = game:GetService("MarketplaceService") local TweenService = game:GetService("TweenService") local HttpService = game:GetService("HttpService")
 
 local player = Players.LocalPlayer local playerGui = player:WaitForChild("PlayerGui")
 
--- Notifikasi di tengah layar local function showCenterNotification(text, duration) duration = duration or 3 local screenGui = Instance.new("ScreenGui") screenGui.Name = "GMONNotification" screenGui.ResetOnSpawn = false screenGui.Parent = playerGui
+-- Notifikasi di tengah layar
+ local function showCenterNotification(text, duration) duration = duration or 3 local screenGui = Instance.new("ScreenGui") screenGui.Name = "GMONNotification" screenGui.ResetOnSpawn = false screenGui.Parent = playerGui
 
 local frame = Instance.new("Frame", screenGui)
 frame.Size = UDim2.new(0, 250, 0, 50)
