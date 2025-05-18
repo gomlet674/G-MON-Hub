@@ -1,96 +1,78 @@
--- source.lua
--- Modul logic untuk GMON Hub UI
+-- source.lua - GMON Hub Logic
 
-local TweenService = game:GetService("TweenService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Players = game.Players
+local Players     = game:GetService("Players")
+local RunService  = game:GetService("RunService")
+local Workspace   = game:GetService("Workspace")
+local LocalPlayer = Players.LocalPlayer
+local Camera      = Workspace.CurrentCamera
 
-local M = {}
+local activeThreads = {}
 
--- Daftar boss per sea (1–3)
-M.bossPerSea = {
-    [1] = {"Gorilla King","Bobby","Saw","Yeti"},
-    [2] = {"Mob Leader","Vice Admiral","Warden"},
-    [3] = {"Swan","Magma Admiral","Fishman Lord"},
-}
-
--- 1) Semua boss (digunakan dropdown Main)
-function M.allBosses()
-    local plr = Players.LocalPlayer
-    local sea = (plr:FindFirstChild("SeaLevel") and plr.SeaLevel.Value) or 1
-    local list = {}
-    for s = 1, 3 do
-        for _, b in ipairs(M.bossPerSea[s]) do
-            table.insert(list, b)
+-- UTIL: Jalankan fungsi berulang jika flag aktif
+local function runFlagLoop(flagName, interval, fn)
+    if activeThreads[flagName] then return end
+    activeThreads[flagName] = true
+    task.spawn(function()
+        while _G.Flags[flagName] do
+            local success, err = pcall(fn)
+            if not success then warn("Error in", flagName, ":", err) end
+            task.wait(interval or 0.5)
         end
-    end
-    return list
+        activeThreads[flagName] = false
+    end)
 end
 
--- 2) Fase Bulan (untuk tab Info)
-function M.getMoonPhase()
-    local minute = os.date("*t").min
-    local idx    = (minute % 8) + 1
-    local phases = {"🌑","🌒","🌓","🌔","🌕","🌖","🌗","🌘"}
-    return phases[idx] .. " ("..(idx-1).."/4)"
-end
-
--- 3) Cek Spawn Island
-function M.islandSpawned(name)
-    return workspace:FindFirstChild(name) ~= nil
-end
-
--- 4) Cek GodChalice di Backpack
-function M.hasGodChalice()
-    local plr = Players.LocalPlayer
-    return plr.Backpack:FindFirstChild("GodChalice") ~= nil
-end
-
--- 5) Auto Farm Quest (sea 1–3, level 1–maxLevel)
-function M.autoFarm(plr, maxLevel)
-    local sea = (plr:FindFirstChild("SeaLevel") and plr.SeaLevel.Value) or 1
-    for lvl = 1, maxLevel do
-        pcall(function()
-            ReplicatedStorage.Remotes.Quest:InvokeServer(sea, lvl)
-        end)
-    end
-end
-
--- 6) Farm Boss — tanpa teleport kasar: gunakan Humanoid:MoveTo
-function M.farmBoss(plr, bossName)
-    local char = plr.Character
-    if not char then return end
-    local hrp = char:FindFirstChild("HumanoidRootPart")
-    local boss = workspace:FindFirstChild(bossName)
-    if hrp and boss and boss.PrimaryPart then
-        -- Gerakkan karakter mendekati boss
-        local hum = char:FindFirstChildOfClass("Humanoid")
-        hum:MoveTo(boss.PrimaryPart.Position + Vector3.new(0,5,0))
-    end
-end
-
--- 7) Farm Chest — berjalan menuju setiap chest, lalu buka
-function M.farmChest(plr)
-    local char = plr.Character
-    if not char then return end
-    local hrp = char:FindFirstChild("HumanoidRootPart")
-    local hum = char:FindFirstChildOfClass("Humanoid")
-    local sea = (plr:FindFirstChild("SeaLevel") and plr.SeaLevel.Value) or 1
-
-    for _, obj in ipairs(workspace:GetDescendants()) do
-        -- filtrasi chest dengan properti Sea
-        if obj.Name == "Chest" and obj:FindFirstChild("Sea") and obj.Sea.Value == sea then
-            -- jalan ke chest
-            hum:MoveTo(obj.PrimaryPart and obj.PrimaryPart.Position or obj.Position)
-            -- tunggu sampai tiba (atau 1 detik timeout)
-            local reached = hum.MoveToFinished:Wait(2)
-            if reached then
-                pcall(function()
-                    ReplicatedStorage.Remotes.OpenChest:InvokeServer(obj)
-                end)
+-- Autofarm contoh
+if _G.Flags["AutoFarm"] then
+    runFlagLoop("AutoFarm", _G.Config.FarmInterval, function()
+        local mobs = Workspace:FindFirstChild("Mobs")
+        if mobs then
+            for _, mob in pairs(mobs:GetChildren()) do
+                if mob:FindFirstChild("HumanoidRootPart") then
+                    LocalPlayer.Character:PivotTo(mob.HumanoidRootPart.CFrame * CFrame.new(0, 5, -5))
+                    break
+                end
             end
         end
-    end
+    end)
 end
 
-return M
+-- ESP logic sederhana
+if _G.Flags["ESPPlayers"] then
+    runFlagLoop("ESPPlayers", 1, function()
+        for _, player in pairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and player.Character then
+                if not player.Character:FindFirstChild("ESPTag") then
+                    local tag = Instance.new("BillboardGui", player.Character)
+                    tag.Name = "ESPTag"
+                    tag.Size = UDim2.new(0,100,0,20)
+                    tag.Adornee = player.Character:FindFirstChild("Head")
+                    tag.AlwaysOnTop = true
+
+                    local name = Instance.new("TextLabel", tag)
+                    name.Size = UDim2.new(1,0,1,0)
+                    name.BackgroundTransparency = 1
+                    name.Text = player.Name
+                    name.TextColor3 = Color3.new(1,0,0)
+                    name.TextScaled = true
+                end
+            end
+        end
+    end)
+end
+
+-- Devil Fruit Finder contoh
+if _G.Flags["FruitFinder"] then
+    runFlagLoop("FruitFinder", 2, function()
+        for _, obj in pairs(Workspace:GetDescendants()) do
+            if obj:IsA("Tool") and obj.Name:lower():find("fruit") then
+                print("[GMON] Found fruit:", obj:GetFullName())
+            end
+        end
+    end)
+end
+
+-- Tambah fitur lain sesuai flag
+-- Contoh: AutoChest, AutoKitsune, ESPMobs, AutoKill, dll...
+
+return true
