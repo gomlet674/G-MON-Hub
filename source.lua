@@ -1,78 +1,78 @@
--- source.lua - GMON Hub Logic
+-- source.lua – Logic Eksekusi GMON Hub
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local lp = Players.LocalPlayer
 
-local Players     = game:GetService("Players")
-local RunService  = game:GetService("RunService")
-local Workspace   = game:GetService("Workspace")
-local LocalPlayer = Players.LocalPlayer
-local Camera      = Workspace.CurrentCamera
+-- Cek dan tunggu karakter
+repeat task.wait() until lp.Character and lp.Character:FindFirstChild("HumanoidRootPart")
+local hrp = lp.Character:WaitForChild("HumanoidRootPart")
 
-local activeThreads = {}
+-- FARM INTERVAL
+local interval = _G.Config.FarmInterval or 0.5
 
--- UTIL: Jalankan fungsi berulang jika flag aktif
-local function runFlagLoop(flagName, interval, fn)
-    if activeThreads[flagName] then return end
-    activeThreads[flagName] = true
-    task.spawn(function()
-        while _G.Flags[flagName] do
-            local success, err = pcall(fn)
-            if not success then warn("Error in", flagName, ":", err) end
-            task.wait(interval or 0.5)
+-- LOOP LOGIC
+task.spawn(function()
+    while true do
+        task.wait(interval)
+
+        -- AutoFarm
+        if _G.Flags.AutoFarm then
+            -- Contoh: teleport ke lokasi monster
+            local target = workspace:FindFirstChild("Enemy")
+            if target then
+                hrp.CFrame = target.CFrame + Vector3.new(0, 5, 0)
+            end
         end
-        activeThreads[flagName] = false
-    end)
-end
 
--- Autofarm contoh
-if _G.Flags["AutoFarm"] then
-    runFlagLoop("AutoFarm", _G.Config.FarmInterval, function()
-        local mobs = Workspace:FindFirstChild("Mobs")
-        if mobs then
-            for _, mob in pairs(mobs:GetChildren()) do
-                if mob:FindFirstChild("HumanoidRootPart") then
-                    LocalPlayer.Character:PivotTo(mob.HumanoidRootPart.CFrame * CFrame.new(0, 5, -5))
+        -- Kill Aura
+        if _G.Flags.KillAura then
+            for _, enemy in ipairs(workspace:GetChildren()) do
+                if enemy:FindFirstChild("Humanoid") and (enemy.Position - hrp.Position).magnitude < 10 then
+                    local tool = lp.Character:FindFirstChildOfClass("Tool")
+                    if tool and tool:FindFirstChild("RemoteFunction") then
+                        pcall(function()
+                            tool.RemoteFunction:InvokeServer(enemy)
+                        end)
+                    end
+                end
+            end
+        end
+
+        -- Sea Mode (contoh fitur laut)
+        if _G.Flags.SeaRadar then
+            print("[SeaRadar] Aktif: memantau musuh laut...")
+        end
+
+        -- Prehistoric Mode
+        if _G.Flags.JurassicMode then
+            print("[Prehistoric] Mode aktif")
+        end
+
+        -- ESP (Enemy Highlight)
+        if _G.Flags.ESP then
+            for _, ent in ipairs(workspace:GetChildren()) do
+                if ent:FindFirstChild("Humanoid") and not ent:FindFirstChild("ESPBox") then
+                    local box = Instance.new("BoxHandleAdornment", ent)
+                    box.Name = "ESPBox"
+                    box.Adornee = ent
+                    box.Size = Vector3.new(4, 7, 4)
+                    box.AlwaysOnTop = true
+                    box.ZIndex = 5
+                    box.Color3 = Color3.fromRGB(255, 0, 0)
+                    box.Transparency = 0.7
+                end
+            end
+        end
+
+        -- DevilFruit Detection
+        if _G.Flags.AutoFruit then
+            for _, item in ipairs(workspace:GetDescendants()) do
+                if item:IsA("Tool") and item.Name:lower():find("fruit") then
+                    hrp.CFrame = item.Handle.CFrame + Vector3.new(0, 3, 0)
+                    print("Fruit ditemukan:", item.Name)
                     break
                 end
             end
         end
-    end)
-end
-
--- ESP logic sederhana
-if _G.Flags["ESPPlayers"] then
-    runFlagLoop("ESPPlayers", 1, function()
-        for _, player in pairs(Players:GetPlayers()) do
-            if player ~= LocalPlayer and player.Character then
-                if not player.Character:FindFirstChild("ESPTag") then
-                    local tag = Instance.new("BillboardGui", player.Character)
-                    tag.Name = "ESPTag"
-                    tag.Size = UDim2.new(0,100,0,20)
-                    tag.Adornee = player.Character:FindFirstChild("Head")
-                    tag.AlwaysOnTop = true
-
-                    local name = Instance.new("TextLabel", tag)
-                    name.Size = UDim2.new(1,0,1,0)
-                    name.BackgroundTransparency = 1
-                    name.Text = player.Name
-                    name.TextColor3 = Color3.new(1,0,0)
-                    name.TextScaled = true
-                end
-            end
-        end
-    end)
-end
-
--- Devil Fruit Finder contoh
-if _G.Flags["FruitFinder"] then
-    runFlagLoop("FruitFinder", 2, function()
-        for _, obj in pairs(Workspace:GetDescendants()) do
-            if obj:IsA("Tool") and obj.Name:lower():find("fruit") then
-                print("[GMON] Found fruit:", obj:GetFullName())
-            end
-        end
-    end)
-end
-
--- Tambah fitur lain sesuai flag
--- Contoh: AutoChest, AutoKitsune, ESPMobs, AutoKill, dll...
-
-return true
+    end
+end)
