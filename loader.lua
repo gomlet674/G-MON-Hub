@@ -1,6 +1,4 @@
-repeat
-    task.wait()
-until (game.IsLoaded and game:IsLoaded())
+repeat task.wait() until game:IsLoaded()
 
 local Players = game:GetService("Players")
 local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
@@ -189,10 +187,22 @@ end)
 local savedKeyPath = "gmon_key.txt"
 
 local GAME_SCRIPTS = {
-    [4442272183] = "https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/main.lua",         -- Blox Fruits
-    [3233893879] = "https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/main_arena.lua",   -- Arena
-    [537413528]  = "https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/build.lua",        -- Build A Boat
+    [537413528] = "https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/build.lua",
+    [12269725512] = "https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/build.lua",
 }
+
+local url = GAME_SCRIPTS[game.PlaceId]
+
+if not url and success and string.find(productInfo.Name, "Build A Boat") then
+    url = "https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/build.lua"
+end
+
+if not url then
+    warn("GMON Loader: Game tidak dikenali:", game.PlaceId, productInfo.Name)
+    return
+end
+
+loadstring(game:HttpGet(url))()
 
 -- Fungsi untuk memuat skrip sesuai game
 local function loadGameScript()
