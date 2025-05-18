@@ -6,8 +6,8 @@ local M = {}
 -- Daftar boss per sea (1-3) 
 M.bossPerSea = { [1] = {"Gorilla King","Bobby","Saw","Yeti"}, [2] = {"Mob Leader","Vice Admiral","Warden"}, [3] = {"Swan","Magma Admiral","Fishman Lord"} }
 
--- Mengembalikan list semua boss berdasarkan sea 
-player function M.allBosses() local plr = game.Players.LocalPlayer local sea = plr:FindFirstChild("SeaLevel") and plr.SeaLevel.Value or 1 local list = {} for s = 1, 3 do for _, bossName in ipairs(M.bossPerSea[s]) do table.insert(list, bossName) end end return list end
+-- Mengembalikan list semua boss berdasarkan sea player 
+function M.allBosses() local plr = game.Players.LocalPlayer local sea = plr:FindFirstChild("SeaLevel") and plr.SeaLevel.Value or 1 local list = {} for s = 1, 3 do for _, bossName in ipairs(M.bossPerSea[s]) do table.insert(list, bossName) end end return list end
 
 -- Menghitung fase bulan berdasarkan menit 
 function M.getMoonPhase() local minute = os.date("*t").min local idx = minute % 8 + 1 local phases = {"🌑","🌒","🌓","🌔","🌕","🌖","🌗","🌘"} return phases[idx] .. " (" .. (idx-1) .. "/4)" end
