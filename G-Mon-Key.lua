@@ -8,9 +8,10 @@ local StarterGui = game:GetService("StarterGui")
 local screenGui = 
 Instance.new("ScreenGui", game.CoreGui)
 
-local player = game:WaitForChild("Players"):WaitForChild("LocalPlayer")
-wait(1) -- opsional: beri waktu GUI ter-load
+local player = game.Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
+
+-- UI GUI kode di bawahnya...
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "GMon_KeyUI"
 screenGui.ResetOnSpawn = false
