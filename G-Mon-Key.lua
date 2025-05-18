@@ -16,19 +16,19 @@ local parentGui = (RunService:IsStudio() and
 
 -- Buat ScreenGui
 local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "GMon_KeyUI"
+screenGui.Name         = "GMon_KeyUI"
 screenGui.ResetOnSpawn = false
-screenGui.Parent = parentGui
+screenGui.Parent       = parentGui
 
 -- Main Frame
 local frame = Instance.new("Frame", screenGui)
-frame.AnchorPoint               = Vector2.new(0.5, 0.5)
-frame.Position                  = UDim2.new(0.5, 0, 0.5, -20)
-frame.Size                      = UDim2.new(0, 400, 0, 160)
-frame.BackgroundColor3          = Color3.fromRGB(20, 20, 20)
-frame.BackgroundTransparency    = 0.1
-frame.ClipsDescendants          = true
-frame.Active                    = true      -- <— tambahkan ini!
+frame.AnchorPoint            = Vector2.new(0.5, 0.5)
+frame.Position               = UDim2.new(0.5, 0, 0.5, -20)
+frame.Size                   = UDim2.new(0, 400, 0, 160)
+frame.BackgroundColor3       = Color3.fromRGB(20, 20, 20)
+frame.BackgroundTransparency = 0.1
+frame.ClipsDescendants       = true
+frame.Active                 = true    -- supaya menerima Input events
 Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 12)
 
 -- RGB Border
@@ -44,7 +44,7 @@ task.spawn(function()
     end
 end)
 
--- Title + Close
+-- Title
 local title = Instance.new("TextLabel", frame)
 title.Size                  = UDim2.new(1, -20, 0, 30)
 title.Position              = UDim2.new(0, 10, 0, 10)
@@ -55,19 +55,20 @@ title.TextColor3            = Color3.new(1, 1, 1)
 title.TextXAlignment        = Enum.TextXAlignment.Left
 title.Text                  = "G-Mon Hub Key"
 
+-- Close Button
 local closeBtn = Instance.new("TextButton", frame)
-closeBtn.Size               = UDim2.new(0, 24, 0, 24)
-closeBtn.Position           = UDim2.new(1, -30, 0, 8)
-closeBtn.BackgroundTransparency = 1
-closeBtn.Font               = Enum.Font.GothamBold
-closeBtn.TextSize           = 18
-closeBtn.TextColor3         = Color3.new(1, 1, 1)
-closeBtn.Text               = "✕"
+closeBtn.Size                 = UDim2.new(0, 24, 0, 24)
+closeBtn.Position             = UDim2.new(1, -30, 0, 8)
+closeBtn.BackgroundTransparency= 1
+closeBtn.Font                 = Enum.Font.GothamBold
+closeBtn.TextSize             = 18
+closeBtn.TextColor3           = Color3.new(1, 1, 1)
+closeBtn.Text                 = "✕"
 closeBtn.MouseButton1Click:Connect(function()
     screenGui:Destroy()
 end)
 
--- Input Box (hanya muncul saat di-focus)
+-- Input Box
 local input = Instance.new("TextBox", frame)
 input.Size               = UDim2.new(0.8, 0, 0, 28)
 input.Position           = UDim2.new(0.1, 0, 0.4, 0)
@@ -79,7 +80,7 @@ input.Font               = Enum.Font.Gotham
 input.TextSize           = 14
 Instance.new("UICorner", input).CornerRadius = UDim.new(0, 6)
 
--- Transparan kecuali saat di-focus
+-- Buat textbox transparan sampai di-focus
 input.TextTransparency = 1
 input.Focused:Connect(function()
     input.TextTransparency = 0
@@ -90,28 +91,29 @@ input.FocusLost:Connect(function()
     end
 end)
 
--- Buttons
+-- Check Key Button
 local checkBtn = Instance.new("TextButton", frame)
-checkBtn.Size               = UDim2.new(0.35, 0, 0, 28)
-checkBtn.Position           = UDim2.new(0.1, 0, 0.75, 0)
-checkBtn.Font               = Enum.Font.GothamBold
-checkBtn.TextSize           = 14
-checkBtn.TextColor3         = Color3.new(1, 1, 1)
-checkBtn.Text               = "Check Key"
-checkBtn.BackgroundColor3   = Color3.fromRGB(50, 100, 50)
+checkBtn.Size             = UDim2.new(0.35, 0, 0, 28)
+checkBtn.Position         = UDim2.new(0.1, 0, 0.75, 0)
+checkBtn.Font             = Enum.Font.GothamBold
+checkBtn.TextSize         = 14
+checkBtn.TextColor3       = Color3.new(1, 1, 1)
+checkBtn.Text             = "Check Key"
+checkBtn.BackgroundColor3 = Color3.fromRGB(50, 100, 50)
 Instance.new("UICorner", checkBtn).CornerRadius = UDim.new(0, 6)
 
+-- Get Key Button
 local getKeyBtn = Instance.new("TextButton", frame)
-getKeyBtn.Size              = UDim2.new(0.35, 0, 0, 28)
-getKeyBtn.Position          = UDim2.new(0.55, 0, 0.75, 0)
-getKeyBtn.Font              = Enum.Font.GothamBold
-getKeyBtn.TextSize          = 14
-getKeyBtn.TextColor3        = Color3.new(1, 1, 1)
-getKeyBtn.Text              = "Get Key"
-getKeyBtn.BackgroundColor3  = Color3.fromRGB(50, 50, 100)
+getKeyBtn.Size             = UDim2.new(0.35, 0, 0, 28)
+getKeyBtn.Position         = UDim2.new(0.55, 0, 0.75, 0)
+getKeyBtn.Font             = Enum.Font.GothamBold
+getKeyBtn.TextSize         = 14
+getKeyBtn.TextColor3       = Color3.new(1, 1, 1)
+getKeyBtn.Text             = "Get Key"
+getKeyBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 100)
 Instance.new("UICorner", getKeyBtn).CornerRadius = UDim.new(0, 6)
 
--- Get Key logic
+-- Get Key Logic
 getKeyBtn.MouseButton1Click:Connect(function()
     pcall(function()
         setclipboard("https://linkvertise.com/1209226/get-key-gmon-hub-script")
@@ -123,11 +125,11 @@ getKeyBtn.MouseButton1Click:Connect(function()
     })
 end)
 
--- Check Key logic
+-- Check Key Logic
 checkBtn.MouseButton1Click:Connect(function()
     if input.Text == VALID_KEY then
         StarterGui:SetCore("SendNotification", {
-            Title    = "Valid Key",
+            Title    = "Key Valid",
             Text     = "Loading…",
             Duration = 2
         })
