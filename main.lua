@@ -52,7 +52,14 @@ end
  local m = os.date("*t").min % 8 local phases = {[0]="🌑 0/4",[1]="🌒 -1/4",[2]="🌓 -2/4",[3]="🌔 -3/4", [4]="🌕 4/4",[5]="🌖 3/4",[6]="🌗 2/4",[7]="🌘 1/4"} _G.Flags.MoonPhase = phases[m] -- Kitsune, Prehistoric, Mirage: cek workspace _G.Flags.Kitsune = workspace:FindFirstChild("KitsuneIsland")=nil _G.Flags.Mirage = workspace:FindFirstChild("MirageIsland")~=nil end end)
 
 -- Main logic: Auto Farm & Chest 
-spawn(function() while task.wait(_G.Config.FarmInterval) do if _G.Flags.AutoFarm then local plr = Players.LocalPlayer local sea = plr:FindFirstChild("SeaLevel") and plr.SeaLevel.Value or 1 -- ambil quest list sesuai sea for lvl=1,2650 do -- lakukan pengambilan quest sesuai sea dan lvl -- contoh: game.ReplicatedStorage.Remotes.Quest:InvokeServer(sea, lvl) end end if _G.Flags.FarmChest then -- cari chest di workspace sesuai sea for _, chest in ipairs(workspace:GetDescendants()) do if chest.Name == "Chest" and chest:FindFirstChild("Sea") then -- misal chest.Sea.Value == plr.SeaLevel -- game.ReplicatedStorage.Remotes.OpenChest:InvokeServer(chest) end end end end end)
+spawn(function() while task.wait(_G.Config.FarmInterval) do if _G.Flags.AutoFarm then local plr = Players.LocalPlayer local sea = plr:FindFirstChild("SeaLevel") and plr.SeaLevel.Value or 1 
+-- ambil quest list sesuai sea for lvl=1,2650 do 
+-- lakukan pengambilan quest sesuai sea dan lvl
+ -- contoh: game.ReplicatedStorage.Remotes.Quest:InvokeServer(sea, lvl) end end if _G.Flags.FarmChest then 
+
+-- cari chest di workspace sesuai sea for _, chest in ipairs(workspace:GetDescendants()) do if chest.Name == "Chest" and chest:FindFirstChild("Sea") then
+ -- misal chest.Sea.Value == plr.SeaLevel 
+-- game.ReplicatedStorage.Remotes.OpenChest:InvokeServer(chest) end end end end end)
 
 print("GMON Hub UI Loaded and Logic Active")
 
