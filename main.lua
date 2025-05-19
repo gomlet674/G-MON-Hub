@@ -1,121 +1,142 @@
--- GMON Hub Final Version [Visual Fix & Draggable Smooth]
+-- GMON Hub Enhanced UI with Tabs, Scroll, Draggable, RGB Effect
 
 local player = game.Players.LocalPlayer
 local screenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
-screenGui.Name = "GMON_Hub"
+screenGui.Name = "GMON_Hub_Enhanced"
+screenGui.ResetOnSpawn = false
 
-local toggle = false
-
--- Main button (pojok kiri atas)
+-- Toggle Button
 local openButton = Instance.new("TextButton")
 openButton.Parent = screenGui
 openButton.Size = UDim2.new(0, 40, 0, 40)
 openButton.Position = UDim2.new(0, 10, 0, 10)
+openButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 openButton.Text = ""
-openButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-openButton.BorderSizePixel = 0
-openButton.BackgroundTransparency = 0.2
-openButton.Name = "ToggleButton"
+Instance.new("UICorner", openButton).CornerRadius = UDim.new(1, 0)
 
--- Circle style
-local uicorner = Instance.new("UICorner", openButton)
-uicorner.CornerRadius = UDim.new(1, 0)
-
--- Main UI frame
+-- Main UI Frame
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 300, 0, 350)
-mainFrame.Position = UDim2.new(0, 60, 0, 10)
-mainFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+mainFrame.Parent = screenGui
+mainFrame.Size = UDim2.new(0, 500, 0, 400)
+mainFrame.Position = UDim2.new(0.1, 0, 0.1, 0)
+mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 mainFrame.Visible = false
 mainFrame.Active = true
 mainFrame.Draggable = true
-mainFrame.Parent = screenGui
+Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 8)
 
-Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 6)
+-- Tab Buttons
+local tabNames = {"Info", "Main", "Item", "Race", "Sea Events", "Prehistoric", "Kitsune", "Mirage", "Devil Fruit", "ESP", "Misc", "Setting"}
+local currentTab = nil
 
--- Title Bar
-local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, 0, 0, 30)
-title.BackgroundTransparency = 1
-title.Text = "GMON Hub - Blox Fruits"
-title.TextColor3 = Color3.new(1, 1, 1)
-title.Font = Enum.Font.SourceSansBold
-title.TextSize = 20
-title.Parent = mainFrame
+local tabHolder = Instance.new("Frame", mainFrame)
+tabHolder.Size = UDim2.new(1, 0, 0, 30)
+tabHolder.BackgroundTransparency = 1
 
--- Layout container
-local layout = Instance.new("UIListLayout")
-layout.Padding = UDim.new(0, 10)
-layout.FillDirection = Enum.FillDirection.Vertical
-layout.SortOrder = Enum.SortOrder.LayoutOrder
-layout.Parent = mainFrame
+local tabLayout = Instance.new("UIListLayout", tabHolder)
+tabLayout.FillDirection = Enum.FillDirection.Horizontal
+tabLayout.SortOrder = Enum.SortOrder.LayoutOrder
 
--- Padding
-local padding = Instance.new("UIPadding", mainFrame)
-padding.PaddingTop = UDim.new(0, 40)
-padding.PaddingLeft = UDim.new(0, 10)
-padding.PaddingRight = UDim.new(0, 10)
-padding.PaddingBottom = UDim.new(0, 10)
+-- Container for all tab pages
+local container = Instance.new("Frame", mainFrame)
+container.Position = UDim2.new(0, 0, 0, 35)
+container.Size = UDim2.new(1, 0, 1, -35)
+container.BackgroundTransparency = 1
 
--- Function to create toggle row
-local function createToggle(text)
-	local holder = Instance.new("Frame")
-	holder.Size = UDim2.new(1, 0, 0, 30)
-	holder.BackgroundTransparency = 1
+-- Tab content setup
+local tabs = {}
+for _, name in ipairs(tabNames) do
+    local btn = Instance.new("TextButton", tabHolder)
+    btn.Size = UDim2.new(0, 90, 1, 0)
+    btn.Text = name
+    btn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    btn.TextColor3 = Color3.new(1, 1, 1)
+    btn.Font = Enum.Font.SourceSansBold
+    btn.TextSize = 14
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
 
-	local label = Instance.new("TextLabel")
-	label.Parent = holder
-	label.Text = text
-	label.Size = UDim2.new(0.7, 0, 1, 0)
-	label.BackgroundTransparency = 1
-	label.TextColor3 = Color3.new(1,1,1)
-	label.Font = Enum.Font.SourceSans
-	label.TextSize = 18
-	label.TextXAlignment = Enum.TextXAlignment.Left
+    local page = Instance.new("ScrollingFrame", container)
+    page.Size = UDim2.new(1, 0, 1, 0)
+    page.CanvasSize = UDim2.new(0, 0, 0, 0)
+    page.ScrollBarThickness = 6
+    page.Visible = false
+    page.BackgroundTransparency = 1
 
-	local toggleBtn = Instance.new("TextButton")
-	toggleBtn.Parent = holder
-	toggleBtn.Text = "OFF"
-	toggleBtn.Size = UDim2.new(0.25, 0, 1, 0)
-	toggleBtn.Position = UDim2.new(0.75, 0, 0, 0)
-	toggleBtn.BackgroundColor3 = Color3.fromRGB(100, 0, 0)
-	toggleBtn.TextColor3 = Color3.new(1, 1, 1)
-	toggleBtn.Font = Enum.Font.SourceSansBold
-	toggleBtn.TextSize = 16
-	Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(0, 4)
+    local layout = Instance.new("UIListLayout", page)
+    layout.Padding = UDim.new(0, 6)
+    layout.SortOrder = Enum.SortOrder.LayoutOrder
 
-	local state = false
-	toggleBtn.MouseButton1Click:Connect(function()
-		state = not state
-		toggleBtn.Text = state and "ON" or "OFF"
-		toggleBtn.BackgroundColor3 = state and Color3.fromRGB(0, 120, 0) or Color3.fromRGB(100, 0, 0)
-	end)
+    tabs[name] = page
 
-	holder.Parent = mainFrame
+    btn.MouseButton1Click:Connect(function()
+        if currentTab then tabs[currentTab].Visible = false end
+        currentTab = name
+        tabs[name].Visible = true
+    end)
 end
 
--- Create toggle features
-createToggle("Auto Farm")
-createToggle("Farm Boss")
-createToggle("Fast Attack")
-createToggle("Farm Chest")
-createToggle("Auto Buso")
-createToggle("Auto Ken")
-createToggle("Bring Mob")
+-- Toggle row creator
+local function createSwitch(parent, labelText)
+    local row = Instance.new("Frame", parent)
+    row.Size = UDim2.new(1, -10, 0, 30)
+    row.BackgroundTransparency = 1
 
--- Info box
-local infoLabel = Instance.new("TextLabel")
-infoLabel.Size = UDim2.new(1, 0, 0, 40)
-infoLabel.BackgroundTransparency = 1
-infoLabel.TextWrapped = true
-infoLabel.Text = "Made by GMON. UI Final Build. No bugs reported."
-infoLabel.TextColor3 = Color3.new(1,1,1)
-infoLabel.Font = Enum.Font.SourceSansItalic
-infoLabel.TextSize = 16
-infoLabel.TextYAlignment = Enum.TextYAlignment.Center
-infoLabel.Parent = mainFrame
+    local label = Instance.new("TextLabel", row)
+    label.Text = labelText
+    label.Size = UDim2.new(0.7, 0, 1, 0)
+    label.TextColor3 = Color3.new(1,1,1)
+    label.Font = Enum.Font.SourceSans
+    label.TextSize = 16
+    label.BackgroundTransparency = 1
+    label.TextXAlignment = Enum.TextXAlignment.Left
 
--- Button toggle logic
+    local toggleBtn = Instance.new("TextButton", row)
+    toggleBtn.Size = UDim2.new(0.25, 0, 1, 0)
+    toggleBtn.Position = UDim2.new(0.75, 0, 0, 0)
+    toggleBtn.Text = "OFF"
+    toggleBtn.BackgroundColor3 = Color3.fromRGB(120, 0, 0)
+    toggleBtn.TextColor3 = Color3.new(1, 1, 1)
+    toggleBtn.Font = Enum.Font.SourceSansBold
+    toggleBtn.TextSize = 14
+    Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(0, 4)
+
+    local on = false
+    toggleBtn.MouseButton1Click:Connect(function()
+        on = not on
+        toggleBtn.Text = on and "ON" or "OFF"
+        toggleBtn.BackgroundColor3 = on and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(120, 0, 0)
+    end)
+end
+
+-- Example content for Info tab
+createSwitch(tabs["Info"], "Moon Phase")
+createSwitch(tabs["Info"], "Kitsune Island")
+createSwitch(tabs["Info"], "God Chalice")
+createSwitch(tabs["Info"], "Mirage Island")
+createSwitch(tabs["Info"], "Prehistoric Island")
+createSwitch(tabs["Info"], "Tyrant of the Skies")
+
+-- Example content for Main tab
+createSwitch(tabs["Main"], "Farm Level")
+createSwitch(tabs["Main"], "Farm Nearest")
+createSwitch(tabs["Main"], "Farm Boss Selected")
+
+-- Open/close toggle
 openButton.MouseButton1Click:Connect(function()
-	mainFrame.Visible = not mainFrame.Visible
+    mainFrame.Visible = not mainFrame.Visible
 end)
+
+-- RGB background effect (optional aesthetic)
+spawn(function()
+    local hue = 0
+    while true do
+        hue = (hue + 0.005) % 1
+        local color = Color3.fromHSV(hue, 1, 1)
+        openButton.BackgroundColor3 = color
+        wait(0.03)
+    end
+end)
+
+-- Activate default tab
+tabs["Info"].Visible = true
+currentTab = "Info"
