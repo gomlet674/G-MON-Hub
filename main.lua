@@ -1,161 +1,135 @@
--- main.lua
--- Place as a LocalScript (e.g. via loader)
+-- loader.lua
+repeat task.wait() until game:IsLoaded()
 
--- SERVICES
-local Players      = game:GetService("Players")
 local CoreGui      = game:GetService("CoreGui")
 local TweenService = game:GetService("TweenService")
 local UserInput    = game:GetService("UserInputService")
 
--- PARENT GUI
+-- SCREEN GUI
 local screenGui = Instance.new("ScreenGui")
-screenGui.Name              = "GMonHubUI"
-screenGui.ResetOnSpawn      = false
-screenGui.Parent            = CoreGui
+screenGui.Name            = "SkullHubLoader"
+screenGui.ZIndexBehavior  = Enum.ZIndexBehavior.Sibling
+screenGui.Parent          = CoreGui
 
 -- MAIN FRAME
 local frame = Instance.new("Frame", screenGui)
-frame.Name                  = "MainFrame"
-frame.AnchorPoint           = Vector2.new(0.5, 0.5)
-frame.Position              = UDim2.new(0.5, 0, 0.5, 0)
-frame.Size                  = UDim2.new(0, 420, 0, 280)
-frame.BackgroundColor3      = Color3.fromRGB(30,30,30)
-frame.BackgroundTransparency = 0
-frame.Active                = true
-frame.ClipsDescendants      = true
+frame.Name                = "LoaderFrame"
+frame.Size                = UDim2.new(0, 360, 0, 420)
+frame.Position            = UDim2.new(0.5, -180, -1, 0)  -- start above screen
+frame.BackgroundColor3    = Color3.fromRGB(20,20,20)
+frame.BorderSizePixel     = 0
+frame.Active              = true
+frame.ClipsDescendants    = true
 
 -- ROUNDED CORNERS
 Instance.new("UICorner", frame).CornerRadius = UDim.new(0,16)
 
 -- RAINBOW BORDER
-local border = Instance.new("UIStroke", frame)
-border.Thickness            = 3
-border.ApplyStrokeMode      = Enum.ApplyStrokeMode.Border
+local stroke = Instance.new("UIStroke", frame)
+stroke.Thickness          = 3
+stroke.ApplyStrokeMode    = Enum.ApplyStrokeMode.Border
 task.spawn(function()
     local hue = 0
     while frame.Parent do
-        border.Color = Color3.fromHSV(hue,1,1)
+        stroke.Color = Color3.fromHSV(hue,1,1)
         hue = (hue + 0.005) % 1
         task.wait(0.01)
     end
 end)
 
--- TITLE BAR
+-- CROWN ICON
+local icon = Instance.new("ImageLabel", frame)
+icon.Name                 = "Icon"
+icon.Size                 = UDim2.new(0, 100, 0, 100)
+icon.Position             = UDim2.new(0.5, -50, 0, 20)
+icon.BackgroundTransparency = 1
+icon.Image                = "rbxassetid://6031075938"  -- replace with your crown icon
+icon.ScaleType            = Enum.ScaleType.Fit
+Instance.new("UICorner", icon).CornerRadius = UDim.new(1,0)
+
+-- TITLE
 local title = Instance.new("TextLabel", frame)
-title.Name                  = "Title"
-title.Size                  = UDim2.new(1, 0, 0, 40)
-title.Position              = UDim2.new(0, 0, 0, 0)
+title.Name                = "Title"
+title.Size                = UDim2.new(1,0,0,40)
+title.Position            = UDim2.new(0,0,0,140)
 title.BackgroundTransparency = 1
-title.Text                  = "G-Mon Hub"
-title.Font                  = Enum.Font.GothamBold
-title.TextSize              = 22
-title.TextColor3            = Color3.new(1,1,1)
-title.TextXAlignment        = Enum.TextXAlignment.Center
-title.TextYAlignment        = Enum.TextYAlignment.Center
+title.Font                = Enum.Font.GothamBold
+title.TextSize            = 24
+title.Text                = "Skull Hub"
+title.TextColor3          = Color3.new(1,1,1)
+title.TextXAlignment      = Enum.TextXAlignment.Center
+
+-- LOAD BUTTON
+local loadBtn = Instance.new("TextButton", frame)
+loadBtn.Name               = "LoadBtn"
+loadBtn.Size               = UDim2.new(0.6,0,0,40)
+loadBtn.Position           = UDim2.new(0.5,-loadBtn.Size.X.Offset/2,0,200)
+loadBtn.BackgroundColor3   = Color3.fromRGB(0,150,250)
+loadBtn.Font               = Enum.Font.GothamBold
+loadBtn.TextSize           = 18
+loadBtn.Text               = "Load Script"
+loadBtn.TextColor3         = Color3.new(1,1,1)
+Instance.new("UICorner", loadBtn).CornerRadius = UDim.new(0,8)
 
 -- CLOSE BUTTON
 local closeBtn = Instance.new("TextButton", frame)
-closeBtn.Name                = "Close"
-closeBtn.Size                = UDim2.new(0, 32, 0, 32)
-closeBtn.Position            = UDim2.new(1, -36, 0, 4)
+closeBtn.Name              = "CloseBtn"
+closeBtn.Size              = UDim2.new(0,32,0,32)
+closeBtn.Position          = UDim2.new(1,-36,0,4)
 closeBtn.BackgroundTransparency = 1
-closeBtn.Text                = "✕"
-closeBtn.Font                = Enum.Font.GothamBold
-closeBtn.TextSize            = 24
-closeBtn.TextColor3          = Color3.new(1,1,1)
+closeBtn.Font              = Enum.Font.GothamBold
+closeBtn.TextSize          = 24
+closeBtn.Text              = "✕"
+closeBtn.TextColor3        = Color3.new(1,1,1)
+
+-- SLIDE-IN ANIMATION
+TweenService:Create(frame, TweenInfo.new(0.8, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+    Position = UDim2.new(0.5, -180, 0.1, 0)
+}):Play()
+
+-- BUTTON CALLBACKS
 closeBtn.MouseButton1Click:Connect(function()
+    TweenService:Create(frame, TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+        Position = UDim2.new(0.5, -180, -1, 0)
+    }):Play():Wait()
     screenGui:Destroy()
 end)
 
--- CONTAINER FOR OPTIONS
-local container = Instance.new("Frame", frame)
-container.Name               = "Options"
-container.Size               = UDim2.new(1, -20, 1, -60)
-container.Position           = UDim2.new(0,10,0,50)
-container.BackgroundTransparency = 1
-
--- SCROLL CANVAS
-local uiList = Instance.new("UIListLayout", container)
-uiList.SortOrder             = Enum.SortOrder.LayoutOrder
-uiList.Padding               = UDim.new(0,12)
-
--- UTILITY: Create a toggle line
-local function makeToggle(name, initial, callback)
-    local line = Instance.new("Frame", container)
-    line.Size = UDim2.new(1, 0, 0, 30)
-    line.BackgroundTransparency = 1
-
-    local lbl = Instance.new("TextLabel", line)
-    lbl.Size           = UDim2.new(0.7, 0, 1, 0)
-    lbl.Position       = UDim2.new(0, 0, 0, 0)
-    lbl.BackgroundTransparency = 1
-    lbl.Text           = name
-    lbl.Font           = Enum.Font.Gotham
-    lbl.TextSize       = 16
-    lbl.TextColor3     = Color3.new(1,1,1)
-    lbl.TextXAlignment = Enum.TextXAlignment.Left
-    lbl.TextYAlignment = Enum.TextYAlignment.Center
-
-    local btn = Instance.new("TextButton", line)
-    btn.Size           = UDim2.new(0, 40, 0, 20)
-    btn.Position       = UDim2.new(1, -44, 0.5, -10)
-    btn.BackgroundColor3 = initial and Color3.fromRGB(0,200,120) or Color3.fromRGB(90,90,90)
-    btn.Text           = ""
-    btn.AutoButtonColor = false
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
-
-    local state = initial
-    btn.MouseButton1Click:Connect(function()
-        state = not state
-        btn.BackgroundColor3 = state and Color3.fromRGB(0,200,120) or Color3.fromRGB(90,90,90)
-        callback(state)
+loadBtn.MouseButton1Click:Connect(function()
+    loadBtn.Text = "Loading..."
+    -- replace URL below with your main script
+    local ok, err = pcall(function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/hungquan99/SkullHub/main/loader.lua", true))()
     end)
-
-    return line
-end
-
--- EXAMPLE TOGGLES
-makeToggle("Auto Farm", false, function(on)
-    print("Auto Farm toggled to", on)
-end)
-
-makeToggle("Auto Chest", true, function(on)
-    print("Auto Chest toggled to", on)
-end)
-
--- DROPDOWN-LIKE (CLICK FOR MORE)
-local dropdown = makeToggle("Select Weapon ▶", false, function(on)
-    if on then
-        print("Opening weapon list…")
-        -- you can spawn a small submenu here
-    else
-        print("Closing weapon list…")
+    if not ok then
+        loadBtn.Text = "Error"
+        warn("SkullHub load error:", err)
     end
 end)
 
 -- MAKE FRAME DRAGGABLE
 do
-    local dragging, dragInput, dragStart, startPos
-    frame.InputBegan:Connect(function(inp)
-        if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+    local dragging, dragStart, startPos
+    frame.InputBegan:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1 then
             dragging = true
-            dragStart = inp.Position
+            dragStart = i.Position
             startPos = frame.Position
-            inp.Changed:Connect(function()
-                if inp.UserInputState == Enum.UserInputState.End then
+            i.Changed:Connect(function()
+                if i.UserInputState == Enum.UserInputState.End then
                     dragging = false
                 end
             end)
         end
     end)
-    frame.InputChanged:Connect(function(inp)
-        if inp.UserInputType == Enum.UserInputType.MouseMovement then
-            dragInput = inp
+    frame.InputChanged:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseMovement then
+            dragInput = i
         end
     end)
-    UserInput.InputChanged:Connect(function(inp)
-        if dragging and inp == dragInput then
-            local delta = inp.Position - dragStart
+    UserInput.InputChanged:Connect(function(i)
+        if dragging and i == dragInput then
+            local delta = i.Position - dragStart
             frame.Position = UDim2.new(
                 startPos.X.Scale, startPos.X.Offset + delta.X,
                 startPos.Y.Scale, startPos.Y.Offset + delta.Y
