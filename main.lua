@@ -69,6 +69,17 @@ local function AddSwitch(page, label, flag)
     }, ctr)
     New("UICorner", { CornerRadius = UDim.new(0,10) }, sw)
     local knob = New("Frame", {
+
+local btn = New("TextButton", {
+    Text = name,
+    Size = UDim2.new(0,80,1,0),
+    BackgroundColor3 = Color3.new(30,30,30),
+    TextColor3 = Color3.new(1,1,1),
+    LayoutOrder = i,
+    ZIndex = 2,            -- <<< tambahkan ini
+    TextTransparency = 0,  -- <<< pastikan ini
+}, tabScroll)
+
         Size = UDim2.new(0,18,0,18), Position = UDim2.new(0,1,0,1),
         BackgroundColor3 = Color3.fromRGB(50,50,50),
     }, sw)
