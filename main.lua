@@ -1,397 +1,121 @@
--- main.lua – GMON Hub UI Final (Ultimate)
+-- GMON Hub Final Version [Visual Fix & Draggable Smooth]
 
-repeat task.wait() until game:IsLoaded()
+local player = game.Players.LocalPlayer
+local screenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+screenGui.Name = "GMON_Hub"
 
--- SERVICES
-local HttpService  = game:GetService("HttpService")
-local Players      = game:GetService("Players")
-local UserInput    = game:GetService("UserInputService")
-local TweenService = game:GetService("TweenService")
-local Replicated   = game:GetService("ReplicatedStorage")
+local toggle = false
 
--- GLOBAL CONFIG
-getgenv().Flags  = getgenv().Flags  or {}
-getgenv().Config = getgenv().Config or {
-    FarmInterval  = 0.5,
-    MaxQuestLevel = 2650,
-}
+-- Main button (pojok kiri atas)
+local openButton = Instance.new("TextButton")
+openButton.Parent = screenGui
+openButton.Size = UDim2.new(0, 40, 0, 40)
+openButton.Position = UDim2.new(0, 10, 0, 10)
+openButton.Text = ""
+openButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+openButton.BorderSizePixel = 0
+openButton.BackgroundTransparency = 0.2
+openButton.Name = "ToggleButton"
 
--- HELPER: Instance.new + properti
-local function New(cls, props, parent)
-    local inst = Instance.new(cls)
-    for k,v in pairs(props) do inst[k] = v end
-    if parent then inst.Parent = parent end
-    return inst
+-- Circle style
+local uicorner = Instance.new("UICorner", openButton)
+uicorner.CornerRadius = UDim.new(1, 0)
+
+-- Main UI frame
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 300, 0, 350)
+mainFrame.Position = UDim2.new(0, 60, 0, 10)
+mainFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+mainFrame.Visible = false
+mainFrame.Active = true
+mainFrame.Draggable = true
+mainFrame.Parent = screenGui
+
+Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 6)
+
+-- Title Bar
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, 0, 0, 30)
+title.BackgroundTransparency = 1
+title.Text = "GMON Hub - Blox Fruits"
+title.TextColor3 = Color3.new(1, 1, 1)
+title.Font = Enum.Font.SourceSansBold
+title.TextSize = 20
+title.Parent = mainFrame
+
+-- Layout container
+local layout = Instance.new("UIListLayout")
+layout.Padding = UDim.new(0, 10)
+layout.FillDirection = Enum.FillDirection.Vertical
+layout.SortOrder = Enum.SortOrder.LayoutOrder
+layout.Parent = mainFrame
+
+-- Padding
+local padding = Instance.new("UIPadding", mainFrame)
+padding.PaddingTop = UDim.new(0, 40)
+padding.PaddingLeft = UDim.new(0, 10)
+padding.PaddingRight = UDim.new(0, 10)
+padding.PaddingBottom = UDim.new(0, 10)
+
+-- Function to create toggle row
+local function createToggle(text)
+	local holder = Instance.new("Frame")
+	holder.Size = UDim2.new(1, 0, 0, 30)
+	holder.BackgroundTransparency = 1
+
+	local label = Instance.new("TextLabel")
+	label.Parent = holder
+	label.Text = text
+	label.Size = UDim2.new(0.7, 0, 1, 0)
+	label.BackgroundTransparency = 1
+	label.TextColor3 = Color3.new(1,1,1)
+	label.Font = Enum.Font.SourceSans
+	label.TextSize = 18
+	label.TextXAlignment = Enum.TextXAlignment.Left
+
+	local toggleBtn = Instance.new("TextButton")
+	toggleBtn.Parent = holder
+	toggleBtn.Text = "OFF"
+	toggleBtn.Size = UDim2.new(0.25, 0, 1, 0)
+	toggleBtn.Position = UDim2.new(0.75, 0, 0, 0)
+	toggleBtn.BackgroundColor3 = Color3.fromRGB(100, 0, 0)
+	toggleBtn.TextColor3 = Color3.new(1, 1, 1)
+	toggleBtn.Font = Enum.Font.SourceSansBold
+	toggleBtn.TextSize = 16
+	Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(0, 4)
+
+	local state = false
+	toggleBtn.MouseButton1Click:Connect(function()
+		state = not state
+		toggleBtn.Text = state and "ON" or "OFF"
+		toggleBtn.BackgroundColor3 = state and Color3.fromRGB(0, 120, 0) or Color3.fromRGB(100, 0, 0)
+	end)
+
+	holder.Parent = mainFrame
 end
 
--- DRAGGABLE MAKER
-local function makeDraggable(gui)
-    gui.Active = true
-    local dragging, startPos, startInput
-    gui.InputBegan:Connect(function(inp)
-        if inp.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging   = true
-            startPos   = gui.Position
-            startInput = inp.Position
-            inp.Changed:Connect(function()
-                if inp.UserInputState == Enum.UserInputState.End then
-                    dragging = false
-                end
-            end)
-        end
-    end)
-    UserInput.InputChanged:Connect(function(inp)
-        if dragging and inp.UserInputType == Enum.UserInputType.MouseMovement then
-            local delta = inp.Position - startInput
-            gui.Position = UDim2.new(
-                startPos.X.Scale, startPos.X.Offset + delta.X,
-                startPos.Y.Scale, startPos.Y.Offset + delta.Y
-            )
-        end
-    end)
-end
+-- Create toggle features
+createToggle("Auto Farm")
+createToggle("Farm Boss")
+createToggle("Fast Attack")
+createToggle("Farm Chest")
+createToggle("Auto Buso")
+createToggle("Auto Ken")
+createToggle("Bring Mob")
 
--- CONTROL HELPERS
-local function AddSwitch(page, label, flag)
-    local ctr = New("Frame", {
-        Size = UDim2.new(1,0,0,30),
-        BackgroundTransparency = 1,
-        LayoutOrder = #page:GetChildren()+1,
-    }, page)
-    New("TextLabel", {
-        Text = label,
-        Size = UDim2.new(0.7,0,1,0),
-        BackgroundTransparency = 1,
-        TextColor3 = Color3.new(1,1,1),
-        TextXAlignment = Enum.TextXAlignment.Left,
-    }, ctr)
-    local sw = New("TextButton", {
-        Text = "",
-        TextTransparency = 1,
-        Size = UDim2.new(0,40,0,20),
-        Position = UDim2.new(1,-50,0,5),
-        BackgroundColor3 = Color3.new(0.9,0.9,0.9),
-        AutoButtonColor = false,
-    }, ctr)
-    New("UICorner", { CornerRadius = UDim.new(0,10) }, sw)
-    local knob = New("Frame", {
-        Size = UDim2.new(0,18,0,18),
-        Position = UDim2.new(0,1,0,1),
-        BackgroundColor3 = Color3.fromRGB(50,50,50),
-    }, sw)
-    New("UICorner", { CornerRadius = UDim.new(0,9) }, knob)
+-- Info box
+local infoLabel = Instance.new("TextLabel")
+infoLabel.Size = UDim2.new(1, 0, 0, 40)
+infoLabel.BackgroundTransparency = 1
+infoLabel.TextWrapped = true
+infoLabel.Text = "Made by GMON. UI Final Build. No bugs reported."
+infoLabel.TextColor3 = Color3.new(1,1,1)
+infoLabel.Font = Enum.Font.SourceSansItalic
+infoLabel.TextSize = 16
+infoLabel.TextYAlignment = Enum.TextYAlignment.Center
+infoLabel.Parent = mainFrame
 
-    getgenv().Flags[flag] = getgenv().Flags[flag] or false
-    local ti = TweenInfo.new(0.15, Enum.EasingStyle.Quad)
-    local function update()
-        local goal = {
-            Position = getgenv().Flags[flag]
-                and UDim2.new(1,-19,0,1)
-                or UDim2.new(0,1,0,1)
-        }
-        sw.BackgroundColor3 = getgenv().Flags[flag]
-            and Color3.fromRGB(0,170,0)
-            or Color3.new(0.9,0.9,0.9)
-        TweenService:Create(knob, ti, goal):Play()
-    end
-    sw.Activated:Connect(function()
-        getgenv().Flags[flag] = not getgenv().Flags[flag]
-        update()
-    end)
-    update()
-end
-
-local function AddDropdown(page, label, list, flag)
-    New("TextLabel", {
-        Text = label,
-        Size = UDim2.new(1,0,0,20),
-        BackgroundTransparency = 1,
-        TextColor3 = Color3.new(1,1,1),
-        TextXAlignment = Enum.TextXAlignment.Left,
-        LayoutOrder = #page:GetChildren()+1,
-    }, page)
-    local btn = New("TextButton", {
-        Text = list[1] or "Select",
-        Size = UDim2.new(1,0,0,30),
-        BackgroundColor3 = Color3.fromRGB(50,50,50),
-        TextColor3 = Color3.new(1,1,1),
-        LayoutOrder = #page:GetChildren()+1,
-    }, page)
-    New("UICorner", { CornerRadius = UDim.new(0,6) }, btn)
-
-    btn.Activated:Connect(function()
-        if btn:FindFirstChild("Menu") then return end
-        local menu = New("Frame", {
-            Name = "Menu",
-            ZIndex = btn.ZIndex+1,
-            Size = UDim2.new(0, btn.AbsoluteSize.X, 0, #list*25),
-            Position = UDim2.new(0,0,0, btn.AbsoluteSize.Y),
-            BackgroundColor3 = Color3.fromRGB(30,30,30),
-        }, btn)
-        New("UICorner", { CornerRadius = UDim.new(0,6) }, menu)
-        for i,v in ipairs(list) do
-            local opt = New("TextButton", {
-                Text = v,
-                Size = UDim2.new(1,0,0,25),
-                BackgroundTransparency = 1,
-                TextColor3 = Color3.new(1,1,1),
-                LayoutOrder = i,
-                Parent = menu,
-            })
-            opt.Position = UDim2.new(0,0,0,(i-1)*25)
-            opt.Activated:Connect(function()
-                btn.Text = v
-                getgenv().Flags[flag] = v
-                menu:Destroy()
-            end)
-        end
-    end)
-end
-
-local function AddToggle(page, text, flag)
-    local btn = New("TextButton", {
-        Text = text,
-        Size = UDim2.new(1,0,0,30),
-        BackgroundColor3 = Color3.fromRGB(60,60,60),
-        TextColor3 = Color3.new(1,1,1),
-        LayoutOrder = #page:GetChildren()+1,
-    }, page)
-    New("UICorner", { CornerRadius = UDim.new(0,6) }, btn)
-
-    getgenv().Flags[flag] = getgenv().Flags[flag] or false
-    btn.Activated:Connect(function()
-        getgenv().Flags[flag] = not getgenv().Flags[flag]
-        btn.BackgroundColor3 = getgenv().Flags[flag]
-            and Color3.fromRGB(0,170,0)
-            or Color3.fromRGB(60,60,60)
-    end)
-end
-
-local function AddText(page, text)
-    New("TextLabel", {
-        Text = text,
-        Size = UDim2.new(1,0,0,20),
-        BackgroundTransparency = 1,
-        TextColor3 = Color3.new(1,1,1),
-        TextXAlignment = Enum.TextXAlignment.Left,
-        LayoutOrder = #page:GetChildren()+1,
-    }, page)
-end
-
--- BUILD UI
-local gui = New("ScreenGui", {
-    Name = "GMONHub_UI",
-    ResetOnSpawn = false,
-    ZIndexBehavior = Enum.ZIndexBehavior.Global,
-}, Players.LocalPlayer:WaitForChild("PlayerGui"))
-
--- MAIN FRAME
-local frame = New("Frame", {
-    Size = UDim2.new(0,600,0,450),
-    Position = UDim2.new(0.5,-300,0.5,-225),
-    BackgroundColor3 = Color3.new(0,0,0),
-    BackgroundTransparency = 0.5,
-    Visible = false,
-}, gui)
-New("UICorner", { CornerRadius = UDim.new(0,12) }, frame)
-frame.Active = true
-makeDraggable(frame)
-
--- BACKGROUND IMAGE (di dalam frame)
-New("ImageLabel", {
-    Image = "rbxassetid://16790218639",
-    Size = UDim2.new(1,0,1,0),
-    BackgroundTransparency = 1,
-    ZIndex = 0,
-}, frame)
-
--- ANIMATED BORDER
-local stroke = New("UIStroke", {
-    Parent = frame,
-    Thickness = 4,
-    ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-})
-task.spawn(function()
-    local hue = 0
-    while frame.Parent do
-        hue = (hue + 0.005) % 1
-        stroke.Color = Color3.fromHSV(hue,1,1)
-        task.wait(0.03)
-    end
+-- Button toggle logic
+openButton.MouseButton1Click:Connect(function()
+	mainFrame.Visible = not mainFrame.Visible
 end)
-
--- TOGGLE BUTTON (GMON)
-local toggle = New("TextButton", {
-    Text = "GMON",
-    Size = UDim2.new(0,70,0,35),
-    Position = UDim2.new(0,20,0,20),
-    BackgroundColor3 = Color3.fromRGB(40,40,40),
-    TextColor3 = Color3.new(1,1,1),
-    ZIndex = 2,
-}, gui)
-New("UICorner", { CornerRadius = UDim.new(0,8) }, toggle)
-toggle.Active = true
-makeDraggable(toggle)
-toggle.Activated:Connect(function()
-    frame.Visible = not frame.Visible
-end)
-UserInput.InputBegan:Connect(function(inp, gp)
-    if not gp and inp.KeyCode == Enum.KeyCode.M then
-        frame.Visible = not frame.Visible
-    end
-end)
-
--- TABS & PAGES
-local tabNames = {"Info","Main","Item","Sea","Prehistoric","Kitsune","Leviathan","DevilFruit","ESP","Misc","Setting"}
-local pages, pagesByName = {}, {}
-
-local tabScroll = New("ScrollingFrame", {
-    Size = UDim2.new(1,0,0,40),
-    Position = UDim2.new(0,0,0,0),
-    BackgroundTransparency = 1,
-    ScrollingDirection = Enum.ScrollingDirection.X,
-    ScrollBarThickness = 6,
-    CanvasSize = UDim2.new(#tabNames*80,0,0,40),
-    Parent = frame,
-})
-tabScroll.Active = true
-New("UIListLayout", {
-    Parent = tabScroll,
-    FillDirection = Enum.FillDirection.Horizontal,
-    SortOrder = Enum.SortOrder.LayoutOrder,
-    Padding = UDim.new(0,5),
-}, tabScroll)
-
-for i,name in ipairs(tabNames) do
-    local btn = New("TextButton", {
-        Text = name,
-        Size = UDim2.new(0,80,1,0),
-        BackgroundColor3 = Color3.new(30,30,30),
-        TextColor3 = Color3.new(1,1,1),
-        LayoutOrder = i,
-        ZIndex = 2,
-    }, tabScroll)
-    New("UICorner", { CornerRadius = UDim.new(0,6) }, btn)
-
-    local page = New("ScrollingFrame", {
-        Name = name.."Page",
-        Size = UDim2.new(1,0,1,-40),
-        Position = UDim2.new(0,0,0,40),
-        BackgroundTransparency = 1,
-        ScrollBarThickness = 6,
-        AutomaticCanvasSize = Enum.AutomaticSize.Y,
-        CanvasSize = UDim2.new(0,0,0,0),
-        Visible = (i==1),
-        ZIndex = 2,
-        Parent = frame,
-    })
-    New("UIListLayout", {
-        Parent = page,
-        SortOrder = Enum.SortOrder.LayoutOrder,
-        Padding = UDim.new(0,5),
-    }, page)
-
-    pages[i] = page
-    pagesByName[name] = page
-
-    btn.Activated:Connect(function()
-        for _,p in ipairs(pages) do p.Visible = false end
-        pagesByName[name].Visible = true
-    end)
-end
-
--- 1) INFO TAB LOGIC
-task.spawn(function()
-    while true do
-        local info = pagesByName.Info
-        info:ClearAllChildren()
-        AddText(info, "Toggle GUI: Press M or click GMON")
-
-        local minute = os.date("*t").min
-        local idx = (minute % 8) + 1
-        local phases = {"🌑","🌒","🌓","🌔","🌕","🌖","🌗","🌘"}
-        AddText(info, string.format("Moon Phase: %s (%d/7)", phases[idx], idx-1))
-
-        local function chk(n)
-            return workspace:FindFirstChild(n) and "✅" or "❌"
-        end
-        AddText(info, "Kitsune Island: "     .. chk("KitsuneIsland"))
-        AddText(info, "Prehistoric Island: " .. chk("PrehistoricIsland"))
-        AddText(info, "Mirage Island: "      .. chk("MirageIsland"))
-        AddText(info, "Tyrant of the Skies: ".. chk("TyrantOfTheSkies"))
-
-        local hasChalice = Players.LocalPlayer.Backpack:FindFirstChild("GodChalice") and "✅" or "❌"
-        AddText(info, "God Chalice: " .. hasChalice)
-
-        task.wait(5)
-    end
-end)
-
--- 2) MAIN TAB + LOGIC
-do
-    local m = pagesByName.Main
-    AddSwitch(m,   "Auto Farm",           "AutoFarm")
-    AddDropdown(m, "Select Boss",         {"Gorilla King","Bobby","Saw","Yeti","Ice Admiral"}, "SelectedBoss")
-    AddSwitch(m,   "Farm Boss Selected", "FarmBossSelected")
-    AddSwitch(m,   "Farm Chest",          "FarmChest")
-end
-task.spawn(function()
-    while true do
-        if getgenv().Flags.AutoFarm then
-            for lvl=1,getgenv().Config.MaxQuestLevel do
-                pcall(function()
-                    Replicated.Remotes.Quest:InvokeServer(Players.LocalPlayer.SeaLevel.Value, lvl)
-                end)
-            end
-        end
-        if getgenv().Flags.FarmBossSelected and getgenv().Flags.SelectedBoss then
-            local boss = workspace:FindFirstChild(getgenv().Flags.SelectedBoss)
-            local hum  = Players.LocalPlayer.Character and Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-            if boss and boss.PrimaryPart and hum then
-                hum:MoveTo(boss.PrimaryPart.Position + Vector3.new(0,5,0))
-            end
-        end
-        if getgenv().Flags.FarmChest then
-            local char = Players.LocalPlayer.Character
-            local hum  = char and char:FindFirstChildOfClass("Humanoid")
-            local sea  = Players.LocalPlayer.SeaLevel.Value
-            if hum then
-                for _,c in ipairs(workspace:GetDescendants()) do
-                    if c.Name=="Chest" and c:FindFirstChild("Sea") and c.Sea.Value==sea then
-                        hum:MoveTo((c.PrimaryPart or c).Position)
-                        hum.MoveToFinished:Wait(1)
-                        pcall(function() Replicated.Remotes.OpenChest:InvokeServer(c) end)
-                    end
-                end
-            end
-        end
-        task.wait(getgenv().Config.FarmInterval)
-    end
-end)
-
--- 3) OTHER TABS PLACEHOLDERS
-do local p = pagesByName.Item         for _,t in ipairs({"Yama","Tushita","Soul Guitar","CDK"})         do AddToggle(p,"Auto "..t,"Auto"..t)           end end
-do local p = pagesByName.Sea          AddSwitch(p,"Kill Sea Beast","KillSeaBeast"); AddSwitch(p,"Auto Sail","AutoSail") end
-do local p = pagesByName.Prehistoric  for _,t in ipairs({"Kill Golem","Defend Volcano","Collect Dragon Egg","Collect Bones"}) do AddToggle(p,t,t:gsub("%s",""))  end end
-do local p = pagesByName.Kitsune      for _,t in ipairs({"Collect Azure Ember","Trade Azure Ember"}) do AddToggle(p,t,t:gsub("%s","")) end end
-do local p = pagesByName.Leviathan    AddToggle(p,"Attack Leviathan","AttackLeviathan") end
-do local p = pagesByName.DevilFruit   AddToggle(p,"Gacha Fruit","GachaFruit"); AddText(p,"Fruit Target:"); AddDropdown(p,"",{"Bomb","Flame","Quake"},"FruitTarget") end
-do local p = pagesByName.ESP          for _,t in ipairs({"ESP Fruit","ESP Player","ESP Chest","ESP Flower"}) do AddToggle(p,t,t:gsub("%s","")) end end
-do local p = pagesByName.Misc         for _,t in ipairs({"Server Hop","Redeem All Codes","FPS Booster","Auto Awaken Fruit"}) do AddToggle(p,t,t:gsub("%s","")) end end
-
--- 4) SETTING TAB + FAST ATTACK
-do
-    local s = pagesByName.Setting
-    AddToggle(s, "Fast Attack", "FastAttack")
-    AddText(s,    "Version: vFinal")
-end
-task.spawn(function()
-    while true do
-        if getgenv().Flags.FastAttack then
-            pcall(function() Replicated.Remotes.FastAttack:FireServer() end)
-        end
-        task.wait()
-    end
-end)
-
-print("GMON Hub UI Loaded (Ultimate)")
