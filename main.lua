@@ -1,196 +1,148 @@
--- LocalScript di StarterGui
-local Players = game:GetService("Players")
-local player = Players.LocalPlayer
-local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
-gui.Name = "GantengHub"
-gui.ResetOnSpawn = false
+-- GMON Hub UI - Auto Hatch Anti Bee Egg
 
--- Utility: buat instance dengan properti
-local function New(class, props, parent)
-    local inst = Instance.new(class)
-    for k,v in pairs(props or {}) do inst[k] = v end
+repeat task.wait() until game:IsLoaded()
+
+local HttpService  = game:GetService("HttpService")
+local Players      = game:GetService("Players")
+local UserInput    = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+
+_G.Flags = _G.Flags or {}
+
+local function New(cls, props, parent)
+    local inst = Instance.new(cls)
+    for k,v in pairs(props) do inst[k] = v end
     if parent then inst.Parent = parent end
     return inst
 end
 
--- Main Window
-local main = New("Frame", {
-    Name = "MainWindow",
-    Size = UDim2.new(0,600,0,350),
-    Position = UDim2.new(0.5,-300,0.5,-175),
-    BackgroundColor3 = Color3.fromRGB(25,25,25),
-    BorderSizePixel = 0,
-}, gui)
-
--- Close & Minimize
-local header = New("Frame", {
-    Size = UDim2.new(1,0,0,32),
-    BackgroundColor3 = Color3.fromRGB(20,20,20),
-    BorderSizePixel = 0,
-}, main)
-New("UICorner",{CornerRadius=UDim.new(0,6)}, header)
-
-local btnClose = New("TextButton", {
-    Text = "✕", Font = Enum.Font.GothamBold, TextSize = 18,
-    Size = UDim2.new(0,32,0,32), Position = UDim2.new(1,-32,0,0),
-    BackgroundTransparency = 1, TextColor3 = Color3.new(1,1,1),
-}, header)
-local btnMin  = New("TextButton", {
-    Text = "─", Font = Enum.Font.GothamBold, TextSize = 18,
-    Size = UDim2.new(0,32,0,32), Position = UDim2.new(1,-64,0,0),
-    BackgroundTransparency = 1, TextColor3 = Color3.new(1,1,1),
-}, header)
-
-btnClose.MouseButton1Click:Connect(function() main:Destroy() end)
-btnMin.MouseButton1Click:Connect(function()
-    main.Visible = false
-end)
-
--- Sidebar
-local sidebar = New("Frame", {
-    Size = UDim2.new(0,120,1,0),
-    Position = UDim2.new(0,0,0,0),
-    BackgroundColor3 = Color3.fromRGB(30,30,30),
-    BorderSizePixel = 0,
-}, main)
-New("UIListLayout",{Padding=UDim.new(0,8),SortOrder=Enum.SortOrder.LayoutOrder}, sidebar)
-
-local pages = {
-    {Name="Kitsune", Icon="🦊"},
-    {Name="Prehistoric", Icon="🦕"},
-    {Name="Sea Event", Icon="🐬"},
-    {Name="Dragon Dojo", Icon="🐉"},
-    {Name="RaceV4", Icon="🏁"},
-    {Name="Stats Player", Icon="📊"},
-    {Name="Stop All Tween", Icon="⏹️"},
-}
-
--- Content container
-local content = New("Frame", {
-    Size = UDim2.new(1,-120,1,-32),
-    Position = UDim2.new(0,120,0,32),
-    BackgroundColor3 = Color3.fromRGB(35,35,35),
-    BorderSizePixel = 0,
-}, main)
-New("UIListLayout",{Padding=UDim.new(0,8),SortOrder=Enum.SortOrder.LayoutOrder}, content)
-
--- Header Right (Back + Icon + Title)
-local hdrR = New("Frame", {
-    Size = UDim2.new(1,0,0,32),
-    BackgroundTransparency = 1,
-}, content)
-New("UIListLayout",{FillDirection=Enum.FillDirection.Horizontal,SortOrder=Enum.SortOrder.LayoutOrder,VerticalAlignment=Enum.VerticalAlignment.Center,Padding=UDim.new(0,8)}, hdrR)
-
-local btnBack = New("TextButton", {
-    Text = "< Back", Font = Enum.Font.Gotham, TextSize = 16,
-    Size = UDim2.new(0,70,0,32), BackgroundTransparency=1, TextColor3=Color3.new(1,1,1),
-}, hdrR)
-local pageIcon = New("TextLabel", {
-    Text = "", Font = Enum.Font.GothamBold, TextSize = 20,
-    Size = UDim2.new(0,32,0,32), BackgroundTransparency=1, TextColor3=Color3.new(1,1,1),
-}, hdrR)
-local pageTitle = New("TextLabel", {
-    Text = "", Font = Enum.Font.GothamBold, TextSize = 18,
-    Size = UDim2.new(0,150,0,32), BackgroundTransparency=1, TextColor3=Color3.new(1,1,1),
-}, hdrR)
-
--- Spacer
-local spacer = Instance.new("Frame", hdrR)
-spacer.Size = UDim2.new(1,0,1,0); spacer.BackgroundTransparency=1
-
--- Pages store
-local pageFrames = {}
-
--- Function untuk switch page
-local function showPage(name)
-    for k,v in pairs(pageFrames) do
-        v.Visible = (k == name)
-    end
-    -- update header
-    for _,p in ipairs(pages) do
-        if p.Name == name then
-            pageIcon.Text = p.Icon
-            pageTitle.Text = p.Name
+-- Draggable frame
+local function makeDraggable(gui)
+    local dragging, startPos, startInput
+    gui.Active = true
+    gui.InputBegan:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            startPos = gui.Position
+            startInput = inp.Position
+            inp.Changed:Connect(function()
+                if inp.UserInputState == Enum.UserInputState.End then dragging = false end
+            end)
         end
-    end
-end
-
--- Buat setiap page frame
-for _,p in ipairs(pages) do
-    local pf = New("Frame", {
-        Size = UDim2.new(1,0,1,-32),
-        BackgroundTransparency = 1,
-        Visible = false,
-    }, content)
-    New("UIListLayout",{Padding=UDim.new(0,8),SortOrder=Enum.SortOrder.LayoutOrder}, pf)
-    pageFrames[p.Name] = pf
-
-    -- contohnya: jika Sea Event maka isi tombol khusus
-    if p.Name == "Sea Event" then
-        local btn1 = New("TextButton", {
-            Text = "Temporary Sea Event Only In Third Sea",
-            Font = Enum.Font.Gotham, TextSize = 14,
-            Size = UDim2.new(1,-16,0,30), BackgroundColor3=Color3.fromRGB(45,45,45),
-            TextColor3=Color3.new(1,1,1), BorderSizePixel=0,
-        }, pf)
-        btn1.MouseButton1Click:Connect(function()
-            -- contoh aksi
-            print("Aktifkan Temporary Sea Event Only In Third Sea")
-        end)
-
-        local btn2 = btn1:Clone()
-        btn2.Parent = pf
-        btn2.Text = "Sea Event Sementara Hanya Di Third Sea"
-        btn2.MouseButton1Click:Connect(function()
-            print("Aktifkan Sea Event Sementara Hanya Di Third Sea")
-        end)
-
-        -- Slider label
-        local lbl = New("TextLabel", {
-            Text = "Setting Speed Boat",
-            Font = Enum.Font.GothamBold, TextSize = 14,
-            Size = UDim2.new(1,-16,0,20), BackgroundTransparency=1, TextColor3=Color3.new(1,1,1),
-        }, pf)
-
-        -- Boost button
-        local boost = New("TextButton", {
-            Text = "Boost Speed Boat For Ur Boat",
-            Font = Enum.Font.Gotham, TextSize = 14,
-            Size = UDim2.new(1,-16,0,30), BackgroundColor3=Color3.fromRGB(60,60,60),
-            TextColor3=Color3.new(1,1,1), BorderSizePixel=0,
-        }, pf)
-        boost.MouseButton1Click:Connect(function()
-            print("Boosting your boat speed…")
-        end)
-    else
-        -- halaman lain: placeholder
-        local placeholder = New("TextLabel", {
-            Text = p.Name.." page coming soon…",
-            Font = Enum.Font.GothamItalic, TextSize = 16,
-            Size = UDim2.new(1,-16,0,30), BackgroundTransparency=1, TextColor3=Color3.fromRGB(150,150,150),
-        }, pf)
-    end
-end
-
--- Buat button sidebar dan koneksi
-for _,p in ipairs(pages) do
-    local btn = New("TextButton", {
-        Text = p.Icon.."  "..p.Name,
-        Font = Enum.Font.Gotham, TextSize = 14,
-        Size = UDim2.new(1,-8,0,30), BackgroundColor3=Color3.fromRGB(40,40,40),
-        TextColor3=Color3.new(1,1,1), BorderSizePixel=0,
-    }, sidebar)
-    btn.LayoutOrder = _  -- agar berurutan
-    btn.MouseButton1Click:Connect(function()
-        showPage(p.Name)
+    end)
+    UserInput.InputChanged:Connect(function(inp)
+        if dragging and inp.UserInputType == Enum.UserInputType.MouseMovement then
+            local delta = inp.Position - startInput
+            gui.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X,
+                                     startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
     end)
 end
 
--- Back button: kembali ke “Sea Event” misalnya
-btnBack.MouseButton1Click:Connect(function()
-    showPage("Sea Event")
-    main.Visible = true  -- jika di-minimize
+-- GUI
+local gui = New("ScreenGui", {
+    Name = "GMONHub_UI", ResetOnSpawn = false,
+    ZIndexBehavior = Enum.ZIndexBehavior.Global,
+}, Players.LocalPlayer:WaitForChild("PlayerGui"))
+
+local frame = New("Frame", {
+    Size = UDim2.new(0,600,0,450),
+    Position = UDim2.new(0.5,-300,0.5,-225),
+    BackgroundColor3 = Color3.new(0,0,0), BackgroundTransparency = 0.5,
+    Visible = false,
+}, gui)
+New("UICorner", { CornerRadius = UDim.new(0,12) }, frame)
+makeDraggable(frame)
+
+New("ImageLabel", {
+    Image = "rbxassetid://16790218639",
+    Size = UDim2.new(1,0,1,0), BackgroundTransparency = 1,
+    ZIndex = 0,
+}, frame)
+
+local stroke = New("UIStroke", {
+    Parent = frame, Thickness = 4, ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+})
+task.spawn(function()
+    local hue = 0
+    while frame.Parent do
+        hue = (hue + 0.005) % 1
+        stroke.Color = Color3.fromHSV(hue,1,1)
+        task.wait(0.03)
+    end
 end)
 
--- Inisialisasi: tampilkan Sea Event
-showPage("Sea Event")
+-- TOGGLE BUTTON
+local toggle = New("TextButton", {
+    Text = "GMON", Size = UDim2.new(0,70,0,35),
+    Position = UDim2.new(0,20,0,20),
+    BackgroundColor3 = Color3.fromRGB(40,40,40), TextColor3 = Color3.new(1,1,1),
+    ZIndex = 2,
+}, gui)
+New("UICorner", { CornerRadius = UDim.new(0,8) }, toggle)
+makeDraggable(toggle)
+toggle.Activated:Connect(function() frame.Visible = not frame.Visible end)
+UserInput.InputBegan:Connect(function(inp, gp)
+    if not gp and inp.KeyCode == Enum.KeyCode.M then
+        frame.Visible = not frame.Visible
+    end
+end)
+
+-- TAB (Auto Hatch Only)
+local tabScroll = New("ScrollingFrame", {
+    Size = UDim2.new(1,0,0,40), Position = UDim2.new(0,0,0,0),
+    BackgroundTransparency = 1, ScrollingDirection = Enum.ScrollingDirection.X,
+    ScrollBarThickness = 0, CanvasSize = UDim2.new(0,120,0,40),
+    Parent = frame,
+})
+New("UIListLayout", {
+    Parent = tabScroll,
+    FillDirection = Enum.FillDirection.Horizontal,
+    SortOrder = Enum.SortOrder.LayoutOrder,
+    Padding = UDim.new(0,5),
+}, tabScroll)
+
+local btn = New("TextButton", {
+    Text = "Auto Hatch", Size = UDim2.new(0,120,1,0),
+    BackgroundColor3 = Color3.fromRGB(30,30,30), TextColor3 = Color3.new(1,1,1),
+    Parent = tabScroll,
+})
+New("UICorner", { CornerRadius = UDim.new(0,6) }, btn)
+
+local page = New("ScrollingFrame", {
+    Name = "HatchPage",
+    Size = UDim2.new(1,0,1,-40), Position = UDim2.new(0,0,0,40),
+    BackgroundTransparency = 1, ScrollBarThickness = 6,
+    CanvasSize = UDim2.new(0,0,0,1000), Visible = true,
+    Parent = frame,
+})
+New("UIListLayout", {
+    Parent = page,
+    SortOrder = Enum.SortOrder.LayoutOrder,
+    Padding = UDim.new(0,6),
+})
+
+btn.Activated:Connect(function()
+    page.Visible = true
+end)
+
+-- TOGGLE FUNCTION
+local function AddToggle(page, text, flag)
+    local btn = New("TextButton", {
+        Text = text, Size = UDim2.new(1,0,0,30),
+        BackgroundColor3 = Color3.fromRGB(60,60,60), TextColor3 = Color3.new(1,1,1),
+        LayoutOrder = #page:GetChildren()+1,
+    }, page)
+    New("UICorner", { CornerRadius = UDim.new(0,6) }, btn)
+
+    _G.Flags[flag] = _G.Flags[flag] or false
+    btn.Activated:Connect(function()
+        _G.Flags[flag] = not _G.Flags[flag]
+        btn.BackgroundColor3 = _G.Flags[flag]
+            and Color3.fromRGB(0,170,0)
+            or Color3.fromRGB(60,60,60)
+    end)
+end
+
+-- Add Toggle: Auto Hatch Anti Bee Egg
+AddToggle(page, "Auto Hatch if selected pet (Anti Bee Egg)", "auto_hatch_antibee")
