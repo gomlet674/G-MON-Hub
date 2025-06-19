@@ -228,82 +228,31 @@ local function createSwitch(label, flagName)
 end
 
 -- Create switches for each egg type
-createSwitch("CommonEgg",    "ESP_Common")
-createSwitch("UncommonEgg",  "ESP_Uncommon")
-createSwitch("RareEgg",      "ESP_Rare")
-createSwitch("LegendaryEgg", "ESP_Legendary")
-createSwitch("MythicalEgg",  "ESP_Mythical")
-createSwitch("BugEgg",       "ESP_Bug")
-createSwitch("BeeEgg",       "ESP_Bee")
-createSwitch("Anti BeeEgg",  "ESP_AntiBee")
+function createSwitch(name, default, callback)
+    local sw = Instance.new("TextButton")
+    sw.Name = name
+    sw.Size = UDim2.new(0, 50, 0, 25)
+    sw.Position = UDim2.new(0, 10, 0, 10 + (#ESP:GetChildren() * 35)) -- otomatis nambah jarak
+    sw.BackgroundColor3 = default and Color3.fromRGB(0, 170, 0) or Color3.fromRGB(85, 85, 85)
+    sw.Text = name
+    sw.TextColor3 = Color3.fromRGB(255, 255, 255)
+    sw.Font = Enum.Font.SourceSansBold
+    sw.TextSize = 14
+    sw.BorderSizePixel = 0
+    sw.AutoButtonColor = false
+    sw.ZIndex = 2
+    sw.Parent = ESP
 
--- ganti bagian createSwitch dengan yang ini:
+    local enabled = default
+    Flags[name] = default
 
-local function createSwitch(label, flagName)
-    -- holder
-    local holder = New("Frame", {
-        Parent = scroll,
-        Size   = UDim2.new(1, 0, 0, 40),
-        BackgroundTransparency = 1,
-    })
-    -- label teks
-    New("TextLabel", {
-        Parent         = holder,
-        Size           = UDim2.new(0.75, 0, 1, 0),
-        Position       = UDim2.new(0, 10, 0, 0),
-        BackgroundTransparency = 1,
-        Text           = label,
-        Font           = Enum.Font.Gotham,
-        TextSize       = 14,
-        TextColor3     = Color3.fromRGB(230,230,230),
-        TextXAlignment = Enum.TextXAlignment.Left,
-    })
-
-    -- switch sebagai TextButton
-    local sw = New("TextButton", {
-        Parent           = holder,
-        Size             = UDim2.new(0, 40, 0, 24),
-        Position         = UDim2.new(1, -50, 0.5, -12),
-        BackgroundColor3 = Color3.fromRGB(60,60,60),
-        AutoButtonColor  = false,
-        Text             = "",         -- kosongkan text
-    })
-    New("UICorner", { CornerRadius = UDim.new(0,12) }, sw)
-
-    -- knob di dalam sw
-    local knob = New("Frame", {
-        Parent           = sw,
-        Size             = UDim2.new(0, 20, 0, 20),
-        Position         = UDim2.new(0,2,0,2),
-        BackgroundColor3 = Color3.fromRGB(200,200,200),
-    })
-    New("UICorner", { CornerRadius = UDim.new(0,10) }, knob)
-
-    -- fungsi update visual
-    local function update()
-        if Flags[flagName] then
-            sw.BackgroundColor3 = Color3.fromRGB(0,170,0)
-            knob:TweenPosition(UDim2.new(1, -22, 0, 2), "InOut", "Quad", 0.15, true)
-        else
-            sw.BackgroundColor3 = Color3.fromRGB(60,60,60)
-            knob:TweenPosition(UDim2.new(0, 2, 0, 2), "InOut", "Quad", 0.15, true)
-        end
-    end
-
-    -- sekarang event klik pakai MouseButton1Click
     sw.MouseButton1Click:Connect(function()
-        Flags[flagName] = not Flags[flagName]
-        update()
+        enabled = not enabled
+        Flags[name] = enabled
+        sw.BackgroundColor3 = enabled and Color3.fromRGB(0, 170, 0) or Color3.fromRGB(85, 85, 85)
+        callback(enabled)
     end)
-
-    -- inisialisasi posisi awal
-    update()
 end
--- Toggle main frame
-toggleBtn.MouseButton1Click:Connect(function()
-    frame.Visible = not frame.Visible
-end)
-
 -- Hotkey M
 UserInputService.InputBegan:Connect(function(input, gpe)
     if not gpe and input.KeyCode == Enum.KeyCode.M then
