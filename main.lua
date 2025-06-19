@@ -228,6 +228,15 @@ local function createSwitch(label, flagName)
 end
 
 -- Create switches for each egg type
+createSwitch("CommonEgg",    "ESP_Common")
+createSwitch("UncommonEgg",  "ESP_Uncommon")
+createSwitch("RareEgg",      "ESP_Rare")
+createSwitch("LegendaryEgg", "ESP_Legendary")
+createSwitch("MythicalEgg",  "ESP_Mythical")
+createSwitch("BugEgg",       "ESP_Bug")
+createSwitch("BeeEgg",       "ESP_Bee")
+createSwitch("Anti BeeEgg",  "ESP_AntiBee")
+
 -- ganti bagian createSwitch dengan yang ini:
 
 local function createSwitch(label, flagName)
@@ -290,7 +299,6 @@ local function createSwitch(label, flagName)
     -- inisialisasi posisi awal
     update()
 end
-
 -- Toggle main frame
 toggleBtn.MouseButton1Click:Connect(function()
     frame.Visible = not frame.Visible
