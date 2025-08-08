@@ -1,20 +1,22 @@
--- main.lua – Grow A Garden Hub “NatHub” Style ESP Eggs
+-- main.lua – Complete NatHub-Style ESP & Join Player UI
+-- Fluxus / Synapse compatible
 
--- Wait until game is loaded
+-- Ensure game is loaded
 if not game:IsLoaded() then
     game.Loaded:Wait()
 end
 
 -- Services
 local Players          = game:GetService("Players")
+local TeleportService  = game:GetService("TeleportService")
+local HttpService      = game:GetService("HttpService")
 local UserInputService = game:GetService("UserInputService")
 local Workspace        = game:GetService("Workspace")
-local Replicated       = game:GetService("ReplicatedStorage")
 
 local lp = Players.LocalPlayer
 
--- Flags
-local Flags = {
+-- ==== 1. Global Flags (via getgenv) ====
+getgenv().EggESPFlags = getgenv().EggESPFlags or {
     ESP_Common      = false,
     ESP_Uncommon    = false,
     ESP_Rare        = false,
@@ -24,6 +26,7 @@ local Flags = {
     ESP_Bee         = false,
     ESP_AntiBee     = false,
 }
+local Flags = getgenv().EggESPFlags
 
 -- Prediction map
 local predictionMap = {
@@ -40,36 +43,36 @@ local predictionMap = {
 -- Helper to create Instance
 local function New(cls, props, parent)
     local inst = Instance.new(cls)
-    for k,v in pairs(props) do inst[k] = v end
+    for k, v in pairs(props) do inst[k] = v end
     if parent then inst.Parent = parent end
     return inst
 end
 
--- Draggable handling (mouse & touch)
+-- Make frame draggable
 local function makeDraggable(frame)
     local dragging, dragInput, dragStart, startPos
-    frame.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1
-        or input.UserInputType == Enum.UserInputType.Touch then
+    frame.InputBegan:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseButton1
+        or inp.UserInputType == Enum.UserInputType.Touch then
             dragging = true
-            dragStart = input.Position
+            dragStart = inp.Position
             startPos  = frame.Position
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
+            inp.Changed:Connect(function()
+                if inp.UserInputState == Enum.UserInputState.End then
                     dragging = false
                 end
             end)
         end
     end)
-    frame.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement
-        or input.UserInputType == Enum.UserInputType.Touch then
-            dragInput = input
+    frame.InputChanged:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseMovement
+        or inp.UserInputType == Enum.UserInputType.Touch then
+            dragInput = inp
         end
     end)
-    UserInputService.InputChanged:Connect(function(input)
-        if input == dragInput and dragging then
-            local delta = input.Position - dragStart
+    UserInputService.InputChanged:Connect(function(inp)
+        if inp == dragInput and dragging then
+            local delta = inp.Position - dragStart
             frame.Position = UDim2.new(
                 startPos.X.Scale, startPos.X.Offset + delta.X,
                 startPos.Y.Scale, startPos.Y.Offset + delta.Y
@@ -78,14 +81,16 @@ local function makeDraggable(frame)
     end)
 end
 
--- Create ScreenGui
+-- ==== 2. Build GUI ====
+-- Parent ScreenGui
 local screenGui = New("ScreenGui", {
-    Name = "NatHubGrowGarden",
+    Name = "NatHubUI",
     ResetOnSpawn = false,
+    ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
     Parent = lp:WaitForChild("PlayerGui"),
 })
 
--- GMON Toggle Button
+-- Toggle Button (GMON)
 local toggleBtn = New("TextButton", {
     Name = "GMONToggle",
     Text = "GMON",
@@ -96,7 +101,6 @@ local toggleBtn = New("TextButton", {
     Font = Enum.Font.GothamBold,
     TextSize = 14,
     AutoButtonColor = false,
-    ZIndex = 10,
 }, screenGui)
 New("UICorner", { CornerRadius = UDim.new(0,6) }, toggleBtn)
 makeDraggable(toggleBtn)
@@ -104,187 +108,250 @@ makeDraggable(toggleBtn)
 -- Main Frame
 local frame = New("Frame", {
     Name = "MainFrame",
-    Size = UDim2.new(0, 280, 0, 400),
+    Size = UDim2.new(0, 350, 0, 500),
     Position = UDim2.new(0, 12, 0, 52),
-    BackgroundColor3 = Color3.fromRGB(28, 28, 28),
-    BorderColor3 = Color3.fromRGB(60, 60, 60),
-    BorderSizePixel = 1,
+    BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+    BackgroundTransparency = 0.4,
+    BorderSizePixel = 0,
     Visible = false,
 }, screenGui)
 New("UICorner", { CornerRadius = UDim.new(0,8) }, frame)
 makeDraggable(frame)
 
--- Title Bar
-local titleBar = New("Frame", {
+-- RGB Animated Border
+local stroke = New("UIStroke", {
+    Thickness = 2,
+    ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+}, frame)
+task.spawn(function()
+    local hue = 0
+    while true do
+        hue = (hue + 1) % 360
+        stroke.Color = Color3.fromHSV(hue/360, 1, 1)
+        task.wait(0.03)
+    end
+end)
+
+-- Title
+New("TextLabel", {
     Parent = frame,
     Size = UDim2.new(1, 0, 0, 30),
-    BackgroundColor3 = Color3.fromRGB(20, 20, 20),
-}, frame)
-New("UICorner", { CornerRadius = UDim.new(0,8) }, titleBar)
-
-New("TextLabel", {
-    Parent = titleBar,
-    Size = UDim2.new(1, -60, 1, 0),
-    Position = UDim2.new(0, 10, 0, 0),
     BackgroundTransparency = 1,
-    Text = "ESP Egg Prediction",
+    Text = "NatHub – ESP & Join UI",
     Font = Enum.Font.GothamBold,
-    TextSize = 16,
-    TextColor3 = Color3.fromRGB(255,255,255),
-    TextXAlignment = Enum.TextXAlignment.Left,
-}, titleBar)
+    TextSize = 18,
+    TextColor3 = Color3.new(1,1,1),
+    TextXAlignment = Enum.TextXAlignment.Center,
+}, frame)
 
 -- Close Button
 local closeBtn = New("TextButton", {
-    Parent = titleBar,
+    Parent = frame,
     Size = UDim2.new(0, 24, 0, 24),
-    Position = UDim2.new(1, -34, 0, 3),
+    Position = UDim2.new(1, -30, 0, 5),
     Text = "✕",
     Font = Enum.Font.GothamBold,
     TextSize = 18,
-    TextColor3 = Color3.fromRGB(200,200,200),
     BackgroundTransparency = 1,
+    TextColor3 = Color3.fromRGB(200,200,200),
     AutoButtonColor = false,
-}, titleBar)
-closeBtn.MouseButton1Click:Connect(function()
-    frame.Visible = false
+}, frame)
+closeBtn.MouseButton1Click:Connect(function() frame.Visible = false end)
+
+-- ==== 3. Join Player Section ====
+-- Username Input
+local usernameBox = New("TextBox", {
+    Parent = frame,
+    Name = "UsernameBox",
+    Size = UDim2.new(1, -40, 0, 30),
+    Position = UDim2.new(0, 20, 0, 45),
+    PlaceholderText = "Masukkan Username...",
+    BackgroundTransparency = 0.6,
+    TextColor3 = Color3.new(1,1,1),
+    Font = Enum.Font.Gotham,
+    TextSize = 16,
+}, frame)
+New("UICorner", { CornerRadius = UDim.new(0,4) }, usernameBox)
+
+-- Status Label
+local statusLabel = New("TextLabel", {
+    Parent = frame,
+    Name = "StatusLabel",
+    Size = UDim2.new(1, -40, 0, 20),
+    Position = UDim2.new(0, 20, 0, 80),
+    BackgroundTransparency = 1,
+    Text = "Status: -",
+    Font = Enum.Font.Gotham,
+    TextSize = 14,
+    TextColor3 = Color3.new(1,1,1),
+    TextXAlignment = Enum.TextXAlignment.Left,
+}, frame)
+
+-- Join Button
+local joinBtn = New("TextButton", {
+    Parent = frame,
+    Name = "JoinButton",
+    Size = UDim2.new(1, -40, 0, 36),
+    Position = UDim2.new(0, 20, 0, 110),
+    Text = "Join Friend / Dev",
+    Font = Enum.Font.GothamBold,
+    TextSize = 16,
+    TextColor3 = Color3.new(1,1,1),
+    BackgroundColor3 = Color3.fromRGB(30,130,255),
+    AutoButtonColor = false,
+}, frame)
+New("UICorner", { CornerRadius = UDim.new(0,6) }, joinBtn)
+
+-- Function cek online
+local function checkOnline(username)
+    if username == "" then
+        statusLabel.Text = "Status: Masukkan username!"
+        statusLabel.TextColor3 = Color3.fromRGB(255,50,50)
+        return nil
+    end
+    local ok, userId = pcall(function()
+        return Players:GetUserIdFromNameAsync(username)
+    end)
+    if not ok then
+        statusLabel.Text = "Status: Username tidak ditemukan"
+        statusLabel.TextColor3 = Color3.fromRGB(255,50,50)
+        return nil
+    end
+    -- Cek online via API
+    local suc, resp = pcall(function()
+        return HttpService:GetAsync("https://api.roblox.com/users/"..userId.."/onlinestatus/")
+    end)
+    if not suc then
+        statusLabel.Text = "Status: Gagal koneksi"
+        statusLabel.TextColor3 = Color3.fromRGB(255,50,50)
+        return nil
+    end
+    local data = HttpService:JSONDecode(resp)
+    if data.IsOnline then
+        statusLabel.Text = "Status: ONLINE"
+        statusLabel.TextColor3 = Color3.fromRGB(0,255,0)
+        return userId
+    else
+        statusLabel.Text = "Status: OFFLINE"
+        statusLabel.TextColor3 = Color3.fromRGB(255,50,50)
+        return nil
+    end
+end
+
+usernameBox.FocusLost:Connect(function()
+    checkOnline(usernameBox.Text)
 end)
 
--- Content ScrollingFrame
+joinBtn.MouseButton1Click:Connect(function()
+    local uid = checkOnline(usernameBox.Text)
+    if uid then
+        -- Ambil jobId (bila developer server, owner bisa taruh sendiri)
+        -- Contoh: gunakan jobId pemain target
+        local jobId = workspace:FindFirstChild("PlaceJobId_"..uid) and workspace["PlaceJobId_"..uid].Value
+        if typeof(jobId) == "string" then
+            TeleportService:TeleportToPlaceInstance(game.PlaceId, jobId, lp)
+        else
+            -- fallback: teleport ke game (jika public)
+            TeleportService:Teleport(game.PlaceId, lp)
+        end
+    end
+end)
+
+-- ==== 4. ESP Egg Prediction Section ====
+-- Scrolling Frame
 local scroll = New("ScrollingFrame", {
     Parent = frame,
-    Size = UDim2.new(1, -20, 1, -40),
-    Position = UDim2.new(0, 10, 0, 35),
-    CanvasSize = UDim2.new(0, 0, 0, 0),
+    Name = "ESPScroll",
+    Size = UDim2.new(1, -40, 0, 230),
+    Position = UDim2.new(0, 20, 0, 160),
+    CanvasSize = UDim2.new(0,0,0,0),
     ScrollBarThickness = 6,
     BackgroundTransparency = 1,
 }, frame)
 local layout = New("UIListLayout", {
     Parent = scroll,
-    SortOrder = Enum.SortOrder.LayoutOrder,
-    Padding = UDim.new(0, 10),
+    Padding = UDim.new(0,8),
 }, scroll)
 layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-    scroll.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 10)
+    scroll.CanvasSize = UDim2.new(0,0,0, layout.AbsoluteContentSize.Y + 10)
 end)
 
--- Toggle Switch Factory
-local function createSwitch(label, flagName)
+-- Create switch for each egg category
+for eggName,_ in pairs(predictionMap) do
+    local labelText = eggName:gsub("Egg","")
     local holder = New("Frame", {
         Parent = scroll,
-        Size = UDim2.new(1, 0, 0, 40),
+        Size = UDim2.new(1,0,0, thirty),
         BackgroundTransparency = 1,
     }, scroll)
-    New("TextLabel", {
+    local lbl = New("TextLabel", {
         Parent = holder,
-        Size = UDim2.new(0.75, 0, 1, 0),
+        Size = UDim2.new(0.7,0,1,0),
+        Position = UDim2.new(0,0,0,0),
         BackgroundTransparency = 1,
-        Text = label,
+        Text = labelText,
         Font = Enum.Font.Gotham,
         TextSize = 14,
-        TextColor3 = Color3.fromRGB(230,230,230),
+        TextColor3 = Color3.new(1,1,1),
         TextXAlignment = Enum.TextXAlignment.Left,
-        Position = UDim2.new(0, 10, 0, 0),
     }, holder)
-
+    -- Switch
     local sw = New("Frame", {
         Parent = holder,
-        Size = UDim2.new(0, 40, 0, 24),
-        Position = UDim2.new(1, -50, 0.5, -12),
+        Size = UDim2.new(0,40,0,20),
+        Position = UDim2.new(1,-45,0.5,-10),
         BackgroundColor3 = Color3.fromRGB(60,60,60),
-        BorderSizePixel = 0,
-        Name = "SwitchHolder",
+        Name = "Switch"..eggName,
     }, holder)
-    New("UICorner", { CornerRadius = UDim.new(0,12) }, sw)
-
+    New("UICorner", { CornerRadius = UDim.new(0,10) }, sw)
     local knob = New("Frame", {
         Parent = sw,
-        Size = UDim2.new(0, 20, 0, 20),
+        Size = UDim2.new(0,18,0,18),
         Position = UDim2.new(0,2,0,2),
         BackgroundColor3 = Color3.fromRGB(200,200,200),
-        Name = "Knob",
     }, sw)
-    New("UICorner", { CornerRadius = UDim.new(0,10) }, knob)
-
-    -- update visual
-    local function update()
-        if Flags[flagName] then
-            knob:TweenPosition(UDim2.new(1, -22, 0, 2), "InOut", "Quad", 0.15, true)
-            sw.BackgroundColor3 = Color3.fromRGB(0,170,0)
-        else
-            knob:TweenPosition(UDim2.new(0, 2, 0, 2), "InOut", "Quad", 0.15, true)
-            sw.BackgroundColor3 = Color3.fromRGB(60,60,60)
-        end
-    end
-
-    sw.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            Flags[flagName] = not Flags[flagName]
-            update()
+    New("UICorner", { CornerRadius = UDim.new(0,9) }, knob)
+    -- click
+    sw.InputBegan:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+            Flags["ESP_"..labelText] = not Flags["ESP_"..labelText]
+            -- animate knob
+            if Flags["ESP_"..labelText] then
+                knob:TweenPosition(UDim2.new(1,-20,0,2),"InOut","Quad",0.15,true)
+                sw.BackgroundColor3 = Color3.fromRGB(0,170,0)
+            else
+                knob:TweenPosition(UDim2.new(0,2,0,2),"InOut","Quad",0.15,true)
+                sw.BackgroundColor3 = Color3.fromRGB(60,60,60)
+            end
         end
     end)
-
-    update()
 end
 
--- Create switches for each egg type
-function createSwitch(name, default, callback)
-    local sw = Instance.new("TextButton")
-    sw.Name = name
-    sw.Size = UDim2.new(0, 50, 0, 25)
-    sw.Position = UDim2.new(0, 10, 0, 10 + (#ESP:GetChildren() * 35)) -- otomatis nambah jarak
-    sw.BackgroundColor3 = default and Color3.fromRGB(0, 170, 0) or Color3.fromRGB(85, 85, 85)
-    sw.Text = name
-    sw.TextColor3 = Color3.fromRGB(255, 255, 255)
-    sw.Font = Enum.Font.SourceSansBold
-    sw.TextSize = 14
-    sw.BorderSizePixel = 0
-    sw.AutoButtonColor = false
-    sw.ZIndex = 2
-    sw.Parent = ESP
-
-    local enabled = default
-    Flags[name] = default
-
-    sw.MouseButton1Click:Connect(function()
-        enabled = not enabled
-        Flags[name] = enabled
-        sw.BackgroundColor3 = enabled and Color3.fromRGB(0, 170, 0) or Color3.fromRGB(85, 85, 85)
-        callback(enabled)
-    end)
-end
--- Hotkey M
-UserInputService.InputBegan:Connect(function(input, gpe)
-    if not gpe and input.KeyCode == Enum.KeyCode.M then
-        frame.Visible = not frame.Visible
-    end
-end)
-
--- ESP Egg Prediction Logic
+-- ESP Rendering Loop
 task.spawn(function()
     while task.wait(1.5) do
-        -- clear old GUIs
+        -- bersihkan ESP lama
         for _, gui in ipairs(Workspace:GetDescendants()) do
             if gui.Name == "EggESP" and gui:IsA("BillboardGui") then
                 gui:Destroy()
             end
         end
-
-        for eggName, pets in pairs(predictionMap) do
-            local flagKey = "ESP_" .. eggName:gsub("Egg", "")
+        -- buat ESP baru
+        for eggName,pets in pairs(predictionMap) do
+            local flagKey = "ESP_"..eggName:gsub("Egg","")
             if Flags[flagKey] then
-                for _, model in ipairs(Workspace:GetDescendants()) do
-                    if model:IsA("Model") and model.Name == eggName then
-                        local part = model:FindFirstChildWhichIsA("BasePart")
+                for _, mdl in ipairs(Workspace:GetDescendants()) do
+                    if mdl:IsA("Model") and mdl.Name == eggName then
+                        local part = mdl:FindFirstChildWhichIsA("BasePart")
                         if part then
                             local bb = New("BillboardGui", {
                                 Name = "EggESP",
-                                Parent = model,
+                                Parent = mdl,
                                 Adornee = part,
-                                Size = UDim2.new(0, 140, 0, 30),
-                                StudsOffset = Vector3.new(0, 3, 0),
+                                Size = UDim2.new(0,140,0,30),
+                                StudsOffset = Vector3.new(0,3,0),
                                 AlwaysOnTop = true,
-                            }, model)
+                            }, mdl)
                             New("UICorner", { CornerRadius = UDim.new(0,4) }, bb)
                             New("TextLabel", {
                                 Parent = bb,
@@ -294,7 +361,7 @@ task.spawn(function()
                                 TextColor3 = Color3.fromRGB(255,255,0),
                                 Font = Enum.Font.Gotham,
                                 TextSize = 14,
-                                Text = "→ " .. table.concat(pets, ", "),
+                                Text = "→ "..table.concat(pets, ", "),
                                 TextWrapped = true,
                             }, bb)
                         end
@@ -303,4 +370,16 @@ task.spawn(function()
             end
         end
     end
+end)
+
+-- Hotkey M untuk toggle GUI
+UserInputService.InputBegan:Connect(function(input,gpe)
+    if not gpe and input.KeyCode == Enum.KeyCode.M then
+        frame.Visible = not frame.Visible
+    end
+end)
+
+-- Toggle juga via tombol GMON
+toggleBtn.MouseButton1Click:Connect(function()
+    frame.Visible = not frame.Visible
 end)
