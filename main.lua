@@ -628,43 +628,57 @@ task.spawn(function()
         if GAME ~= "CAR_TYCOON" then task.wait(0.5); continue end
         if not CAR_Auto then continue end
         pcall(function()
-            -- choose fastest available car (heuristic)
             local carsRoot = Workspace:FindFirstChild("Cars")
             if not carsRoot then return end
+
+            -- pilih mobil tercepat (heuristik)
             local best, bestVal = nil, -math.huge
             for _, m in ipairs(carsRoot:GetChildren()) do
                 if m:IsA("Model") and m.PrimaryPart then
                     local top = m:FindFirstChild("TopSpeed") or m:FindFirstChild("Speed") or m:FindFirstChild("MaxSpeed")
-                    local v = nil
-                    if top and tonumber(top.Value) then v = tonumber(top.Value) else v = #m:GetDescendants() end
-                    if v and v > bestVal then bestVal, best = v, m end
+                    local v = (top and tonumber(top.Value)) or #m:GetDescendants()
+                    if v > bestVal then
+                        bestVal = v
+                        best = m
+                    end
                 end
             end
             if not best then return end
             chosenCarModel = best
-            -- store start pos if not stored
-            if chosenCarModel and chosenCarModel.PrimaryPart and not chosenCarModel:FindFirstChild("_GmonStartPos") then
-                local tag = Instance.new("CFrameValue")
-                tag.Name = "_GmonStartPos"
-                tag.Value = chosenCarModel.PrimaryPart.CFrame
-                tag.Parent = chosenCarModel
-                CAR_start_CFrame = tag.Value
+
+            -- simpan posisi awal jika belum ada
+            if not CAR_start_CFrame and chosenCarModel.PrimaryPart then
+                CAR_start_CFrame = chosenCarModel.PrimaryPart.CFrame
             end
-            -- attempt to seat player near seat
-            local seat = nil
+
+            -- teleport mobil ke bawah tanah dan buat floor jika belum ada
+            local cf = chosenCarModel.PrimaryPart.CFrame
+            local underY = -500
+            chosenCarModel:SetPrimaryPartCFrame(CFrame.new(cf.Position.X, underY, cf.Position.Z))
+
+            if not chosenCarModel:GetAttribute("GmonFloor") then
+                local floor = Instance.new("Part")
+                floor.Size = Vector3.new(200,1,200)
+                floor.Position = Vector3.new(cf.Position.X, underY - 1, cf.Position.Z)
+                floor.Anchored = true
+                floor.TopSurface = Enum.SurfaceType.Smooth
+                floor.BrickColor = BrickColor.new("Really black")
+                floor.Parent = Workspace
+                chosenCarModel:SetAttribute("GmonFloor", floor)
+            end
+
+            -- pindahkan player dekat kursi mobil jika ada
             for _, obj in ipairs(chosenCarModel:GetDescendants()) do
-                if obj:IsA("VehicleSeat") then seat = obj; break end
+                if obj:IsA("VehicleSeat") and SafeChar() then
+                    SafeChar().HumanoidRootPart.CFrame = obj.CFrame * CFrame.new(0,2,0)
+                    break
+                end
             end
-            if seat and SafeChar() then
-                pcall(function()
-                    SafeChar().HumanoidRootPart.CFrame = seat.CFrame * CFrame.new(0,2,0)
-                end)
-            end
-            -- move car forward (snap)
-            local ok, cf = pcall(function() return chosenCarModel.PrimaryPart.CFrame end)
-            if ok and cf then
-                chosenCarModel:SetPrimaryPartCFrame(cf * CFrame.new(0,0,-(CAR_step or 14)))
-                lastAction = "Car -> "..tostring(chosenCarModel.Name)
+
+            -- gerakkan mobil maju
+            local ok, cf2 = pcall(function() return chosenCarModel.PrimaryPart.CFrame end)
+            if ok and cf2 then
+                chosenCarModel:SetPrimaryPartCFrame(cf2 * CFrame.new(0,0,-CAR_step))
             end
         end)
     end
@@ -739,6 +753,42 @@ task.spawn(function()
     while true do
         task.wait(1)
         pcall(updateIndicators)
+    end
+end)
+
+local dragging = false
+local dragInput, mousePos, framePos
+
+local frame = status.frame
+
+frame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        mousePos = input.Position
+        framePos = frame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+frame.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement then
+        dragInput = input
+    end
+end)
+
+UIS.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        local delta = input.Position - mousePos
+        frame.Position = UDim2.new(
+            framePos.X.Scale,
+            framePos.X.Offset + delta.X,
+            framePos.Y.Scale,
+            framePos.Y.Offset + delta.Y
+        )
     end
 end)
 
