@@ -322,12 +322,10 @@ if GAME == "CAR_TYCOON" then
 
 -- Helper: cari model mobil milik player
 local function findPlayerCarsRoot()
-    -- 1) common layout: workspace.Cars.<PlayerName> (folder or model)
     local carsRoot = workspace:FindFirstChild("Cars")
     if not carsRoot then return nil end
     local own = carsRoot:FindFirstChild(game.Players.LocalPlayer.Name)
     if own then
-        -- jika folder, cari model di dalam; jika model langsung return sebagai list
         if own:IsA("Model") and own.PrimaryPart then
             return {own}
         elseif own:IsA("Folder") or own:IsA("Model") then
@@ -338,6 +336,8 @@ local function findPlayerCarsRoot()
             if #list > 0 then return list end
         end
     end
+    return nil
+          end
 
     -- 2) fallback: cari mobil yang punya tag Owner / OwnerUserId / OwnerName
     local owned = {}
@@ -573,25 +573,7 @@ task.spawn(function()
             continue
         end
         pcall(function()
-            -- jika belum ada chosenCarModel atau chosenCarModel invalid: pilih & initialize
-            if (not chosenCarModel) or (not chosenCarModel.PrimaryPart) then
-                chosenCarModel = startUsingPlayerCar(CAR_step, -500)
-                if chosenCarModel then
-                    CAR_start_CFrame = chosenCarModel.PrimaryPart.CFrame -- track current (already under map)
-                end
-            end
-            if not chosenCarModel or not chosenCarModel.PrimaryPart then return end
-
-            -- snap move forward
-            local ok, cf = pcall(function() return chosenCarModel.PrimaryPart.CFrame end)
-            if ok and cf then
-                chosenCarModel:SetPrimaryPartCFrame(cf * CFrame.new(0,0,-(CAR_step or 14)))
-                lastAction = "Car drag -> "..tostring(chosenCarModel.Name)
-            end
-        end)
-    end
-end)
-
+            
             -- choose fastest available car (heuristic)
             local carsRoot = Workspace:FindFirstChild("Cars")
             if not carsRoot then return end
