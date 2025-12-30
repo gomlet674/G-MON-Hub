@@ -1,9 +1,8 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
--- Cek dulu kalau belum ada
-local Remote = ReplicatedStorage:FindFirstChild("HubRemote")
-if not Remote then
-    Remote = Instance.new("RemoteEvent")
-    Remote.Name = "HubRemote"
-    Remote.Parent = ReplicatedStorage
+local HubRemote = ReplicatedStorage:FindFirstChild("HubRemote")
+if not HubRemote then
+    HubRemote = Instance.new("RemoteEvent")
+    HubRemote.Name = "HubRemote"
+    HubRemote.Parent = ReplicatedStorage
 end
