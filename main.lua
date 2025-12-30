@@ -9,8 +9,8 @@ local player = Players.LocalPlayer
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
 
 -- Remote setup
-local Remote =
-ReplicatedStorage:WaitForChild("HubRemote")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Remote = ReplicatedStorage:WaitForChild("HubRemote")
 
 -- GAME DETECTION (ubah PlaceId sesuai game kamu)
 local GAME_TYPE = "UNKNOWN"
@@ -21,7 +21,7 @@ elseif game.PlaceId == 1554960397 then
 elseif game.PlaceId == 537413528 then
     GAME_TYPE = "BUILD_A_BOAT_FOR_TREASURE"
 end
-
+  
 -- GUI
 local Window = Rayfield:CreateWindow({
     Name = "G-MON",
