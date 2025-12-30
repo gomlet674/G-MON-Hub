@@ -10,7 +10,7 @@ local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
 
 -- Remote setup
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Remote = ReplicatedStorage:WaitForChild("HubRemote")
+local Remote = ReplicatedStorage:FindFirstChild("HubRemote")
 
 -- GAME DETECTION (ubah PlaceId sesuai game kamu)
 local GAME_TYPE = "UNKNOWN"
