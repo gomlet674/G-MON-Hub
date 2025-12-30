@@ -1,349 +1,498 @@
--- Fly Script (Educational Purpose)
--- Author: YourName
--- Platform: Roblox
--- Type: LocalScript
+-- Fly GUI (Custom, scrollable panels)
+-- Place as LocalScript in StarterPlayer > StarterPlayerScripts
+-- AUTHOR: (you) - edit as needed
+-- WARNING: For educational/testing in your own game only.
 
 local Players = game:GetService("Players")
-local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
 
 local player = Players.LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
-local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+local playerGui = player:WaitForChild("PlayerGui")
 
+-- CONFIG DEFAULTS
+local defaultKeybind = Enum.KeyCode.F
+local defaultSpeed = 80
+local minSpeed, maxSpeed = 10, 200
+local defaultSmooth = 0.18 -- lower = snappier
+
+-- state
 local flying = false
-local speed = 50
+local speed = defaultSpeed
+local smooth = defaultSmooth
+local keybind = defaultKeybind
+local bodyGyro, bodyVelocity
+local control = {F=0,B=0,L=0,R=0,U=0,D=0}
 
-local bodyGyro
-local bodyVelocity
-
--- INPUT
-local control = {F = 0, B = 0, L = 0, R = 0, U = 0, D = 0}
-
-UserInputService.InputBegan:Connect(function(input, gp)
-	if gp then return end
-
-	if input.KeyCode == Enum.KeyCode.F then
-		flying = not flying
-
-		if flying then
-			bodyGyro = Instance.new("BodyGyro")
-			bodyGyro.P = 9e4
-			bodyGyro.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
-			bodyGyro.CFrame = humanoidRootPart.CFrame
-			bodyGyro.Parent = humanoidRootPart
-
-			bodyVelocity = Instance.new("BodyVelocity")
-			bodyVelocity.Velocity = Vector3.zero
-			bodyVelocity.MaxForce = Vector3.new(9e9, 9e9, 9e9)
-			bodyVelocity.Parent = humanoidRootPart
+-- Helper: create UI
+local function new(class, props)
+	local obj = Instance.new(class)
+	for k,v in pairs(props or {}) do
+		if k == "Parent" then
+			obj.Parent = v
 		else
-			if bodyGyro then bodyGyro:Destroy() end
-			if bodyVelocity then bodyVelocity:Destroy() end
+			obj[k] = v
 		end
 	end
+	return obj
+end
 
-	if input.KeyCode == Enum.KeyCode.W then control.F = 1 end
-	if input.KeyCode == Enum.KeyCode.S then control.B = -1 end
-	if input.KeyCode == Enum.KeyCode.A then control.L = -1 end
-	if input.KeyCode == Enum.KeyCode.D then control.R = 1 end
-	if input.KeyCode == Enum.KeyCode.Space then control.U = 1 end
-	if input.KeyCode == Enum.KeyCode.LeftControl then control.D = -1 end
+-- prevent duplicate GUI
+local existing = playerGui:FindFirstChild("FlyControlGui")
+if existing then existing:Destroy() end
+
+local screenGui = new("ScreenGui", {Name="FlyControlGui", Parent=playerGui, ZIndexBehavior=Enum.ZIndexBehavior.Sibling})
+
+-- Main window
+local window = new("Frame", {
+	Parent = screenGui,
+	Name = "Window",
+	AnchorPoint = Vector2.new(0.5,0.5),
+	Position = UDim2.new(0.5,0.5,0.5,0),
+	Size = UDim2.new(0.72,0,0.72,0),
+	BackgroundColor3 = Color3.fromRGB(30,30,30),
+	BackgroundTransparency = 0.06,
+	BorderSizePixel = 0,
+})
+new("UICorner", {Parent = window, CornerRadius = UDim.new(0,12)})
+
+-- Left menu
+local leftPanel = new("Frame", {
+	Parent = window,
+	Name = "LeftPanel",
+	Size = UDim2.new(0,260,1,0),
+	Position = UDim2.new(0,0,0,0),
+	BackgroundColor3 = Color3.fromRGB(22,22,22),
+})
+new("UICorner", {Parent = leftPanel, CornerRadius = UDim.new(0,12)})
+local leftTitle = new("TextLabel", {
+	Parent = leftPanel,
+	Size = UDim2.new(1,0,0,48),
+	BackgroundTransparency = 1,
+	Text = "Ganteng Hub",
+	TextColor3 = Color3.fromRGB(240,240,240),
+	Font = Enum.Font.GothamBold,
+	TextSize = 20,
+	TextXAlignment = Enum.TextXAlignment.Left,
+	TextStrokeTransparency = 0.8,
+	Padding = Enum.PaddingSettings.new(),
+})
+leftTitle.Position = UDim2.new(0,18,0,10)
+
+-- Left scrolling list
+local leftScroll = new("ScrollingFrame", {
+	Parent = leftPanel,
+	Name = "MenuList",
+	Position = UDim2.new(0,8,0,64),
+	Size = UDim2.new(1,-16,1,-72),
+	CanvasSize = UDim2.new(0,0,0,0),
+	BackgroundTransparency = 1,
+	ScrollBarThickness = 6,
+})
+local leftUIList = new("UIListLayout", {Parent = leftScroll, Padding = UDim.new(0,6), FillDirection = Enum.FillDirection.Vertical})
+leftUIList.HorizontalAlignment = Enum.HorizontalAlignment.Center
+leftUIList.SortOrder = Enum.SortOrder.LayoutOrder
+
+-- function to create left menu button
+local function createMenuButton(text, index)
+	local f = new("Frame", {Parent = leftScroll, Size = UDim2.new(1, -12, 0, 46), BackgroundTransparency = 1})
+	local btn = new("TextButton", {
+		Parent = f,
+		Size = UDim2.new(1,0,1,0),
+		Text = text,
+		BackgroundColor3 = Color3.fromRGB(42,42,42),
+		TextColor3 = Color3.fromRGB(240,240,240),
+		Font = Enum.Font.Gotham,
+		TextSize = 16,
+		BorderSizePixel = 0,
+		Name = "MenuBtn_"..tostring(index),
+		AutoButtonColor = true,
+	})
+	new("UICorner", {Parent = btn, CornerRadius = UDim.new(0,8)})
+	return btn
+end
+
+local menus = {"Main", "Settings", "Controls", "About"}
+local leftButtons = {}
+for i,m in ipairs(menus) do
+	local b = createMenuButton(m, i)
+	leftButtons[m] = b
+end
+
+-- Update canvas size dynamically
+leftScroll.ChildAdded:Connect(function()
+	leftScroll.CanvasSize = UDim2.new(0,0,0,leftUIList.AbsoluteContentSize + 8)
 end)
 
-UserInputService.InputEnded:Connect(function(input)
-	if input.KeyCode == Enum.KeyCode.W then control.F = 0 end
-	if input.KeyCode == Enum.KeyCode.S then control.B = 0 end
-	if input.KeyCode == Enum.KeyCode.A then control.L = 0 end
-	if input.KeyCode == Enum.KeyCode.D then control.R = 0 end
-	if input.KeyCode == Enum.KeyCode.Space then control.U = 0 end
-	if input.KeyCode == Enum.KeyCode.LeftControl then control.D = 0 end
+-- Right panel
+local rightPanel = new("Frame", {
+	Parent = window,
+	Name = "RightPanel",
+	Position = UDim2.new(0,260,0,0),
+	Size = UDim2.new(1,-260,1,0),
+	BackgroundTransparency = 1
+})
+local rightHeader = new("Frame", {Parent = rightPanel, Size = UDim2.new(1,0,0,62), BackgroundColor3 = Color3.fromRGB(24,24,24)})
+new("UICorner", {Parent = rightHeader, CornerRadius = UDim.new(0,10)})
+local headerText = new("TextLabel", {
+	Parent = rightHeader,
+	Size = UDim2.new(1,-44,1,0),
+	Position = UDim2.new(0,18,0,0),
+	Text = "Main",
+	BackgroundTransparency = 1,
+	TextColor3 = Color3.fromRGB(245,245,245),
+	Font = Enum.Font.GothamBold,
+	TextSize = 20,
+	TextXAlignment = Enum.TextXAlignment.Left,
+})
+-- Close button
+local closeBtn = new("TextButton", {
+	Parent = rightHeader,
+	Size = UDim2.new(0,36,0,36),
+	Position = UDim2.new(1,-44,0,12),
+	Text = "X",
+	Font = Enum.Font.GothamBold,
+	TextSize = 18,
+	BackgroundColor3 = Color3.fromRGB(50,50,50),
+	TextColor3 = Color3.fromRGB(255,255,255),
+})
+new("UICorner", {Parent = closeBtn, CornerRadius = UDim.new(0,8)})
+
+-- Right scroll area for options
+local rightScroll = new("ScrollingFrame", {
+	Parent = rightPanel,
+	Position = UDim2.new(0,12,0,72),
+	Size = UDim2.new(1,-24,1,-84),
+	CanvasSize = UDim2.new(0,0,0,0),
+	BackgroundTransparency = 1,
+	ScrollBarThickness = 10,
+})
+local rightList = new("UIListLayout", {Parent = rightScroll, Padding = UDim.new(0,10)})
+rightList.SortOrder = Enum.SortOrder.LayoutOrder
+rightScroll.ChildAdded:Connect(function()
+	rightScroll.CanvasSize = UDim2.new(0,0,0,rightList.AbsoluteContentSize + 12)
 end)
 
-RunService.RenderStepped:Connect(function()
+-- UI helpers for option rows
+local function createSectionTitle(text)
+	local lbl = new("TextLabel", {
+		Parent = rightScroll,
+		Size = UDim2.new(1,0,0,30),
+		BackgroundTransparency = 1,
+		Text = text,
+		TextColor3 = Color3.fromRGB(220,220,220),
+		Font = Enum.Font.GothamBold,
+		TextSize = 16,
+		TextXAlignment = Enum.TextXAlignment.Left,
+	})
+	return lbl
+end
+
+local function createToggleRow(text, initial, callback)
+	local row = new("Frame", {Parent = rightScroll, Size = UDim2.new(1,0,0,46), BackgroundTransparency = 1})
+	local label = new("TextLabel", {
+		Parent = row, Size = UDim2.new(0.7,0,1,0), BackgroundTransparency = 1,
+		Text = text, TextColor3 = Color3.fromRGB(230,230,230), Font = Enum.Font.Gotham, TextSize = 15, TextXAlignment = Enum.TextXAlignment.Left
+	})
+	local tbtn = new("TextButton", {
+		Parent = row, Size = UDim2.new(0,72,0,32), Position = UDim2.new(1,-76,0.5,-16),
+		Text = (initial and "ON" or "OFF"), BackgroundColor3 = (initial and Color3.fromRGB(30,150,70) or Color3.fromRGB(60,60,60)),
+		TextColor3 = Color3.fromRGB(240,240,240), Font = Enum.Font.GothamBold, TextSize = 14, BorderSizePixel = 0
+	})
+	new("UICorner", {Parent = tbtn, CornerRadius = UDim.new(0,8)})
+	tbtn.MouseButton1Click:Connect(function()
+		local newv = not (tbtn.Text == "ON")
+		tbtn.Text = (newv and "ON" or "OFF")
+		tbtn.BackgroundColor3 = (newv and Color3.fromRGB(30,150,70) or Color3.fromRGB(60,60,60))
+		callback(newv)
+	end)
+	return row, tbtn
+end
+
+local function createSliderRow(text, min, max, init, callback)
+	local row = new("Frame", {Parent = rightScroll, Size = UDim2.new(1,0,0,66), BackgroundTransparency = 1})
+	new("TextLabel", {
+		Parent = row, Size = UDim2.new(1,0,0,18), Position = UDim2.new(0,0,0,0),
+		Text = text, BackgroundTransparency = 1, TextColor3 = Color3.fromRGB(230,230,230), Font = Enum.Font.Gotham, TextSize = 15, TextXAlignment = Enum.TextXAlignment.Left
+	})
+	local sliderFrame = new("Frame", {Parent = row, Size = UDim2.new(1,0,0,36), Position = UDim2.new(0,0,0,26), BackgroundColor3 = Color3.fromRGB(40,40,40), BorderSizePixel=0})
+	new("UICorner", {Parent = sliderFrame, CornerRadius = UDim.new(0,8)})
+	local fill = new("Frame", {Parent = sliderFrame, Size = UDim2.new( (init-min)/(max-min), 0, 1,0), BackgroundColor3 = Color3.fromRGB(100,150,255)})
+	new("UICorner", {Parent = fill, CornerRadius = UDim.new(0,8)})
+	local knob = new("ImageButton", {Parent = sliderFrame, Size = UDim2.new(0,0,1,0), Image = "", BackgroundColor3 = Color3.fromRGB(230,230,230), BorderSizePixel=0})
+	new("UICorner", {Parent = knob, CornerRadius = UDim.new(0,16)})
+	knob.Size = UDim2.new(0,18,0,18)
+	knob.Position = UDim2.new(fill.Size.X.Scale, -9, 0.5, -9)
+	local valueLabel = new("TextLabel", {Parent = row, Size = UDim2.new(0,80,0,18), Position = UDim2.new(1,-84,0,2), BackgroundTransparency = 1, Text = tostring(init), TextColor3 = Color3.fromRGB(230,230,230), Font = Enum.Font.GothamBold, TextSize = 14})
+	-- drag logic
+	local dragging = false
+	local function updateFromX(x)
+		local rel = math.clamp((x - sliderFrame.AbsolutePosition.X) / sliderFrame.AbsoluteSize.X, 0, 1)
+		fill.Size = UDim2.new(rel,0,1,0)
+		knob.Position = UDim2.new(rel, -9, 0.5, -9)
+		local val = (min + (max-min)*rel)
+		if typeof(init) == "number" then
+			local rounded = math.floor(val + 0.5)
+			valueLabel.Text = tostring(rounded)
+			callback(rounded)
+		else
+			valueLabel.Text = string.format("%.2f", val)
+			callback(val)
+		end
+	end
+	knob.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			dragging = true
+			input.Changed:Connect(function()
+				if input.UserInputState == Enum.UserInputState.End then dragging = false end
+			end)
+		end
+	end)
+	UserInputService.InputChanged:Connect(function(input)
+		if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+			updateFromX(input.Position.X)
+		end
+	end)
+	sliderFrame.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			updateFromX(input.Position.X)
+		end
+	end)
+	-- init
+	updateFromX(sliderFrame.AbsolutePosition.X + sliderFrame.AbsoluteSize.X * ((init-min)/(max-min)))
+	return row, valueLabel
+end
+
+-- Create option rows for each menu
+local function buildMainOptions()
+	rightScroll:ClearAllChildren()
+	rightList = new("UIListLayout", {Parent = rightScroll, Padding = UDim.new(0,10)})
+	rightList.SortOrder = Enum.SortOrder.LayoutOrder
+
+	createSectionTitle("Fly Controls")
+	local toggleRow, toggleBtn = createToggleRow("Enable Fly (Key: F)", false, function(v)
+		-- toggle fly from UI
+		if v then
+			flying = true
+			startFly()
+		else
+			flying = false
+			stopFly()
+		end
+	end)
+	-- sync toggle text later
+	local sliderRow, speedValue = createSliderRow("Speed", minSpeed, maxSpeed, speed, function(v)
+		speed = v
+	end)
+	local smoothRow, smoothValue = createSliderRow("Smoothness (lower = snappier)", 0.02, 0.6, smooth, function(v)
+		smooth = v
+	end)
+	-- small spacing UI
+	local info = new("TextLabel", {Parent = rightScroll, Size = UDim2.new(1,0,0,40), BackgroundTransparency = 1, Text = "Use key F to toggle fly. WASD to move, Space to go up, LeftCtrl to go down.", TextColor3 = Color3.fromRGB(200,200,200), Font = Enum.Font.Gotham, TextSize = 14, TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left})
+	-- ensure toggle reflects current state
+	spawn(function()
+		wait(0.05)
+		toggleBtn.Text = (flying and "ON" or "OFF")
+		toggleBtn.BackgroundColor3 = (flying and Color3.fromRGB(30,150,70) or Color3.fromRGB(60,60,60))
+	end)
+end
+
+local function buildSettingsOptions()
+	rightScroll:ClearAllChildren()
+	rightList = new("UIListLayout", {Parent = rightScroll, Padding = UDim.new(0,10)})
+	rightList.SortOrder = Enum.SortOrder.LayoutOrder
+	createSectionTitle("Settings")
+	createSectionTitle("UI")
+	local row = new("Frame", {Parent = rightScroll, Size = UDim2.new(1,0,0,46), BackgroundTransparency = 1})
+	new("TextLabel", {Parent = row, Size = UDim2.new(1,0,1,0), BackgroundTransparency = 1, Text = "Window can be dragged from header. Close button on top right.", TextColor3 = Color3.fromRGB(200,200,200), Font = Enum.Font.Gotham, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left})
+	createSectionTitle("Advanced")
+	local _, v1 = createSliderRow("Max Speed", minSpeed, maxSpeed, speed, function(v) speed = v end)
+	local _, v2 = createSliderRow("Smoothness", 0.02, 0.6, smooth, function(v) smooth = v end)
+end
+
+local function buildControlsOptions()
+	rightScroll:ClearAllChildren()
+	rightList = new("UIListLayout", {Parent = rightScroll, Padding = UDim.new(0,10)})
+	rightList.SortOrder = Enum.SortOrder.LayoutOrder
+	createSectionTitle("Controls")
+	local keysText = "Toggle Key: F\nMove: W A S D\nUp: Space\nDown: LeftCtrl"
+	local lbl = new("TextLabel", {Parent = rightScroll, Size = UDim2.new(1,0,0,96), BackgroundTransparency = 1, Text = keysText, TextColor3 = Color3.fromRGB(220,220,220), Font = Enum.Font.Gotham, TextSize = 16, TextXAlignment = Enum.TextXAlignment.Left})
+end
+
+local function buildAboutOptions()
+	rightScroll:ClearAllChildren()
+	rightList = new("UIListLayout", {Parent = rightScroll, Padding = UDim.new(0,10)})
+	rightList.SortOrder = Enum.SortOrder.LayoutOrder
+	createSectionTitle("About")
+	local aboutTxt = "Fly Controller GUI\nFor educational/testing only. Author: You.\nDo not use to cheat in other people's games."
+	local lbl = new("TextLabel", {Parent = rightScroll, Size = UDim2.new(1,0,0,120), BackgroundTransparency = 1, Text = aboutTxt, TextWrapped = true, TextColor3 = Color3.fromRGB(220,220,220), Font = Enum.Font.Gotham, TextSize = 15, TextXAlignment = Enum.TextXAlignment.Left})
+end
+
+-- menu click logic
+local function setActiveMenu(name)
+	headerText.Text = name
+	if name == "Main" then
+		buildMainOptions()
+	elseif name == "Settings" then
+		buildSettingsOptions()
+	elseif name == "Controls" then
+		buildControlsOptions()
+	elseif name == "About" then
+		buildAboutOptions()
+	end
+end
+
+for name,btn in pairs(leftButtons) do
+	btn.MouseButton1Click:Connect(function()
+		setActiveMenu(btn.Text)
+	end)
+end
+
+setActiveMenu("Main")
+
+-- close button
+closeBtn.MouseButton1Click:Connect(function()
+	screenGui:Destroy()
+end)
+
+-- dragging the main window from header
+do
+	local dragging = false
+	local dragInput, dragStart, startPos
+	local function update(input)
+		local delta = input.Position - dragStart
+		window.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+	end
+	rightHeader.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			dragging = true
+			dragStart = input.Position
+			startPos = window.Position
+			input.Changed:Connect(function()
+				if input.UserInputState == Enum.UserInputState.End then dragging = false end
+			end)
+		end
+	end)
+	rightHeader.InputChanged:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseMovement then
+			dragInput = input
+		end
+	end)
+	UserInputService.InputChanged:Connect(function(input)
+		if input == dragInput and dragging then
+			update(input)
+		end
+	end)
+end
+
+-- FLY LOGIC
+local function startFly()
+	local character = player.Character
+	if not character then return end
+	local hrp = character:FindFirstChild("HumanoidRootPart")
+	if not hrp then return end
+
+	-- cleanup if existing
+	if bodyGyro then bodyGyro:Destroy() end
+	if bodyVelocity then bodyVelocity:Destroy() end
+
+	bodyGyro = Instance.new("BodyGyro")
+	bodyGyro.P = 9e4
+	bodyGyro.MaxTorque = Vector3.new(9e9,9e9,9e9)
+	bodyGyro.CFrame = hrp.CFrame
+	bodyGyro.Parent = hrp
+
+	bodyVelocity = Instance.new("BodyVelocity")
+	bodyVelocity.MaxForce = Vector3.new(9e9,9e9,9e9)
+	bodyVelocity.Velocity = Vector3.new(0,0,0)
+	bodyVelocity.Parent = hrp
+end
+
+local function stopFly()
+	if bodyGyro then bodyGyro:Destroy() bodyGyro = nil end
+	if bodyVelocity then bodyVelocity:Destroy() bodyVelocity = nil end
+end
+
+-- movement loop
+local lastCameraCFrame = nil
+RunService.RenderStepped:Connect(function(dt)
 	if flying and bodyVelocity and bodyGyro then
+		local character = player.Character
+		if not character or not character:FindFirstChild("HumanoidRootPart") then return end
+		local hrp = character.HumanoidRootPart
 		local cam = workspace.CurrentCamera
+		if not cam then return end
+
+		-- build move vector from camera orientation
 		local moveDir = (cam.CFrame.LookVector * (control.F + control.B))
 			+ (cam.CFrame.RightVector * (control.R + control.L))
 			+ (cam.CFrame.UpVector * (control.U + control.D))
 
-		bodyVelocity.Velocity = moveDir * speed
-		bodyGyro.CFrame = cam.CFrame
+		-- ensure we have some minimal up to avoid zero
+		local targetVel = moveDir.Unit == moveDir.Unit and moveDir * speed or Vector3.new(0,0,0)
+		-- smooth interpolation
+		local current = bodyVelocity.Velocity
+		local lerpVal = math.clamp(1 - smooth, 0, 1)
+		local newVel = current:Lerp(targetVel, lerpVal)
+		bodyVelocity.Velocity = newVel
+
+		-- orient gyro to camera for natural facing
+		if cam and bodyGyro then
+			bodyGyro.CFrame = CFrame.new(hrp.Position, hrp.Position + cam.CFrame.LookVector)
+		end
 	end
-end)local frame = New("Frame", {
-    Name = "MainFrame",
-    Size = UDim2.new(0, 350, 0, 500),
-    Position = UDim2.new(0, 12, 0, 52),
-    BackgroundColor3 = Color3.fromRGB(0, 0, 0),
-    BackgroundTransparency = 0.4,
-    BorderSizePixel = 0,
-    Visible = false,
-}, screenGui)
-New("UICorner", { CornerRadius = UDim.new(0,8) }, frame)
-makeDraggable(frame)
-
--- RGB Animated Border
-local stroke = New("UIStroke", {
-    Thickness = 2,
-    ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-}, frame)
-task.spawn(function()
-    local hue = 0
-    while true do
-        hue = (hue + 1) % 360
-        stroke.Color = Color3.fromHSV(hue/360, 1, 1)
-        task.wait(0.03)
-    end
 end)
 
--- Title
-New("TextLabel", {
-    Parent = frame,
-    Size = UDim2.new(1, 0, 0, 30),
-    BackgroundTransparency = 1,
-    Text = "NatHub – ESP & Join UI",
-    Font = Enum.Font.GothamBold,
-    TextSize = 18,
-    TextColor3 = Color3.new(1,1,1),
-    TextXAlignment = Enum.TextXAlignment.Center,
-}, frame)
-
--- Close Button
-local closeBtn = New("TextButton", {
-    Parent = frame,
-    Size = UDim2.new(0, 24, 0, 24),
-    Position = UDim2.new(1, -30, 0, 5),
-    Text = "✕",
-    Font = Enum.Font.GothamBold,
-    TextSize = 18,
-    BackgroundTransparency = 1,
-    TextColor3 = Color3.fromRGB(200,200,200),
-    AutoButtonColor = false,
-}, frame)
-closeBtn.MouseButton1Click:Connect(function() frame.Visible = false end)
-
--- ==== 3. Join Player Section ====
--- Username Input
-local usernameBox = New("TextBox", {
-    Parent = frame,
-    Name = "UsernameBox",
-    Size = UDim2.new(1, -40, 0, 30),
-    Position = UDim2.new(0, 20, 0, 45),
-    PlaceholderText = "Masukkan Username...",
-    BackgroundTransparency = 0.6,
-    TextColor3 = Color3.new(1,1,1),
-    Font = Enum.Font.Gotham,
-    TextSize = 16,
-}, frame)
-New("UICorner", { CornerRadius = UDim.new(0,4) }, usernameBox)
-
--- Status Label
-local statusLabel = New("TextLabel", {
-    Parent = frame,
-    Name = "StatusLabel",
-    Size = UDim2.new(1, -40, 0, 20),
-    Position = UDim2.new(0, 20, 0, 80),
-    BackgroundTransparency = 1,
-    Text = "Status: -",
-    Font = Enum.Font.Gotham,
-    TextSize = 14,
-    TextColor3 = Color3.new(1,1,1),
-    TextXAlignment = Enum.TextXAlignment.Left,
-}, frame)
-
--- Join Button
-local joinBtn = New("TextButton", {
-    Parent = frame,
-    Name = "JoinButton",
-    Size = UDim2.new(1, -40, 0, 36),
-    Position = UDim2.new(0, 20, 0, 110),
-    Text = "Join Friend / Dev",
-    Font = Enum.Font.GothamBold,
-    TextSize = 16,
-    TextColor3 = Color3.new(1,1,1),
-    BackgroundColor3 = Color3.fromRGB(30,130,255),
-    AutoButtonColor = false,
-}, frame)
-New("UICorner", { CornerRadius = UDim.new(0,6) }, joinBtn)
-
--- Function cek online
-local function checkOnline(username)
-    if username == "" then
-        statusLabel.Text = "Status: Masukkan username!"
-        statusLabel.TextColor3 = Color3.fromRGB(255,50,50)
-        return nil
-    end
-    local ok, userId = pcall(function()
-        return Players:GetUserIdFromNameAsync(username)
-    end)
-    if not ok then
-        statusLabel.Text = "Status: Username tidak ditemukan"
-        statusLabel.TextColor3 = Color3.fromRGB(255,50,50)
-        return nil
-    end
-    -- Cek online via API
-    local suc, resp = pcall(function()
-        return HttpService:GetAsync("https://api.roblox.com/users/"..userId.."/onlinestatus/")
-    end)
-    if not suc then
-        statusLabel.Text = "Status: Gagal koneksi"
-        statusLabel.TextColor3 = Color3.fromRGB(255,50,50)
-        return nil
-    end
-    local data = HttpService:JSONDecode(resp)
-    if data.IsOnline then
-        statusLabel.Text = "Status: ONLINE"
-        statusLabel.TextColor3 = Color3.fromRGB(0,255,0)
-        return userId
-    else
-        statusLabel.Text = "Status: OFFLINE"
-        statusLabel.TextColor3 = Color3.fromRGB(255,50,50)
-        return nil
-    end
-end
-
-usernameBox.FocusLost:Connect(function()
-    checkOnline(usernameBox.Text)
+-- input handlers
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+	if gameProcessed then return end
+	if input.UserInputType == Enum.UserInputType.Keyboard then
+		local key = input.KeyCode
+		if key == keybind then
+			flying = not flying
+			if flying then startFly() else stopFly() end
+			-- update toggle button text if present (try find)
+			local btn = rightScroll:FindFirstChildWhichIsA("TextButton", true)
+		end
+		if key == Enum.KeyCode.W then control.F = 1 end
+		if key == Enum.KeyCode.S then control.B = -1 end
+		if key == Enum.KeyCode.A then control.L = -1 end
+		if key == Enum.KeyCode.D then control.R = 1 end
+		if key == Enum.KeyCode.Space then control.U = 1 end
+		if key == Enum.KeyCode.LeftControl or key == Enum.KeyCode.RightControl then control.D = -1 end
+	end
 end)
 
-joinBtn.MouseButton1Click:Connect(function()
-    local uid = checkOnline(usernameBox.Text)
-    if uid then
-        -- Ambil jobId (bila developer server, owner bisa taruh sendiri)
-        -- Contoh: gunakan jobId pemain target
-        local jobId = workspace:FindFirstChild("PlaceJobId_"..uid) and workspace["PlaceJobId_"..uid].Value
-        if typeof(jobId) == "string" then
-            TeleportService:TeleportToPlaceInstance(game.PlaceId, jobId, lp)
-        else
-            -- fallback: teleport ke game (jika public)
-            TeleportService:Teleport(game.PlaceId, lp)
-        end
-    end
+UserInputService.InputEnded:Connect(function(input, gameProcessed)
+	if input.UserInputType == Enum.UserInputType.Keyboard then
+		local key = input.KeyCode
+		if key == Enum.KeyCode.W then control.F = 0 end
+		if key == Enum.KeyCode.S then control.B = 0 end
+		if key == Enum.KeyCode.A then control.L = 0 end
+		if key == Enum.KeyCode.D then control.R = 0 end
+		if key == Enum.KeyCode.Space then control.U = 0 end
+		if key == Enum.KeyCode.LeftControl or key == Enum.KeyCode.RightControl then control.D = 0 end
+	end
 end)
 
--- ==== 4. ESP Egg Prediction Section ====
--- Scrolling Frame
-local scroll = New("ScrollingFrame", {
-    Parent = frame,
-    Name = "ESPScroll",
-    Size = UDim2.new(1, -40, 0, 230),
-    Position = UDim2.new(0, 20, 0, 160),
-    CanvasSize = UDim2.new(0,0,0,0),
-    ScrollBarThickness = 6,
-    BackgroundTransparency = 1,
-}, frame)
-local layout = New("UIListLayout", {
-    Parent = scroll,
-    Padding = UDim.new(0,8),
-}, scroll)
-layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-    scroll.CanvasSize = UDim2.new(0,0,0, layout.AbsoluteContentSize.Y + 10)
+-- cleanup on respawn
+player.CharacterAdded:Connect(function(char)
+	wait(0.5)
+	if flying then
+		-- try reapply
+		startFly()
+	end
 end)
 
--- Create switch for each egg category
-for eggName,_ in pairs(predictionMap) do
-    local labelText = eggName:gsub("Egg","")
-    local holder = New("Frame", {
-        Parent = scroll,
-        Size = UDim2.new(1,0,0, thirty),
-        BackgroundTransparency = 1,
-    }, scroll)
-    local lbl = New("TextLabel", {
-        Parent = holder,
-        Size = UDim2.new(0.7,0,1,0),
-        Position = UDim2.new(0,0,0,0),
-        BackgroundTransparency = 1,
-        Text = labelText,
-        Font = Enum.Font.Gotham,
-        TextSize = 14,
-        TextColor3 = Color3.new(1,1,1),
-        TextXAlignment = Enum.TextXAlignment.Left,
-    }, holder)
-    -- Switch
-    local sw = New("Frame", {
-        Parent = holder,
-        Size = UDim2.new(0,40,0,20),
-        Position = UDim2.new(1,-45,0.5,-10),
-        BackgroundColor3 = Color3.fromRGB(60,60,60),
-        Name = "Switch"..eggName,
-    }, holder)
-    New("UICorner", { CornerRadius = UDim.new(0,10) }, sw)
-    local knob = New("Frame", {
-        Parent = sw,
-        Size = UDim2.new(0,18,0,18),
-        Position = UDim2.new(0,2,0,2),
-        BackgroundColor3 = Color3.fromRGB(200,200,200),
-    }, sw)
-    New("UICorner", { CornerRadius = UDim.new(0,9) }, knob)
-    -- click
-    sw.InputBegan:Connect(function(inp)
-        if inp.UserInputType == Enum.UserInputType.MouseButton1 then
-            Flags["ESP_"..labelText] = not Flags["ESP_"..labelText]
-            -- animate knob
-            if Flags["ESP_"..labelText] then
-                knob:TweenPosition(UDim2.new(1,-20,0,2),"InOut","Quad",0.15,true)
-                sw.BackgroundColor3 = Color3.fromRGB(0,170,0)
-            else
-                knob:TweenPosition(UDim2.new(0,2,0,2),"InOut","Quad",0.15,true)
-                sw.BackgroundColor3 = Color3.fromRGB(60,60,60)
-            end
-        end
-    end)
-end
+-- initial UI build done earlier
 
--- ESP Rendering Loop
-task.spawn(function()
-    while task.wait(1.5) do
-        -- bersihkan ESP lama
-        for _, gui in ipairs(Workspace:GetDescendants()) do
-            if gui.Name == "EggESP" and gui:IsA("BillboardGui") then
-                gui:Destroy()
-            end
-        end
-        -- buat ESP baru
-        for eggName,pets in pairs(predictionMap) do
-            local flagKey = "ESP_"..eggName:gsub("Egg","")
-            if Flags[flagKey] then
-                for _, mdl in ipairs(Workspace:GetDescendants()) do
-                    if mdl:IsA("Model") and mdl.Name == eggName then
-                        local part = mdl:FindFirstChildWhichIsA("BasePart")
-                        if part then
-                            local bb = New("BillboardGui", {
-                                Name = "EggESP",
-                                Parent = mdl,
-                                Adornee = part,
-                                Size = UDim2.new(0,140,0,30),
-                                StudsOffset = Vector3.new(0,3,0),
-                                AlwaysOnTop = true,
-                            }, mdl)
-                            New("UICorner", { CornerRadius = UDim.new(0,4) }, bb)
-                            New("TextLabel", {
-                                Parent = bb,
-                                Size = UDim2.new(1,0,1,0),
-                                BackgroundTransparency = 0.6,
-                                BackgroundColor3 = Color3.fromRGB(0,0,0),
-                                TextColor3 = Color3.fromRGB(255,255,0),
-                                Font = Enum.Font.Gotham,
-                                TextSize = 14,
-                                Text = "→ "..table.concat(pets, ", "),
-                                TextWrapped = true,
-                            }, bb)
-                        end
-                    end
-                end
-            end
-        end
-    end
-end)
+-- final note: keep these functions accessible for debugging
+_G.FlyController = {
+	Start = function() flying = true startFly() end,
+	Stop = function() flying = false stopFly() end,
+	SetSpeed = function(v) speed = v end,
+	IsFlying = function() return flying end,
+}
 
--- Hotkey M untuk toggle GUI
-UserInputService.InputBegan:Connect(function(input,gpe)
-    if not gpe and input.KeyCode == Enum.KeyCode.M then
-        frame.Visible = not frame.Visible
-    end
-end)
-
--- Toggle juga via tombol GMON
-toggleBtn.MouseButton1Click:Connect(function()
-    frame.Visible = not frame.Visible
-end)
+print("FlyControlGui loaded. Toggle fly with key F (default).")
