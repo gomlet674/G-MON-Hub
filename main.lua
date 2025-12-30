@@ -22,12 +22,14 @@ if game.PlaceId == 2753915549 then
     GAME_TYPE = "BLOX_FRUIT"
 elseif game.PlaceId == 1554960397 then
     GAME_TYPE = "CAR_TYCOON"
+elseif game.PlaceId == 537413528 then
+    GAME_TYPE = "BUILD_A_BOAT_FOR_TREASURE"
 end
 
 -- GUI
 local Window = Rayfield:CreateWindow({
-    Name = "Ganteng Hub",
-    LoadingTitle = "Ganteng Hub",
+    Name = "GMON",
+    LoadingTitle = "GMON Script",
     LoadingSubtitle = "Logic ON/OFF Aktif",
 })
 
@@ -47,7 +49,7 @@ if GAME_TYPE == "BLOX_FRUIT" then
 end
 
 -- ===== CAR DEALERSHIP TYCOON LOGIC =====
-if GAME_TYPE == "CAR_TYCOON" then
+if GAME_TYPE == "CAR_Dealershil_TYCOON" then
     MainTab:CreateToggle({
         Name = "Auto Farm Money (Car Run)",
         CurrentValue = false,
