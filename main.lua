@@ -55,8 +55,8 @@ if GAME_TYPE == "CAR_DEALERSHIP_TYCOON" then
     })
 end
 
--- ==== BUILD A BOAT FOR TREASURE LOGIC ====
-if GAME_TYPE == " BUILD_A_BOAT_FOR_TREASURE" then
+-- Build A Boat toggle
+if GAME_TYPE == "BUILD_A_BOAT_FOR_TREASURE" then
     MainTab:CreateToggle({
         Name = "Auto Farm Gold", 
         CurrentValue = false, 
@@ -64,7 +64,7 @@ if GAME_TYPE == " BUILD_A_BOAT_FOR_TREASURE" then
             Remote:FireServer("BOAT_GOLD_FARM", v) 
         end   
     }) 
-end  
+end
             
 Rayfield:CreateNotification({
     Title = "Ready",
