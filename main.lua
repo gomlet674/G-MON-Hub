@@ -9,12 +9,8 @@ local player = Players.LocalPlayer
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
 
 -- Remote setup
-local Remote = ReplicatedStorage:FindFirstChild("HubRemote")
-if not Remote then
-    Remote = Instance.new("RemoteEvent")
-    Remote.Name = "HubRemote"
-    Remote.Parent = ReplicatedStorage
-end
+local Remote =
+ReplicatedStorage:FindFirstChild("HubRemote")
 
 -- GAME DETECTION (ubah PlaceId sesuai game kamu)
 local GAME_TYPE = "UNKNOWN"
