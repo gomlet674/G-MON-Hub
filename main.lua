@@ -38,8 +38,8 @@ end
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
 
 local Window = Rayfield:CreateWindow({
-    Name = "Tanaka Hub",
-    LoadingTitle = "Tanaka Hub",
+    Name = "G-MON",
+    LoadingTitle = "G-MON HUB",
     LoadingSubtitle = GAME,
     ConfigurationSaving = {
         Enabled = false
@@ -180,7 +180,7 @@ end
 
 -- ================= NOTIFICATION =================
 Rayfield:CreateNotification({
-    Title = "Tanaka Hub",
+    Title = "G-MON Hub",
     Content = "Loaded Successfully",
     Duration = 4
 })
