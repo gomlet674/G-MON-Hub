@@ -503,8 +503,7 @@ if GAME == "BUILD_A_BOAT" then
         Callback = function(v)
             BOAT_Auto = v
             if v then
-hen
-                BOAT_start_CFrame = (SafeChaand SafeChar().HumanoidRootPart.CFrame) or nil
+                BOAT_start_CFrame = (SafeChar() and SafeChar().HumanoidRootPart.CFrame) or nil
                 Rayfield:Notify({Title="G-MON", Content="Boat Auto ENABLED", Duration=3})
                 setIndicator("boat", true, "Boat: ON")
                 BOAT_active_start = BOAT_active_start or os.time()
@@ -514,7 +513,6 @@ hen
                     local c = SafeChar()
                     if c and BOAT_start_CFrame then c.HumanoidRootPart.CFrame = BOAT_start_CFrame end
                 end)
-end)
                 setIndicator("boat", false, "Boat: OFF")
                 if BOAT_active_start then BOAT_total = BOAT_total + (os.time() - BOAT_active_start); BOAT_active_start = nil end
             end
@@ -536,7 +534,8 @@ end
 task.spawn(function()
     while true do
         task.wait(0.12)
-        if GAME ~= "BLOX_FRUIT" then task.wait(0.5); continue        if not (BF_Auto or BF_Quest or BF_Fast) then continue end
+        if GAME ~= "BLOX_FRUIT" then task.wait(0.5); continue end
+        if not (BF_Auto or BF_Quest or BF_Fast) then continue end
         pcall(function()
             local char = SafeChar()
             if not char then return end
@@ -624,13 +623,11 @@ end)
 
 -- CAR Loop
 task.spawn(function()
-    while task.wait(0.12) do
-        if not CAR_Auto then
-            task.wait(0.5)
-            continue
-        end
+    while true do
+        task.wait(0.12)
+        if GAME ~= "CAR_TYCOON" then task.wait(0.5); continue end
+        if not CAR_Auto then continue end
         pcall(function()
-            
             -- choose fastest available car (heuristic)
             local carsRoot = Workspace:FindFirstChild("Cars")
             if not carsRoot then return end
