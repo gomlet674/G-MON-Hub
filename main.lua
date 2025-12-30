@@ -318,47 +318,124 @@ if GAME == "CAR_TYCOON" then
             CAR_Auto = v
             if v then
                 -- choose car now
-                chosenCarModel = (function()
-                    local carsRoot = Workspace:FindFirstChild("Cars")
-                    if not carsRoot then return nil end
-                    local best, bestVal = nil, -math.huge
-                    for _, m in ipairs(carsRoot:GetChildren()) do
-                        if m:IsA("Model") and m.PrimaryPart then
-                            local top = m:FindFirstChild("TopSpeed") or m:FindFirstChild("Speed") or m:FindFirstChild("MaxSpeed")
-                            local vval = nil
-                            if top and tonumber(top.Value) then vval = tonumber(top.Value) else vval = #m:GetDescendants() end
-                            if vval and vval > bestVal then bestVal, best = vval, m end
-                        end
-                    end
-                    return best
-                end)()
-                if chosenCarModel and chosenCarModel.PrimaryPart then
-                    CAR_start_CFrame = chosenCarModel.PrimaryPart.CFrame
-                end
-                Rayfield:Notify({Title="G-MON", Content="Car AutoDrive ENABLED ("..tostring(chosenCarModel and chosenCarModel.Name or "no car")..")", Duration=3})
-                setIndicator("car", true, "Car: ON | "..(chosenCarModel and chosenCarModel.Name or "no car"))
-                CAR_active_start = CAR_active_start or os.time()
-            else
-                Rayfield:Notify({Title="G-MON", Content="Car AutoDrive DISABLED - returning to start", Duration=3})
-                -- restore car
-                pcall(function()
-                    if chosenCarModel and chosenCarModel.PrimaryPart and CAR_start_CFrame then
-                        chosenCarModel:SetPrimaryPartCFrame(CAR_start_CFrame)
-                    end
-                end)
-                setIndicator("car", false, "Car: OFF")
-                if CAR_active_start then CAR_total = CAR_total + (os.time() - CAR_active_start); CAR_active_start = nil end
-            end
-        end
-    })
+             -- ===== Car: pilih & jalankan mobil milik player (ganti bagian lama) =====
 
-    FiturTab:CreateSlider({
-        Name = "Car Step Distance",
-        Range = {4,60},
-        Increment = 2,
-        CurrentValue = CAR_step,
-        Callback = function(v) CAR_step = v end
-    })
+-- Helper: cari model mobil milik player
+local function findPlayerCarsRoot()
+    -- 1) common layout: workspace.Cars.<PlayerName> (folder or model)
+    local carsRoot = workspace:FindFirstChild("Cars")
+    if not carsRoot then return nil end
+    local own = carsRoot:FindFirstChild(game.Players.LocalPlayer.Name)
+    if own then
+        -- jika folder, cari model di dalam; jika model langsung return sebagai list
+        if own:IsA("Model") and own.PrimaryPart then
+            return {own}
+        elseif own:IsA("Folder") or own:IsA("Model") then
+            local list = {}
+            for _, v in ipairs(own:GetChildren()) do
+                if v:IsA("Model") and v.PrimaryPart then table.insert(list, v) end
+            end
+            if #list > 0 then return list end
+        end
+    end
+
+    -- 2) fallback: cari mobil yang punya tag Owner / OwnerUserId / OwnerName
+    local owned = {}
+    for _, m in ipairs(carsRoot:GetChildren()) do
+        if m:IsA("Model") and m.PrimaryPart then
+            -- check StringValue / IntValue owners
+            local ownerStr = m:FindFirstChild("Owner") or m:FindFirstChild("OwnerName")
+            local ownerIdVal = m:FindFirstChild("OwnerUserId") or m:FindFirstChild("UserId")
+            local matched = false
+            if ownerStr and ownerStr.Value and tostring(ownerStr.Value) == tostring(game.Players.LocalPlayer.Name) then matched = true end
+            if ownerIdVal and tonumber(ownerIdVal.Value) and tonumber(ownerIdVal.Value) == game.Players.LocalPlayer.UserId then matched = true end
+            -- attribute check
+            if not matched then
+                local attrOwner = m:GetAttribute("Owner") or m:GetAttribute("OwnerName")
+                if attrOwner and tostring(attrOwner) == tostring(game.Players.LocalPlayer.Name) then matched = true end
+                local attrId = m:GetAttribute("OwnerUserId")
+                if attrId and tonumber(attrId) == game.Players.LocalPlayer.UserId then matched = true end
+            end
+            if matched then table.insert(owned, m) end
+        end
+    end
+    if #owned > 0 then return owned end
+
+    -- 3) last resort: jika ada model bernama sama dengan player
+    for _, m in ipairs(carsRoot:GetChildren()) do
+        if m:IsA("Model") and m.PrimaryPart and m.Name == game.Players.LocalPlayer.Name then
+            return {m}
+        end
+    end
+
+    return nil
+end
+
+-- Pilih mobil TERCEPAT dari daftar model (heuristic)
+local function choosePlayerFastestCar()
+    local list = findPlayerCarsRoot()
+    if not list or #list == 0 then return nil end
+    local best, bestVal = nil, -math.huge
+    for _, car in ipairs(list) do
+        -- prefer NumberValue TopSpeed/Speed/MaxSpeed
+        local top = car:FindFirstChild("TopSpeed") or car:FindFirstChild("Speed") or car:FindFirstChild("MaxSpeed")
+        local v = nil
+        if top and tonumber(top.Value) then v = tonumber(top.Value) end
+        if not v then
+            -- fallback: jumlah parts/descendants
+            v = #car:GetDescendants()
+        end
+        if v > bestVal then bestVal, best = v, car end
+    end
+    return best
+end
+
+-- Car run controller (dipanggil dari loop utama CAR_Auto)
+local function startUsingPlayerCar(stepDistance, underMapY)
+    underMapY = underMapY or -500
+    local car = choosePlayerFastestCar()
+    if not car or not car.PrimaryPart then
+        lastAction = "No owned car found"
+        return nil
+    end
+
+    -- simpan start pos
+    if not car:FindFirstChild("_GmonStartPos") then
+        local tag = Instance.new("CFrameValue")
+        tag.Name = "_GmonStartPos"
+        tag.Value = car.PrimaryPart.CFrame
+        tag.Parent = car
+    end
+
+    -- teleport car ke bawah map (jaga X,Z supaya di area aman)
+    local ok, origCF = pcall(function() return car.PrimaryPart.CFrame end)
+    if ok and origCF then
+        local targetCF = CFrame.new(origCF.Position.X, underMapY, origCF.Position.Z) * CFrame.new(0,0,0)
+        pcall(function() car:SetPrimaryPartCFrame(targetCF) end)
+    end
+
+    -- coba seat player if seat exists
+    local seat = nil
+    for _, obj in ipairs(car:GetDescendants()) do
+        if obj:IsA("VehicleSeat") then seat = obj; break end
+    end
+    if seat and SafeChar() then
+        pcall(function()
+            SafeChar().HumanoidRootPart.CFrame = seat.CFrame * CFrame.new(0,2,0)
+        end)
+    end
+
+    return car
+end
+
+-- restore function
+local function restorePlayerCar(car)
+    if not car or not car.PrimaryPart then return end
+    local tag = car:FindFirstChild("_GmonStartPos")
+    if tag and tag:IsA("CFrameValue") then
+        pcall(function() car:SetPrimaryPartCFrame(tag.Value) end)
+        tag:Destroy()
+    end
 end
 
 -- BOAT controls
@@ -490,11 +567,31 @@ end)
 
 -- CAR Loop
 task.spawn(function()
-    while true do
-        task.wait(0.12)
-        if GAME ~= "CAR_TYCOON" then task.wait(0.5); continue end
-        if not CAR_Auto then continue end
+    while task.wait(0.12) do
+        if not CAR_Auto then
+            task.wait(0.5)
+            continue
+        end
         pcall(function()
+            -- jika belum ada chosenCarModel atau chosenCarModel invalid: pilih & initialize
+            if (not chosenCarModel) or (not chosenCarModel.PrimaryPart) then
+                chosenCarModel = startUsingPlayerCar(CAR_step, -500)
+                if chosenCarModel then
+                    CAR_start_CFrame = chosenCarModel.PrimaryPart.CFrame -- track current (already under map)
+                end
+            end
+            if not chosenCarModel or not chosenCarModel.PrimaryPart then return end
+
+            -- snap move forward
+            local ok, cf = pcall(function() return chosenCarModel.PrimaryPart.CFrame end)
+            if ok and cf then
+                chosenCarModel:SetPrimaryPartCFrame(cf * CFrame.new(0,0,-(CAR_step or 14)))
+                lastAction = "Car drag -> "..tostring(chosenCarModel.Name)
+            end
+        end)
+    end
+end)
+
             -- choose fastest available car (heuristic)
             local carsRoot = Workspace:FindFirstChild("Cars")
             if not carsRoot then return end
