@@ -1,112 +1,76 @@
--- main.lua – Complete NatHub-Style ESP & Join Player UI
--- Fluxus / Synapse compatible
+-- Fly Script (Educational Purpose)
+-- Author: YourName
+-- Platform: Roblox
+-- Type: LocalScript
 
--- Ensure game is loaded
-if not game:IsLoaded() then
-    game.Loaded:Wait()
-end
-
--- Services
-local Players          = game:GetService("Players")
-local TeleportService  = game:GetService("TeleportService")
-local HttpService      = game:GetService("HttpService")
+local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
-local Workspace        = game:GetService("Workspace")
+local RunService = game:GetService("RunService")
 
-local lp = Players.LocalPlayer
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
 
--- ==== 1. Global Flags (via getgenv) ====
-getgenv().EggESPFlags = getgenv().EggESPFlags or {
-    ESP_Common      = false,
-    ESP_Uncommon    = false,
-    ESP_Rare        = false,
-    ESP_Legendary   = false,
-    ESP_Mythical    = false,
-    ESP_Bug         = false,
-    ESP_Bee         = false,
-    ESP_AntiBee     = false,
-}
-local Flags = getgenv().EggESPFlags
+local flying = false
+local speed = 50
 
--- Prediction map
-local predictionMap = {
-    CommonEgg      = { "Golden Lab", "Dog", "Bunny" },
-    UncommonEgg    = { "Black Bunny", "Chicken", "Cat", "Deer" },
-    RareEgg        = { "Orange Tabby", "Spotted Deer", "Pig", "Rooster", "Monkey" },
-    LegendaryEgg   = { "Cow", "Silver Monkey", "Sea Otter", "Turtle", "Polar Bear" },
-    MythicalEgg    = { "Grey Mouse", "Brown Mouse", "Squirrel", "Red Giant Ant", "Red Fox" },
-    BugEgg         = { "Snail", "Giant Ant", "Caterpillar", "Praying Mantis", "Dragonfly" },
-    BeeEgg         = { "Bee", "Honey Bee", "Bear Bee", "Petal Bee", "Queen Bee" },
-    AntiBeeEgg     = { "Wasp", "Tarantula Hawk", "Moth", "Butterfly", "Disco Bee" },
-}
+local bodyGyro
+local bodyVelocity
 
--- Helper to create Instance
-local function New(cls, props, parent)
-    local inst = Instance.new(cls)
-    for k, v in pairs(props) do inst[k] = v end
-    if parent then inst.Parent = parent end
-    return inst
-end
+-- INPUT
+local control = {F = 0, B = 0, L = 0, R = 0, U = 0, D = 0}
 
--- Make frame draggable
-local function makeDraggable(frame)
-    local dragging, dragInput, dragStart, startPos
-    frame.InputBegan:Connect(function(inp)
-        if inp.UserInputType == Enum.UserInputType.MouseButton1
-        or inp.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-            dragStart = inp.Position
-            startPos  = frame.Position
-            inp.Changed:Connect(function()
-                if inp.UserInputState == Enum.UserInputState.End then
-                    dragging = false
-                end
-            end)
-        end
-    end)
-    frame.InputChanged:Connect(function(inp)
-        if inp.UserInputType == Enum.UserInputType.MouseMovement
-        or inp.UserInputType == Enum.UserInputType.Touch then
-            dragInput = inp
-        end
-    end)
-    UserInputService.InputChanged:Connect(function(inp)
-        if inp == dragInput and dragging then
-            local delta = inp.Position - dragStart
-            frame.Position = UDim2.new(
-                startPos.X.Scale, startPos.X.Offset + delta.X,
-                startPos.Y.Scale, startPos.Y.Offset + delta.Y
-            )
-        end
-    end)
-end
+UserInputService.InputBegan:Connect(function(input, gp)
+	if gp then return end
 
--- ==== 2. Build GUI ====
--- Parent ScreenGui
-local screenGui = New("ScreenGui", {
-    Name = "NatHubUI",
-    ResetOnSpawn = false,
-    ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
-    Parent = lp:WaitForChild("PlayerGui"),
-})
+	if input.KeyCode == Enum.KeyCode.F then
+		flying = not flying
 
--- Toggle Button (GMON)
-local toggleBtn = New("TextButton", {
-    Name = "GMONToggle",
-    Text = "GMON",
-    Size = UDim2.new(0, 60, 0, 32),
-    Position = UDim2.new(0, 12, 0, 12),
-    BackgroundColor3 = Color3.fromRGB(40, 40, 40),
-    TextColor3 = Color3.fromRGB(230, 230, 230),
-    Font = Enum.Font.GothamBold,
-    TextSize = 14,
-    AutoButtonColor = false,
-}, screenGui)
-New("UICorner", { CornerRadius = UDim.new(0,6) }, toggleBtn)
-makeDraggable(toggleBtn)
+		if flying then
+			bodyGyro = Instance.new("BodyGyro")
+			bodyGyro.P = 9e4
+			bodyGyro.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
+			bodyGyro.CFrame = humanoidRootPart.CFrame
+			bodyGyro.Parent = humanoidRootPart
 
--- Main Frame
-local frame = New("Frame", {
+			bodyVelocity = Instance.new("BodyVelocity")
+			bodyVelocity.Velocity = Vector3.zero
+			bodyVelocity.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+			bodyVelocity.Parent = humanoidRootPart
+		else
+			if bodyGyro then bodyGyro:Destroy() end
+			if bodyVelocity then bodyVelocity:Destroy() end
+		end
+	end
+
+	if input.KeyCode == Enum.KeyCode.W then control.F = 1 end
+	if input.KeyCode == Enum.KeyCode.S then control.B = -1 end
+	if input.KeyCode == Enum.KeyCode.A then control.L = -1 end
+	if input.KeyCode == Enum.KeyCode.D then control.R = 1 end
+	if input.KeyCode == Enum.KeyCode.Space then control.U = 1 end
+	if input.KeyCode == Enum.KeyCode.LeftControl then control.D = -1 end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+	if input.KeyCode == Enum.KeyCode.W then control.F = 0 end
+	if input.KeyCode == Enum.KeyCode.S then control.B = 0 end
+	if input.KeyCode == Enum.KeyCode.A then control.L = 0 end
+	if input.KeyCode == Enum.KeyCode.D then control.R = 0 end
+	if input.KeyCode == Enum.KeyCode.Space then control.U = 0 end
+	if input.KeyCode == Enum.KeyCode.LeftControl then control.D = 0 end
+end)
+
+RunService.RenderStepped:Connect(function()
+	if flying and bodyVelocity and bodyGyro then
+		local cam = workspace.CurrentCamera
+		local moveDir = (cam.CFrame.LookVector * (control.F + control.B))
+			+ (cam.CFrame.RightVector * (control.R + control.L))
+			+ (cam.CFrame.UpVector * (control.U + control.D))
+
+		bodyVelocity.Velocity = moveDir * speed
+		bodyGyro.CFrame = cam.CFrame
+	end
+end)local frame = New("Frame", {
     Name = "MainFrame",
     Size = UDim2.new(0, 350, 0, 500),
     Position = UDim2.new(0, 12, 0, 52),
