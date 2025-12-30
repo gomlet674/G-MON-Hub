@@ -622,63 +622,48 @@ task.spawn(function()
 end)
 
 -- CAR Loop
+-- CAR Auto W Loop
 task.spawn(function()
     while true do
-        task.wait(0.12)
+        task.wait()
         if GAME ~= "CAR_TYCOON" then task.wait(0.5); continue end
         if not CAR_Auto then continue end
         pcall(function()
-            local carsRoot = Workspace:FindFirstChild("Cars")
-            if not carsRoot then return end
-
-            -- pilih mobil tercepat (heuristik)
-            local best, bestVal = nil, -math.huge
-            for _, m in ipairs(carsRoot:GetChildren()) do
-                if m:IsA("Model") and m.PrimaryPart then
-                    local top = m:FindFirstChild("TopSpeed") or m:FindFirstChild("Speed") or m:FindFirstChild("MaxSpeed")
-                    local v = (top and tonumber(top.Value)) or #m:GetDescendants()
-                    if v > bestVal then
-                        bestVal = v
-                        best = m
+            if not chosenCarModel or not chosenCarModel.PrimaryPart then
+                -- pilih mobil lagi jika hilang
+                local carsRoot = Workspace:FindFirstChild("Cars")
+                if carsRoot then
+                    local best, bestVal = nil, -math.huge
+                    for _, m in ipairs(carsRoot:GetChildren()) do
+                        if m:IsA("Model") and m.PrimaryPart then
+                            local top = m:FindFirstChild("TopSpeed") or m:FindFirstChild("Speed") or m:FindFirstChild("MaxSpeed")
+                            local v = top and tonumber(top.Value) or #m:GetDescendants()
+                            if v > bestVal then bestVal, best = v, m end
+                        end
                     end
-                end
-            end
-            if not best then return end
-            chosenCarModel = best
-
-            -- simpan posisi awal jika belum ada
-            if not CAR_start_CFrame and chosenCarModel.PrimaryPart then
-                CAR_start_CFrame = chosenCarModel.PrimaryPart.CFrame
-            end
-
-            -- teleport mobil ke bawah tanah dan buat floor jika belum ada
-            local cf = chosenCarModel.PrimaryPart.CFrame
-            local underY = -500
-            chosenCarModel:SetPrimaryPartCFrame(CFrame.new(cf.Position.X, underY, cf.Position.Z))
-
-            if not chosenCarModel:GetAttribute("GmonFloor") then
-                local floor = Instance.new("Part")
-                floor.Size = Vector3.new(200,1,200)
-                floor.Position = Vector3.new(cf.Position.X, underY - 1, cf.Position.Z)
-                floor.Anchored = true
-                floor.TopSurface = Enum.SurfaceType.Smooth
-                floor.BrickColor = BrickColor.new("Really black")
-                floor.Parent = Workspace
-                chosenCarModel:SetAttribute("GmonFloor", floor)
-            end
-
-            -- pindahkan player dekat kursi mobil jika ada
-            for _, obj in ipairs(chosenCarModel:GetDescendants()) do
-                if obj:IsA("VehicleSeat") and SafeChar() then
-                    SafeChar().HumanoidRootPart.CFrame = obj.CFrame * CFrame.new(0,2,0)
-                    break
+                    chosenCarModel = best
                 end
             end
 
-            -- gerakkan mobil maju
-            local ok, cf2 = pcall(function() return chosenCarModel.PrimaryPart.CFrame end)
-            if ok and cf2 then
-                chosenCarModel:SetPrimaryPartCFrame(cf2 * CFrame.new(0,0,-CAR_step))
+            if chosenCarModel and chosenCarModel.PrimaryPart then
+                -- maju smooth ala pencet W
+                local hrp = chosenCarModel.PrimaryPart
+                local dt = task.wait() or 0.016
+                local speed = CAR_step or 14
+
+                -- buat BodyVelocity jika belum ada
+                if not hrp:FindFirstChild("_GmonBV") then
+                    local bv = Instance.new("BodyVelocity")
+                    bv.Name = "_GmonBV"
+                    bv.MaxForce = Vector3.new(1e5,0,1e5)
+                    bv.Velocity = hrp.CFrame.LookVector * speed
+                    bv.P = 1250
+                    bv.Parent = hrp
+                else
+                    hrp._GmonBV.Velocity = hrp.CFrame.LookVector * speed
+                end
+
+                lastAction = "Car -> "..tostring(chosenCarModel.Name)
             end
         end)
     end
