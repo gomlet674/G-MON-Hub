@@ -19,6 +19,87 @@ local VirtualUser = game:GetService("VirtualUser")
 local Workspace = workspace
 local LP = Players.LocalPlayer
 
+-- ===== GAME DETECTION (flexible) =====
+do
+    local pid = game.PlaceId
+    -- quick placeId recognition first
+    if pid == 2753915549 then
+        STATE.GAME = "BLOX_FRUIT"
+    elseif pid == 1554960397 then
+        STATE.GAME = "CAR_TYCOON"
+    elseif pid == 537413528 then
+        STATE.GAME = "BUILD_A_BOAT"
+    else
+        -- flexible detection by workspace names (aliases)
+        local aliasMap = {
+            BLOX_FRUIT = {"Enemies","Sea1Enemies","Sea2Enemies","Monsters","Mobs","Quests","NPCQuests"},
+            CAR_TYCOON = {"Cars","VehicleFolder","Vehicles","Dealership","Garage","CarShop","CarStages"},
+            BUILD_A_BOAT = {"BoatStages","Stages","NormalStages","StageFolder","BoatStage","Chest","Treasure"}
+        }
+        local found = "UNKNOWN"
+        for key, list in pairs(aliasMap) do
+            for _, name in ipairs(list) do
+                if workspace:FindFirstChild(name) then
+                    found = key
+                    break
+                end
+            end
+            if found ~= "UNKNOWN" then break end
+        end
+        STATE.GAME = found
+    end
+end
+
+-- helper: nice short label for UI/notify
+local function ShortLabelForGame(g)
+    if g == "BLOX_FRUIT" then return "Blox" end
+    if g == "CAR_TYCOON" then return "Car" end
+    if g == "BUILD_A_BOAT" then return "Boat" end
+    return tostring(g or "Unknown")
+end
+
+-- ===== STAGED LAZY BOOT (AUTO START SAFE) - REPLACED =====
+task.spawn(function()
+    SAFE_WAIT(1)
+    SAFE_CALL(function() if STATE.Status and STATE.Status.Create then STATE.Status.Create() end end)
+    SAFE_WAIT(6)
+    SAFE_CALL(function()
+        if STATE.Rayfield and STATE.Rayfield.Notify then
+            STATE.Rayfield:Notify({Title="G-MON", Content="Initializing modules...", Duration=4})
+        end
+    end)
+
+    -- final safe detection & auto-start (delayed to avoid overload)
+    SAFE_WAIT(10)
+    SAFE_CALL(function()
+        local g = STATE.GAME or "UNKNOWN"
+        local short = ShortLabelForGame(g)
+        if STATE.Rayfield and STATE.Rayfield.Notify then
+            STATE.Rayfield:Notify({Title="G-MON", Content="Detected: "..short.." | Auto-starting if module available", Duration=5})
+        end
+
+        -- delay a little more before actually calling modules
+        task.delay(2.5, function()
+            SAFE_CALL(function()
+                if g == "BLOX_FRUIT" then
+                    if STATE.Modules.Blox and STATE.Modules.Blox.start then STATE.Modules.Blox.start() end
+                elseif g == "CAR_TYCOON" then
+                    if STATE.Modules.Car and STATE.Modules.Car.start then STATE.Modules.Car.start() end
+                elseif g == "BUILD_A_BOAT" then
+                    if STATE.Modules.Boat and STATE.Modules.Boat.start then STATE.Modules.Boat.start() end
+                else
+                    if STATE.Rayfield and STATE.Rayfield.Notify then
+                        STATE.Rayfield:Notify({Title="G-MON", Content="Game not recognized; use toggles to start modules", Duration=5})
+                    end
+                end
+            end)
+        end)
+    end)
+
+    SAFE_WAIT(12)
+    SAFE_CALL(function() if STATE.Rayfield and STATE.Rayfield.Notify then STATE.Rayfield:Notify({Title="G-MON", Content="Initialization complete (lazy)", Duration=4}) end end)
+end)
+
 -- ===== SAFE HELPERS =====
 local function SAFE_CALL(fn, ...)
     if type(fn) ~= "function" then return false end
