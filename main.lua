@@ -741,3 +741,14 @@ end)
 -- ===== Final notify & print =====
 SAFE_CALL(function() if STATE.Rayfield and STATE.Rayfield.Notify then STATE.Rayfield:Notify({Title="G-MON Hub", Content="Loaded — use toggles to control modules", Duration=5}) end end)
 print("[G-MON] main.lua loaded. Detected game:", STATE.GAME)
+
+-- ===== EXPORT FOR LOADER =====
+local Main = {}
+
+function Main.Start()
+    -- main.lua sudah auto-init
+    -- fungsi ini hanya untuk kompatibilitas loader
+    return true
+end
+
+return Main
