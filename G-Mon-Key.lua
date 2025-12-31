@@ -26,12 +26,27 @@ end
 
 -- Fungsi load script utama
 local function loadMainScript()
-    local ok, err = pcall(function()
-        loadstring(game:HttpGet(MAIN_SCRIPT_URL, true))()
+    local ok, Main = pcall(function()
+        return loadstring(game:HttpGet(MAIN_SCRIPT_URL, true))()
     end)
+
     if not ok then
-        warn("GMON Loader: Gagal memuat main.lua:", err)
+        warn("GMON Loader: gagal load main.lua")
+        return
     end
+
+    if type(Main) ~= "table" then
+        warn("GMON Loader: main.lua tidak return table")
+        return
+    end
+
+    if type(Main.Start) ~= "function" then
+        warn("GMON Loader: Start() tidak ditemukan di main.lua")
+        return
+    end
+
+    -- 🔥 AMAN 100%
+    Main.Start()
 end
 
 -- GUI Key
