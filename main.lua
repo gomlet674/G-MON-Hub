@@ -212,14 +212,16 @@ InfoTab:CreateButton({
 
 -- ===== Fitur tab controls =====
 -- BLOX controls
+-- BF & CAR & BOAT (perbaikan & konsisten)
+
 local BF_attack_delay = 0.35
 local BF_force_sea = nil
 
--- additional BF settings
+-- BF state tambahan
 local BF_range = 10            -- default jarak (studs)
 local BF_long_range = false    -- serang dari jauh (tanpa teleport)
-local BF_fast_attack = false
-local BF_attack_delay_backup = BF_attack_delay
+local BF_fast_attack = false   -- toggle untuk menurunkan attack delay
+local BF_attack_delay_backup = BF_attack_delay -- backup
 
 if GAME == "BLOX_FRUIT" then
     FiturTab:CreateToggle({
@@ -234,7 +236,6 @@ if GAME == "BLOX_FRUIT" then
                 BF_active_start = BF_active_start or os.time()
             else
                 Rayfield:Notify({Title="G-MON", Content="Blox AutoFarm DISABLED - returning to start", Duration=3})
-                -- restore pos
                 pcall(function()
                     local c = SafeChar()
                     if c and BF_start_CFrame then c.HumanoidRootPart.CFrame = BF_start_CFrame end
@@ -298,7 +299,7 @@ if GAME == "BLOX_FRUIT" then
         Callback = function(v) BF_force_sea = (v==0) and nil or v end
     })
 
-    -- Added controls
+    -- controls tambahan BF
     FiturTab:CreateSlider({
         Name = "Range Farming (studs) 1-20",
         Range = {1,20},
@@ -334,68 +335,11 @@ if GAME == "BLOX_FRUIT" then
     })
 end
 
--- ===== CAR helpers (choose fastest owned car) =====
+-- CAR controls
 local CAR_speed = 60
 
--- find player's car models (prioritize workspace.Cars.<playername>)
-local function findPlayerCarsRoot()
-    local carsRoot = Workspace:FindFirstChild("Cars")
-    if not carsRoot then return nil end
-
-    local own = carsRoot:FindFirstChild(LP.Name)
-    if own then
-        if own:IsA("Model") and own.PrimaryPart then
-            return {own}
-        elseif own:IsA("Folder") or own:IsA("Model") then
-            local list = {}
-            for _, v in ipairs(own:GetChildren()) do
-                if v:IsA("Model") and v.PrimaryPart then table.insert(list, v) end
-            end
-            if #list > 0 then return list end
-        end
-    end
-
-    local owned = {}
-    for _, m in ipairs(carsRoot:GetChildren()) do
-        if m:IsA("Model") and m.PrimaryPart then
-            local matched = false
-            local ownerStr = m:FindFirstChild("Owner") or m:FindFirstChild("OwnerName")
-            local ownerIdVal = m:FindFirstChild("OwnerUserId") or m:FindFirstChild("UserId")
-            if ownerStr and tostring(ownerStr.Value) == tostring(LP.Name) then matched = true end
-            if ownerIdVal and tonumber(ownerIdVal.Value) and tonumber(ownerIdVal.Value) == LP.UserId then matched = true end
-            local attrOwner = m:GetAttribute("Owner") or m:GetAttribute("OwnerName")
-            local attrId = m:GetAttribute("OwnerUserId")
-            if attrOwner and tostring(attrOwner) == tostring(LP.Name) then matched = true end
-            if attrId and tonumber(attrId) and tonumber(attrId) == LP.UserId then matched = true end
-            if matched then table.insert(owned, m) end
-        end
-    end
-    if #owned > 0 then return owned end
-
-    for _, m in ipairs(carsRoot:GetChildren()) do
-        if m:IsA("Model") and m.PrimaryPart and m.Name == LP.Name then
-            return {m}
-        end
-    end
-
-    return nil
-end
-
-local function choosePlayerFastestCar()
-    local list = findPlayerCarsRoot()
-    if not list or #list == 0 then return nil end
-    local best, bestVal = nil, -math.huge
-    for _, car in ipairs(list) do
-        local top = car:FindFirstChild("TopSpeed") or car:FindFirstChild("Speed") or car:FindFirstChild("MaxSpeed")
-        local v = nil
-        if top and tonumber(top.Value) then v = tonumber(top.Value) end
-        if not v then v = #car:GetDescendants() end
-        if v > bestVal then bestVal, best = v, car end
-    end
-    return best
-end
-
--- ===== Start / Stop using player car (BodyVelocity "W" style) =====
+-- (PENTING) fungsi choosePlayerFastestCar diharapkan sudah ada di script utama.
+-- startUsingPlayerCar: teleport ke bawah, buat floor, pasang BodyVelocity
 local function startUsingPlayerCar(underMapY)
     underMapY = underMapY or -500
 
@@ -420,31 +364,39 @@ local function startUsingPlayerCar(underMapY)
         if tag then CAR_start_CFrame = tag.Value end
     end
 
-    -- Dapatkan origCF (safely)
-    local success, origCF = pcall(function() return car.PrimaryPart.CFrame end)
-    if not success or not origCF then origCF = car.PrimaryPart.CFrame end
+    -- Ambil origCF dengan aman
+    local origCF
+    local ok, res = pcall(function() return car.PrimaryPart.CFrame end)
+    if ok and res then origCF = res else
+        -- fallback: coba pakai PrimaryPart CFrame langsung
+        if car.PrimaryPart and car.PrimaryPart.CFrame then origCF = car.PrimaryPart.CFrame end
+    end
 
     -- Teleport mobil ke bawah map (tetap jaga X,Z)
-    local targetCF = CFrame.new(origCF.Position.X, underMapY, origCF.Position.Z)
-    pcall(function() car:SetPrimaryPartCFrame(targetCF) end)
+    if origCF then
+        local targetCF = CFrame.new(origCF.Position.X, underMapY, origCF.Position.Z)
+        pcall(function() car:SetPrimaryPartCFrame(targetCF) end)
+    end
 
-    -- Buat floor di bawah agar mobil punya ground
+    -- Buat floor di bawah agar mobil punya ground untuk berjalan (hanya jika belum ada)
     if not car:FindFirstChild("_GmonFloorRef") then
-        local floor = Instance.new("Part")
-        floor.Name = "_GmonFloor_GMON"
-        floor.Size = Vector3.new(300, 2, 300)
-        floor.Position = Vector3.new(origCF.Position.X, underMapY - 1, origCF.Position.Z)
-        floor.Anchored = true
-        floor.CanCollide = true
-        floor.TopSurface = Enum.SurfaceType.Smooth
-        floor.Material = Enum.Material.SmoothPlastic
-        floor.Transparency = 0.15
-        floor.Parent = Workspace
+        if origCF then
+            local floor = Instance.new("Part")
+            floor.Name = "_GmonFloor_GMON"
+            floor.Size = Vector3.new(300, 2, 300)
+            floor.Position = Vector3.new(origCF.Position.X, underMapY - 1, origCF.Position.Z)
+            floor.Anchored = true
+            floor.CanCollide = true
+            floor.TopSurface = Enum.SurfaceType.Smooth
+            floor.Material = Enum.Material.SmoothPlastic
+            floor.Transparency = 0.15
+            floor.Parent = Workspace
 
-        local fv = Instance.new("ObjectValue")
-        fv.Name = "_GmonFloorRef"
-        fv.Value = floor
-        fv.Parent = car
+            local fv = Instance.new("ObjectValue")
+            fv.Name = "_GmonFloorRef"
+            fv.Value = floor
+            fv.Parent = car
+        end
     end
 
     -- Pastikan player duduk/berada dekat kursi (visual)
@@ -459,20 +411,19 @@ local function startUsingPlayerCar(underMapY)
         end
     end
 
-    -- Pasang BodyVelocity pada PrimaryPart (jika belum ada)
+    -- Pasang atau update BodyVelocity pada PrimaryPart
     local prim = car.PrimaryPart
-    if prim and not prim:FindFirstChild("_GmonBV") then
-        local bv = Instance.new("BodyVelocity")
-        bv.Name = "_GmonBV"
-        bv.MaxForce = Vector3.new(1e6, 0, 1e6) -- cukup besar
-        bv.Velocity = prim.CFrame.LookVector * CAR_speed
-        bv.P = 1250
-        bv.Parent = prim
-    else
+    if prim then
         pcall(function()
-            if prim and prim:FindFirstChild("_GmonBV") then
-                prim._GmonBV.Velocity = prim.CFrame.LookVector * CAR_speed
+            local bv = prim:FindFirstChild("_GmonBV")
+            if not bv then
+                bv = Instance.new("BodyVelocity")
+                bv.Name = "_GmonBV"
+                bv.MaxForce = Vector3.new(1e6, 0, 1e6)
+                bv.P = 1250
+                bv.Parent = prim
             end
+            bv.Velocity = prim.CFrame.LookVector * CAR_speed
         end)
     end
 
@@ -480,18 +431,19 @@ local function startUsingPlayerCar(underMapY)
     return car
 end
 
+-- Stop / restore mobil
 local function stopUsingPlayerCar()
     if not chosenCarModel then return end
     pcall(function()
         -- hapus BodyVelocity
-        if chosenCarModel.PrimaryPart and chosenCarModel.PrimaryPart:FindFirstChild("_GmonBV") then
-            chosenCarModel.PrimaryPart._GmonBV:Destroy()
+        if chosenCarModel.PrimaryPart then
+            local bv = chosenCarModel.PrimaryPart:FindFirstChild("_GmonBV")
+            if bv then pcall(function() bv:Destroy() end) end
         end
         -- kembalikan ke pos awal jika ada
         local tag = chosenCarModel:FindFirstChild("_GmonStartPos")
         if tag and tag:IsA("CFrameValue") and chosenCarModel.PrimaryPart then
             pcall(function() chosenCarModel:SetPrimaryPartCFrame(tag.Value) end)
-            -- optional: hapus tag jika mau
             pcall(function() tag:Destroy() end)
         end
         -- hapus floor ref jika ada
@@ -499,8 +451,8 @@ local function stopUsingPlayerCar()
         if fv and fv.Value and fv.Value.Parent then
             pcall(function() fv.Value:Destroy() end)
         end
-        -- bersihkan atribut
-        if chosenCarModel:GetAttribute and chosenCarModel:GetAttribute("GmonFloor") then
+        -- hapus atribut floor jika ada
+        if chosenCarModel.GetAttribute and chosenCarModel:GetAttribute("GmonFloor") then
             pcall(function() chosenCarModel:SetAttribute("GmonFloor", nil) end)
         end
     end)
@@ -509,7 +461,7 @@ local function stopUsingPlayerCar()
     CAR_start_CFrame = nil
 end
 
--- ===== BOAT helpers & loop (stage-by-stage teleport -> chest) =====
+-- ===== BOAT perbaikan =====
 BOAT_delay = BOAT_delay or 1.5
 
 local function isDarkPart(part)
@@ -558,38 +510,7 @@ local function findNearestChestFrom(pos)
     return candidates[1]
 end
 
-if GAME == "BUILD_A_BOAT" then
-    FiturTab:CreateToggle({
-        Name = "Auto Gold Stages",
-        CurrentValue = false,
-        Callback = function(v)
-            BOAT_Auto = v
-            if v then
-                BOAT_start_CFrame = (SafeChar() and SafeChar().HumanoidRootPart.CFrame) or nil
-                Rayfield:Notify({Title="G-MON", Content="Boat Auto ENABLED", Duration=3})
-                setIndicator("boat", true, "Boat: ON")
-                BOAT_active_start = BOAT_active_start or os.time()
-            else
-                Rayfield:Notify({Title="G-MON", Content="Boat Auto DISABLED - returning to start", Duration=3})
-                pcall(function()
-                    local c = SafeChar()
-                    if c and BOAT_start_CFrame then c.HumanoidRootPart.CFrame = BOAT_start_CFrame end
-                end)
-                setIndicator("boat", false, "Boat: OFF")
-                if BOAT_active_start then BOAT_total = BOAT_total + (os.time() - BOAT_active_start); BOAT_active_start = nil end
-            end
-        end
-    })
-
-    FiturTab:CreateSlider({
-        Name = "Stage Delay (s)",
-        Range = {0.5,6},
-        Increment = 0.5,
-        CurrentValue = BOAT_delay,
-        Callback = function(v) BOAT_delay = v end
-    })
-end
-
+-- BOAT main navigator loop (sudah diperbaiki)
 task.spawn(function()
     while true do
         task.wait(0.2)
@@ -624,7 +545,7 @@ task.spawn(function()
             end
 
             if #stages == 0 then
-                Rayfield:Notify({Title="G-MON", Content="No stage parts detected (Boat)", Duration=3})
+                Rayfield:Notify({Title="G-MON", Content="No black stage parts detected (Boat)", Duration=3})
                 BOAT_Auto = false
                 setIndicator("boat", false, "Boat: OFF")
                 return
@@ -665,7 +586,7 @@ end)
 
 -- ===== Core loops =====
 
--- BF Loop (supports BF_range, BF_long_range, BF_fast_attack)
+-- BF Loop (supports BF_range, BF_long_range, BF_fast_attack) --
 task.spawn(function()
     while true do
         task.wait(0.12)
@@ -808,6 +729,91 @@ task.spawn(function()
                 bv.Parent = prim
             else
                 prim._GmonBV.Velocity = prim.CFrame.LookVector * CAR_speed
+            end
+        end)
+    end
+end)
+
+-- BOAT main loop
+task.spawn(function()
+    while true do
+        task.wait(0.2)
+        if GAME ~= "BUILD_A_BOAT" then task.wait(0.5); continue end
+        if not BOAT_Auto then task.wait(0.5); continue end
+
+        pcall(function()
+            local char = SafeChar()
+            if not char then return end
+            local hrp = char:FindFirstChild("HumanoidRootPart")
+            if not hrp then return end
+
+            -- kumpulkan root stage
+            local boatRoots = {}
+            local hints = {"BoatStages","Stages","NormalStages","StageFolder","BoatStage"}
+            for _, name in ipairs(hints) do
+                local r = Workspace:FindFirstChild(name)
+                if r then table.insert(boatRoots, r) end
+            end
+            if #boatRoots == 0 then table.insert(boatRoots, Workspace) end
+
+            -- kumpulkan semua stage part
+            local stages = {}
+            for _, root in ipairs(boatRoots) do
+                local s = collectBoatStages(root)
+                for _, p in ipairs(s) do table.insert(stages, p) end
+            end
+
+            -- fallback: semua part bernama "stage"
+            if #stages == 0 then
+                for _, obj in ipairs(Workspace:GetDescendants()) do
+                    if obj:IsA("BasePart") and string.find(string.lower(obj.Name or ""), "stage") then
+                        table.insert(stages, obj)
+                    end
+                end
+            end
+
+            if #stages == 0 then
+                Rayfield:Notify({Title="G-MON", Content="No black stage parts detected (Boat)", Duration=3})
+                BOAT_Auto = false
+                setIndicator("boat", false, "Boat: OFF")
+                return
+            end
+
+            -- deduplicate stage berdasarkan posisi
+            local seen, uniq = {}, {}
+            for _, p in ipairs(stages) do
+                local key = string.format("%.2f_%.2f_%.2f", p.Position.X, p.Position.Y, p.Position.Z)
+                if not seen[key] then seen[key] = true; table.insert(uniq, p) end
+            end
+            stages = uniq
+
+            -- sort stage berdasarkan jarak dari start
+            local referencePos = (BOAT_start_CFrame and BOAT_start_CFrame.p) or hrp.Position
+            table.sort(stages, function(a,b)
+                return (a.Position - referencePos).Magnitude < (b.Position - referencePos).Magnitude
+            end)
+
+            -- kunjungi setiap stage
+            for _, stagePart in ipairs(stages) do
+                if not BOAT_Auto then break end
+                if not stagePart or not stagePart.Parent then continue end
+                pcall(function()
+                    hrp.CFrame = stagePart.CFrame * CFrame.new(0,3,0)
+                    lastAction = "Boat Stage -> "..tostring(stagePart.Name)
+                end)
+                task.wait(BOAT_delay or 1.5)
+            end
+
+            -- teleport ke chest terdekat setelah stage
+            local finalChest = findNearestChestFrom(hrp.Position)
+            if finalChest then
+                pcall(function()
+                    hrp.CFrame = finalChest.CFrame * CFrame.new(0,3,0)
+                    lastAction = "Boat Chest -> "..tostring(finalChest.Name)
+                    Rayfield:Notify({Title="G-MON", Content="Reached chest", Duration=3})
+                end)
+            else
+                Rayfield:Notify({Title="G-MON", Content="No chest found after stages", Duration=3})
             end
         end)
     end
