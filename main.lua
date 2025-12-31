@@ -631,18 +631,109 @@ do
     STATE.Modules.Boat = M
 end
 
--- ===== UI wiring (Rayfield) =====
+-- ===== UI wiring (Rayfield) - DYNAMIC per detected game =====
 SAFE_CALL(function()
     local Tabs = STATE.Tabs
+    -- Info tab: show detected & manual override
     Tabs.Info:CreateLabel("G-MON Hub - client-only. Use in private/testing places.")
-    Tabs.Info:CreateButton({ Name = "Show Quick Help", Callback = function()
-        SAFE_CALL(function()
-            if STATE.GAME == "BLOX_FRUIT" then STATE.Rayfield:Notify({Title="Help - Blox", Content="Auto Farm: toggle to start. Use sliders for range/delay.", Duration=5})
-            elseif STATE.GAME == "CAR_TYCOON" then STATE.Rayfield:Notify({Title="Help - Car", Content="Auto Drive: toggle to start. Car Speed slider available.", Duration=5})
-            elseif STATE.GAME == "BUILD_A_BOAT" then STATE.Rayfield:Notify({Title="Help - Boat", Content="Auto Gold: toggle to start. Stage delay slider available.", Duration=5})
-            else STATE.Rayfield:Notify({Title="Help", Content="Place not recognized; use toggles manually.", Duration=4}) end
-        end)
+    local detectedLabel = Tabs.Info:CreateLabel(ShortLabelForGame(STATE.GAME) .. " (detected)")
+    Tabs.Info:CreateButton({
+        Name = "Detect Game Now",
+        Callback = function()
+            SAFE_CALL(function()
+                local d = Utils.FlexibleDetectByAliases()
+                if d and d ~= "UNKNOWN" then
+                    STATE.GAME = d
+                    detectedLabel:Set("text", ShortLabelForGame(d) .. " (detected)")
+                    STATE.Rayfield:Notify({Title="G-MON", Content="Detected: "..ShortLabelForGame(d), Duration=4})
+                    -- stop all modules first
+                    SAFE_CALL(STATE.Modules.Blox.stop)
+                    SAFE_CALL(STATE.Modules.Car.stop)
+                    SAFE_CALL(STATE.Modules.Boat.stop)
+                    -- rebuild feature UI
+                    SAFE_CALL(function() buildFeatureControls() end)
+                else
+                    STATE.Rayfield:Notify({Title="G-MON", Content="Detect: Unknown", Duration=3})
+                end
+            end)
+        end
+    })
+
+    Tabs.Info:CreateButton({ Name = "Force Blox", Callback = function()
+        STATE.GAME = "BLOX_FRUIT"
+        SAFE_CALL(function() buildFeatureControls() end)
+        STATE.Rayfield:Notify({Title="G-MON", Content="Forced: Blox", Duration=3})
     end })
+    Tabs.Info:CreateButton({ Name = "Force Car", Callback = function()
+        STATE.GAME = "CAR_TYCOON"
+        SAFE_CALL(function() buildFeatureControls() end)
+        STATE.Rayfield:Notify({Title="G-MON", Content="Forced: Car", Duration=3})
+    end })
+    Tabs.Info:CreateButton({ Name = "Force Boat", Callback = function()
+        STATE.GAME = "BUILD_A_BOAT"
+        SAFE_CALL(function() buildFeatureControls() end)
+        STATE.Rayfield:Notify({Title="G-MON", Content="Forced: Boat", Duration=3})
+    end })
+
+    Tabs.Info:CreateParagraph({ Title = "Note", Content = "If detection is wrong, use Force buttons. UI will rebuild accordingly." })
+
+    -- Helper: clear old controls (Rayfield doesn't expose remove — we track created handles)
+    local createdControls = {} -- store callbacks/refs if needed
+
+    local function clearControls()
+        -- Rayfield lacks a universal remove API; best approach is to create only once per session after replacement.
+        -- If you rerun script, old UI will be gone; here we attempt to disable modules to avoid duplicates.
+        SAFE_CALL(STATE.Modules.Blox.stop)
+        SAFE_CALL(STATE.Modules.Car.stop)
+        SAFE_CALL(STATE.Modules.Boat.stop)
+        createdControls = {}
+    end
+
+    -- Builder: create feature controls only for current game
+    function buildFeatureControls()
+        clearControls()
+        local g = STATE.GAME or "UNKNOWN"
+        -- update status label
+        if STATE.Status and STATE.Status.lines and STATE.Status.lines.bf then
+            STATE.Status.lines.bf.lbl.Text = "Blox: "..(g=="BLOX_FRUIT" and "Available" or "N/A")
+            STATE.Status.lines.car.lbl.Text = "Car: "..(g=="CAR_TYCOON" and "Available" or "N/A")
+            STATE.Status.lines.boat.lbl.Text = "Boat: "..(g=="BUILD_A_BOAT" and "Available" or "N/A")
+        end
+
+        -- Remove: we won't try to remove existing Rayfield components (non-API); instead create only relevant ones.
+        -- Create controls depending on detected game:
+        if g == "BLOX_FRUIT" then
+            Tabs.Fitur:CreateLabel("Blox Fruit controls")
+            createdControls.bf_auto = Tabs.Fitur:CreateToggle({ Name = "Auto Farm (Blox)", CurrentValue = false, Callback = function(v)
+                if v then SAFE_CALL(STATE.Modules.Blox.start) else SAFE_CALL(STATE.Modules.Blox.stop) end
+            end })
+            createdControls.bf_long = Tabs.Fitur:CreateToggle({ Name = "Long Range Hit", CurrentValue = STATE.Modules.Blox.config.long_range, Callback = function(v) STATE.Modules.Blox.config.long_range = v end })
+            createdControls.bf_fast = Tabs.Fitur:CreateToggle({ Name = "Fast Attack (client)", CurrentValue = STATE.Modules.Blox.config.fast_attack, Callback = function(v) STATE.Modules.Blox.config.fast_attack = v end })
+            createdControls.bf_delay = Tabs.Fitur:CreateSlider({ Name = "Attack Delay (ms)", Range = {50,1000}, Increment = 25, CurrentValue = math.floor((STATE.Modules.Blox.config.attack_delay or 0.35)*1000), Callback = function(v) STATE.Modules.Blox.config.attack_delay = v/1000 end })
+            createdControls.bf_range = Tabs.Fitur:CreateSlider({ Name = "Range Farming (studs)", Range = {1,50}, Increment = 1, CurrentValue = STATE.Modules.Blox.config.range or 10, Callback = function(v) STATE.Modules.Blox.config.range = v end })
+        elseif g == "CAR_TYCOON" then
+            Tabs.Fitur:CreateLabel("Car Tycoon controls")
+            createdControls.car_auto = Tabs.Fitur:CreateToggle({ Name = "Car AutoDrive", CurrentValue = false, Callback = function(v) if v then SAFE_CALL(STATE.Modules.Car.start) else SAFE_CALL(STATE.Modules.Car.stop) end end })
+            createdControls.car_speed = Tabs.Fitur:CreateSlider({ Name = "Car Speed", Range = {20,200}, Increment = 5, CurrentValue = STATE.Modules.Car.speed or 60, Callback = function(v) STATE.Modules.Car.speed = v end })
+        elseif g == "BUILD_A_BOAT" then
+            Tabs.Fitur:CreateLabel("Build A Boat controls")
+            createdControls.boat_auto = Tabs.Fitur:CreateToggle({ Name = "Boat Auto Stages", CurrentValue = false, Callback = function(v) if v then SAFE_CALL(STATE.Modules.Boat.start) else SAFE_CALL(STATE.Modules.Boat.stop) end end })
+            createdControls.boat_delay = Tabs.Fitur:CreateSlider({ Name = "Stage Delay (s)", Range = {0.5,6}, Increment = 0.5, CurrentValue = STATE.Modules.Boat.delay or 1.5, Callback = function(v) STATE.Modules.Boat.delay = v end })
+        else
+            Tabs.Fitur:CreateLabel("No auto features for this place. Use Force buttons in Info tab.")
+        end
+
+        -- small notify
+        SAFE_CALL(function()
+            if STATE.Rayfield and STATE.Rayfield.Notify then
+                STATE.Rayfield:Notify({Title="G-MON", Content="UI built for "..ShortLabelForGame(g), Duration=3})
+            end
+        end)
+    end
+
+    -- build initial feature controls based on current detection
+    SAFE_CALL(buildFeatureControls)
+end)
 
     -- BLOX controls
     Tabs.Fitur:CreateToggle({ Name = "Auto Farm (Blox)", CurrentValue = false, Callback = function(v) if v then SAFE_CALL(STATE.Modules.Blox.start) else SAFE_CALL(STATE.Modules.Blox.stop) end end })
