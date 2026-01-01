@@ -43,7 +43,7 @@ elseif PlaceId == 537413528 then
 
 -- Blox Fruits
 elseif PlaceId == 2753915549 then
-    safeLoad("https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/modules/blox.lua")
+    safeLoad("https://pandadevelopment.net/virtual/file/f2e45fc211ee862d"))()")
 
 else
     Rayfield:Notify({
