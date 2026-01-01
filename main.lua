@@ -1,11 +1,9 @@
 --[[
-  G-MON Hub - main_with_vexon_and_gmonextras.lua (Merged & Ready)
-  - Core G-MON kept intact (Blox/Car/Boat modules preserved, unchanged)
-  - Added VexonHub (key UI + loader helper) integrated into Scripts tab
-  - Haruka module renamed to GMONExtras (AutoFarm + Gold Tracker)
-  - Integrated VexonHub & GMONExtras into STATE.Modules and UI without altering core G-MON logic
-  - NOTE: This script still calls remote loaders (game:HttpGet + loadstring). Remote execution is risky.
-    If you want, I can produce a safe version that comments out remote load calls for offline inspection.
+  G-MON Hub - Haruka - Vexno (Merged)
+  - G-MON core (Blox / Car / Boat modules) kept intact
+  - Added Haruka module (AutoFarm + Gold Tracker) as "Script Picker" features
+  - UI: extra "Scripts" tab to toggle Haruka features
+  - SAFE_CALL wrappers, status GUI, fallback Rayfield preserved
 --]]
 
 -- BOOTSTRAP
@@ -118,7 +116,10 @@ end
 STATE.Modules.Utils = Utils
 
 -- ===== MODULES (original G-MON kept) =====
--- Blox/Car/Boat modules kept intact (identical behavior). (BEGIN Blox module)
+-- [BLOX module, CAR module, BOAT module]
+-- (copied exactly from your provided script; preserved as-is to avoid changing behavior)
+-- For brevity in this merged snippet they are kept intact:
+-- (BEGIN Blox module)
 do
     local M = {}
     M.config = { attack_delay = 0.35, range = 10, long_range = false, fast_attack = false }
@@ -433,210 +434,7 @@ do
 end
 -- (END Boat module)
 
--- ===== VEXON HUB module (integrated) =====
-do
-    local V = {}
-    V.Name = "VexonHub"
-    V.TrialFile = "VexonHubTrail.txt"
-    V.MaxAttempts = 5
-    V.KeyFile = "VexonHub_Key.txt"
-    V.RemoteKeyURL1 = "https://raw.githubusercontent.com/TheVex0n/vexonhub-key/refs/heads/main/key.txt"
-    V.RemoteKeyURL2 = "https://raw.githubusercontent.com/DiosDi/VexonHub/refs/heads/main/Key-VexonHub"
-    V.LoaderURL = "https://raw.githubusercontent.com/DiosDi/VexonHub/main/Loader-VexonHub"
-
-    -- UI refs
-    V._gui = nil
-
-    -- increment usage trail
-    local function incrementTrail()
-        local a = V.TrialFile
-        local b = V.MaxAttempts
-        local c = 0
-        if isfile and readfile and isfile(a) then
-            local d = readfile(a)
-            c = tonumber(d) or 0
-        end
-        c = c + 1
-        if writefile then pcall(function() writefile(a, tostring(c)) end) end
-        return c
-    end
-
-    local function fetchRemoteKey(url)
-        local ok, res = pcall(function() return game:HttpGet(url, true) end)
-        if ok and res and res ~= "" then
-            local s = res:gsub("^\239\187\191",""):gsub("^%s*(.-)%s*$","%1")
-            return s
-        end
-        return nil
-    end
-
-    function V.CheckRemoteKeys()
-        local k1 = fetchRemoteKey(V.RemoteKeyURL1)
-        local k2 = fetchRemoteKey(V.RemoteKeyURL2)
-        return k1, k2
-    end
-
-    function V.LoadLoaderSafe()
-        -- loads remote loader; kept as original (remote execution risk)
-        pcall(function()
-            local body = game:HttpGet(V.LoaderURL)
-            if body and body ~= "" then
-                loadstring(body)()
-            end
-        end)
-    end
-
-    function V.ShowKeyUI()
-        SAFE_CALL(function()
-            -- Build UI only once
-            if V._gui and V._gui.Parent then return end
-
-            local c = incrementTrail()
-            if c <= V.MaxAttempts then
-                -- auto-load loader if under trial
-                V.LoadLoaderSafe()
-                return
-            end
-
-            local playerGui = LP:WaitForChild("PlayerGui")
-            -- Black fade GUI
-            local blackGui = Instance.new("ScreenGui")
-            blackGui.Name = "VexonHub_BlackFadeGui"
-            blackGui.IgnoreGuiInset = true
-            blackGui.ResetOnSpawn = false
-            blackGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
-            blackGui.Parent = playerGui
-
-            local frame = Instance.new("Frame")
-            frame.BackgroundColor3 = Color3.new(0,0,0)
-            frame.Size = UDim2.new(1,0,1,0)
-            frame.Position = UDim2.new(0,0,0,0)
-            frame.BackgroundTransparency = 0.0
-            frame.BorderSizePixel = 0
-            frame.ZIndex = 999999
-            frame.Parent = blackGui
-
-            local logo = Instance.new("ImageLabel")
-            logo.Size = UDim2.new(0,100,0,100)
-            logo.Position = UDim2.new(0.5,-50,0.5,-110)
-            logo.BackgroundTransparency = 1
-            logo.Image = "rbxassetid://84519376661277"
-            logo.ImageTransparency = 0
-            logo.ZIndex = 1000001
-            logo.Parent = blackGui
-
-            -- Key textbox GUI
-            local keyGui = Instance.new("ScreenGui")
-            keyGui.Name = "VexonHub_GlowingTextbox"
-            keyGui.ResetOnSpawn = false
-            keyGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
-            keyGui.Parent = playerGui
-
-            local function styleGuiText(x)
-                x.BackgroundColor3 = Color3.fromRGB(0,0,0)
-                x.TextColor3 = Color3.fromRGB(255,255,255)
-                x.Font = Enum.Font.Gotham
-                x.TextSize = 18
-                x.ZIndex = 1000002
-                x.TextTransparency = 0
-                local y = Instance.new("UICorner", x)
-                y.CornerRadius = UDim.new(0,12)
-                local z = Instance.new("UIStroke", x)
-                z.Thickness = 1
-                z.Color = Color3.fromRGB(170,0,255)
-                z.Transparency = 0.2
-            end
-
-            local txtBox = Instance.new("TextBox")
-            txtBox.Name = "Vexon_KeyBox"
-            txtBox.Parent = keyGui
-            txtBox.Size = UDim2.new(0,210,0,30)
-            txtBox.Position = UDim2.new(0.5, -105, 0.5, -25)
-            txtBox.ClearTextOnFocus = true
-            txtBox.Text = "Key In Discord for free"
-            styleGuiText(txtBox)
-
-            local btnGet = Instance.new("TextButton"); btnGet.Parent = keyGui; btnGet.Size = UDim2.new(0,100,0,30); btnGet.Position = UDim2.new(0.5, -105, 0.5, 20); btnGet.Text = "Get Key"; styleGuiText(btnGet)
-            local btnCheck = Instance.new("TextButton"); btnCheck.Parent = keyGui; btnCheck.Size = UDim2.new(0,100,0,30); btnCheck.Position = UDim2.new(0.5, 5, 0.5, 20); btnCheck.Text = "Check Key"; styleGuiText(btnCheck)
-            local btnClose = Instance.new("TextButton"); btnClose.Parent = keyGui; btnClose.Size = UDim2.new(0,15,0,15); btnClose.Position = UDim2.new(1, -275, 0, 145); btnClose.Text = "×"; styleGuiText(btnClose)
-            local btnHelp = Instance.new("TextButton"); btnHelp.Parent = keyGui; btnHelp.Size = UDim2.new(0,15,0,15); btnHelp.Position = UDim2.new(1, -519, 0, 145); btnHelp.Text = "?"; styleGuiText(btnHelp)
-
-            local gameList = Instance.new("TextLabel")
-            gameList.Parent = keyGui
-            gameList.Text = "VexonHub Supported Games..."
-            gameList.TextColor3 = Color3.fromRGB(255,255,255)
-            gameList.BackgroundTransparency = 1
-            gameList.Font = Enum.Font.GothamBold
-            gameList.TextSize = 18
-            gameList.TextXAlignment = Enum.TextXAlignment.Left
-            gameList.Size = UDim2.new(0,1000,0,30)
-            gameList.Position = UDim2.new(1,0,0.85,0)
-            gameList.ZIndex = 1000003
-
-            -- copy invite
-            btnGet.MouseButton1Click:Connect(function()
-                local invite = "https://discord.gg/mdJKdwbKjE"
-                pcall(function() setclipboard(invite) end)
-                btnGet.Text = "Copied"
-                task.wait(1.5)
-                btnGet.Text = "Get Key"
-            end)
-
-            -- check key
-            btnCheck.MouseButton1Click:Connect(function()
-                local entered = txtBox.Text:gsub("^%s*(.-)%s*$","%1")
-                local k1, k2 = V.CheckRemoteKeys()
-                local ok = (k1 and entered == k1) or (k2 and entered == k2)
-                if ok then
-                    pcall(function() if writefile then writefile(V.KeyFile, entered) end end)
-                    -- attempt to load loader (kept behavior)
-                    pcall(function() V.LoadLoaderSafe() end)
-                    -- cleanup GUIs
-                    pcall(function()
-                        if keyGui then keyGui:Destroy() end
-                        if blackGui then blackGui:Destroy() end
-                    end)
-                else
-                    btnCheck.Text = "Wrong"
-                    task.wait(1.2)
-                    btnCheck.Text = "Check Key"
-                end
-            end)
-
-            btnClose.MouseButton1Click:Connect(function()
-                pcall(function() if keyGui then keyGui:Destroy() end if blackGui then blackGui:Destroy() end end)
-            end)
-
-            V._gui = keyGui
-        end)
-    end
-
-    function V.TryAutoLoadIfKeyPresent()
-        SAFE_CALL(function()
-            local hasFile = isfile and readfile and isfile(V.KeyFile)
-            if hasFile then
-                local q = readfile(V.KeyFile):gsub("^%s*(.-)%s*$","%1")
-                local k1,k2 = V.CheckRemoteKeys()
-                if q == k1 or q == k2 then
-                    pcall(function() V.LoadLoaderSafe() end)
-                    return true
-                end
-            end
-            return false
-        end)
-    end
-
-    function V.ExposeConfig()
-        return {
-            { type="button", name="Open Vexon Key UI", callback = function() V.ShowKeyUI() end },
-            { type="button", name="Try Autoload (local key)", callback = function() V.TryAutoLoadIfKeyPresent() end }
-        }
-    end
-
-    STATE.Modules.VexonHub = V
-end
-
--- ===== GMONExtras module (formerly Haruka) =====
+-- ===== HARUKA module (added) =====
 do
     local M = {}
     M.autoRunning = false
@@ -644,83 +442,74 @@ do
     M._autoTask = nil
     M._goldGui = nil
 
-    -- AutoFarm loop (copied/adapted)
+    -- AutoFarm behavior lifted/adapted from previous clean Haruka
     local function haruka_auto_loop(character)
-        ::haruka_top::
         while M.autoRunning do
             if not character or not character.Parent then
-                task.wait(1)
-                character = game.Players.LocalPlayer and game.Players.LocalPlayer.Character or nil
-                if not character then goto haruka_continue end
+                wait(1)
+                character = game.Players.LocalPlayer.Character
+                if not character then continue end
             end
 
-            task.wait(1.24)
-            local hrp = character and character:FindFirstChild("HumanoidRootPart")
-            if not hrp then task.wait(1) goto haruka_continue end
+            wait(1.24)
+            local hrp = character:FindFirstChild("HumanoidRootPart")
+            if not hrp then wait(1) continue end
 
-            local velObj = Instance.new("BodyVelocity")
-            velObj.Name = "_HarukaVel"
-            velObj.Parent = hrp
-            velObj.MaxForce = Vector3.new(0,0,0)
-            pcall(function() velObj.Velocity = Vector3.new(0, -0.1, 0) end)
-
+            -- lightweight velocity object
+            local velObj = Instance.new("BodyVelocity", hrp)
+            velObj.Velocity = Vector3.new(0, -0.1, 0)
+            -- path & movements (kept same coordinates as Haruka)
             pcall(function() hrp.CFrame = CFrame.new(-135.900,72,623.750) end)
 
-            while hrp and hrp.CFrame and (hrp.CFrame.Z < 8600.75) and M.autoRunning do
+            while hrp and hrp.CFrame and hrp.CFrame.Z < 8600.75 and M.autoRunning do
                 for i=1,50 do
                     if not M.autoRunning then break end
                     if hrp then pcall(function() hrp.CFrame = hrp.CFrame + Vector3.new(0,0,0.3) end) end
-                    task.wait()
                 end
-                task.wait()
+                wait()
             end
 
-            if velObj and velObj.Parent then pcall(function() velObj:Destroy() end) end
+            if velObj then pcall(function() velObj:Destroy() end) end
 
             if M.autoRunning then
-                pcall(function() hrp.CFrame = CFrame.new(-150.900,72,2000.750) end); task.wait(0.2)
-                pcall(function() hrp.CFrame = CFrame.new(-150.900,72,2500.750) end); task.wait(0.5)
-                pcall(function() hrp.CFrame = CFrame.new(-55.8801956,-361.116333,9488.1377) end); task.wait(0.5)
-                pcall(function() hrp.CFrame = CFrame.new(-55.8801956,-361.116333,9495.1377) end); task.wait(1)
-                pcall(function() hrp.CFrame = CFrame.new(-205.900,20,1700.750) end); task.wait(2.3)
-                pcall(function() hrp.CFrame = CFrame.new(-55.8801956,-361.116333,9488.1377) end); task.wait(0.6)
-                pcall(function() hrp.CFrame = CFrame.new(-55.8801956,-361.116333,9495.1377) end); task.wait(1.4)
+                pcall(function() hrp.CFrame = CFrame.new(-150.900,72,2000.750) end); wait(0.2)
+                pcall(function() hrp.CFrame = CFrame.new(-150.900,72,2500.750) end); wait(0.5)
+                pcall(function() hrp.CFrame = CFrame.new(-55.8801956,-361.116333,9488.1377) end); wait(0.5)
+                pcall(function() hrp.CFrame = CFrame.new(-55.8801956,-361.116333,9495.1377) end); wait(1)
+                pcall(function() hrp.CFrame = CFrame.new(-205.900,20,1700.750) end); wait(2.3)
+                pcall(function() hrp.CFrame = CFrame.new(-55.8801956,-361.116333,9488.1377) end); wait(0.6)
+                pcall(function() hrp.CFrame = CFrame.new(-55.8801956,-361.116333,9495.1377) end); wait(1.4)
                 pcall(function() hrp.CFrame = CFrame.new(-55.8801956,-361.116333,9488.1377) end)
             end
-
-            ::haruka_continue::
-            task.wait(0.1)
         end
     end
 
     function M.startAutoFarm()
         if M.autoRunning then return end
         M.autoRunning = true
-        STATE.Flags.GMONAuto = true
-        local char = game.Players.LocalPlayer and game.Players.LocalPlayer.Character or nil
-        if char then
-            M._autoTask = task.spawn(function() haruka_auto_loop(char) end)
-        else
-            game.Players.LocalPlayer.CharacterAdded:Connect(function(char)
-                task.wait(2)
-                if M.autoRunning then task.spawn(function() haruka_auto_loop(char) end) end
-            end)
+        STATE.Flags.HarukaAuto = true
+        if game.Players.LocalPlayer.Character then
+            M._autoTask = task.spawn(function() haruka_auto_loop(game.Players.LocalPlayer.Character) end)
         end
+        game.Players.LocalPlayer.CharacterAdded:Connect(function(char)
+            wait(2)
+            if M.autoRunning then task.spawn(function() haruka_auto_loop(char) end) end
+        end)
     end
 
     function M.stopAutoFarm()
         M.autoRunning = false
-        STATE.Flags.GMONAuto = false
+        STATE.Flags.HarukaAuto = false
         M._autoTask = nil
     end
 
-    -- Gold Tracker (UI)
+    -- Gold Tracker (UI). A minimal, compatible version of Haruka Gold Tracker
     local function create_gold_gui()
         local player = game.Players.LocalPlayer
         if not player then return nil end
         local pg = player:FindFirstChild("PlayerGui") or player:WaitForChild("PlayerGui")
         local GoldGui = Instance.new("ScreenGui")
-        GoldGui.Name = "GMON_GoldTracker"
+        GoldGui.Name = "HarukaGoldTracker"
         GoldGui.ResetOnSpawn = false
         GoldGui.Parent = pg
 
@@ -736,7 +525,7 @@ do
         local Stroke = Instance.new("UIStroke"); Stroke.Color = Color3.fromRGB(50,50,50); Stroke.Thickness = 2; Stroke.Parent = Frame
 
         local labels = {}
-        local texts = {"Start balance:", "Current balance:", "Earned:", "Runtime:"}
+        local texts = {"Начальный баланс:", "Текущий баланс:", "Заработано:", "Время работы:"}
         for i, t in ipairs(texts) do
             local holder = Instance.new("Frame"); holder.Size = UDim2.new(1,-20,0,30); holder.Position = UDim2.new(0,10,0,15+(i-1)*35); holder.BackgroundTransparency = 1; holder.Parent = Frame
             local left = Instance.new("TextLabel"); left.Size = UDim2.new(0.6,0,1,0); left.Text = t; left.TextColor3 = Color3.fromRGB(180,180,180); left.BackgroundTransparency = 1; left.TextSize = 14; left.Font = Enum.Font.Gotham; left.TextXAlignment = Enum.TextXAlignment.Left; left.Parent = holder
@@ -749,6 +538,7 @@ do
 
     local function try_find_amount_label(root)
         if not root then return nil end
+        -- find TextLabel that looks numeric
         local function findRec(n)
             local out = {}
             if n:IsA("TextLabel") then table.insert(out, n) end
@@ -759,9 +549,10 @@ do
         end
         local candidates = findRec(root)
         for _, lbl in ipairs(candidates) do
-            local s = lbl.Text or ""
+            local s = lbl.Text:gsub("%%D","")
             local num = s:gsub("%s",""):gsub(",","")
-            if num ~= "" and tonumber((num:gsub("[^0-9]",""))) then return lbl end
+            if num ~= "" and tonumber(num) then return lbl end
+            -- try stripping non-digits
             local digits = num:match("(%d+)")
             if digits and tonumber(digits) then return lbl end
         end
@@ -771,27 +562,36 @@ do
     local function gold_loop(stateObj)
         if not stateObj then return end
         local player = game.Players.LocalPlayer
+        local root = player:FindFirstChild("PlayerGui")
+        local Mroot = nil
+        -- try detect stored UI first
+        SAFE_CALL(function()
+            if player and player:FindFirstChild("PlayerGui") then Mroot = player.PlayerGui end
+        end)
         local startLabel = nil
         local baseAmount = 0
-        stateObj.Labels[1].Text = "0"
+        stateObj.Labels[1].Text = "0" -- initial
         stateObj.Labels[2].Text = "0"
         stateObj.Labels[3].Text = "0"
-        stateObj.Labels[4].Text = "00:00"
+        stateObj.Labels[4].Text = "0:00"
         while M.goldRunning do
-            local root = player and player:FindFirstChild("PlayerGui")
-            if root then
+            -- attempt to find the in-game label with the amount
+            if Mroot then
                 local found = nil
-                -- game-specific path attempt
-                if root:FindFirstChild("GoldGui") and root.GoldGui:FindFirstChild("Frame") then
-                    local ok, frame = pcall(function() return root.GoldGui.Frame end)
+                if Mroot:FindFirstChild("GoldGui") and Mroot.GoldGui:FindFirstChild("Frame") then
+                    -- some game-specific path
+                    local ok, frame = pcall(function() return Mroot.GoldGui.Frame end)
                     if ok and frame then found = try_find_amount_label(frame) end
                 end
                 if not found then
-                    for _, child in ipairs(root:GetDescendants()) do
+                    -- fallback: brute search for numeric TextLabel
+                    for _, child in ipairs(Mroot:GetDescendants()) do
                         if child:IsA("TextLabel") then
-                            local txt = child.Text or ""
-                            local num = (txt:gsub("%s",""):gsub("[^%d]",""))
-                            if num ~= "" and tonumber(num) then found = child; break end
+                            local txt = child.Text:gsub("%%D",""):gsub("%s","")
+                            if txt ~= "" then
+                                local num = txt:match("(%d+)")
+                                if num and tonumber(num) then found = child; break end
+                            end
                         end
                     end
                 end
@@ -812,14 +612,14 @@ do
             local elapsed = os.time() - stateObj.StartTime
             local mm = math.floor(elapsed/60); local ss = elapsed%60
             stateObj.Labels[4].Text = string.format("%02d:%02d", mm, ss)
-            task.wait(1)
+            wait(1)
         end
     end
 
     function M.startGoldTracker()
         if M.goldRunning then return end
         M.goldRunning = true
-        STATE.Flags.GMONGold = true
+        STATE.Flags.HarukaGold = true
         local obj = create_gold_gui()
         if obj then
             M._goldGui = obj
@@ -829,7 +629,7 @@ do
 
     function M.stopGoldTracker()
         M.goldRunning = false
-        STATE.Flags.GMONGold = false
+        STATE.Flags.HarukaGold = false
         if M._goldGui and M._goldGui.Gui and M._goldGui.Gui.Parent then
             pcall(function() M._goldGui.Gui:Destroy() end)
         end
@@ -838,12 +638,12 @@ do
 
     function M.ExposeConfig()
         return {
-            { type="toggle", name="GMON Auto Farm", current=false, onChange=function(v) if v then M.startAutoFarm() else M.stopAutoFarm() end end },
-            { type="toggle", name="GMON Gold Tracker", current=false, onChange=function(v) if v then M.startGoldTracker() else M.stopGoldTracker() end end }
+            { type="toggle", name="Haruka AutoFarm", current=false, onChange=function(v) if v then M.startAutoFarm() else M.stopAutoFarm() end end },
+            { type="toggle", name="Haruka Gold Tracker", current=false, onChange=function(v) if v then M.startGoldTracker() else M.stopGoldTracker() end end }
         }
     end
 
-    STATE.Modules.GMONExtras = M
+    STATE.Modules.Haruka = M
 end
 
 -- RAYFIELD LOAD (safe fallback)
@@ -856,7 +656,7 @@ do
     else
         warn("[G-MON] Rayfield load failed; using fallback UI.")
         local Fallback = {}
-        function Fallback:CreateWindow()
+        function Fallback:CreateWindow() -- returns object with CreateTab
             local win = {}
             function win:CreateTab(name)
                 local tab = {}
@@ -875,7 +675,7 @@ do
     end
 end
 
--- STATUS GUI (draggable)
+-- STATUS GUI (draggable) - unchanged
 do
     local Status = {}
     function Status.Create()
@@ -992,7 +792,7 @@ end
 -- create status GUI
 SAFE_CALL(function() if STATE.Status and STATE.Status.Create then STATE.Status.Create() end end)
 
--- UI BUILDING: create separate tabs per game (only once), plus Scripts (VexonHub & GMONExtras)
+-- UI BUILDING: create separate tabs per game (only once), plus Scripts (Haruka)
 local function buildUI()
     SAFE_CALL(function()
         STATE.Window = (STATE.Rayfield and STATE.Rayfield.CreateWindow) and STATE.Rayfield:CreateWindow({
@@ -1010,7 +810,7 @@ local function buildUI()
             Tabs.TabBoat = STATE.Window:CreateTab("Build A Boat")
             Tabs.Move = STATE.Window:CreateTab("Movement")
             Tabs.Debug = STATE.Window:CreateTab("Debug")
-            Tabs.Scripts = STATE.Window:CreateTab("Scripts") -- VexonHub & GMONExtras
+            Tabs.Scripts = STATE.Window:CreateTab("Scripts") -- Haruka / picker tab
         else
             local function makeTab()
                 return { CreateLabel = function() end, CreateParagraph = function() end, CreateButton = function() end, CreateToggle = function() end, CreateSlider = function() end }
@@ -1044,7 +844,7 @@ local function buildUI()
             Tabs.Info:CreateParagraph({ Title = "Note", Content = "Each game has its own tab. Use Force/Detect to update status. Features are separated to avoid duplicates." })
         end)
 
-        -- BLOX tab
+        -- BLOX tab (features inside its own tab)
         SAFE_CALL(function()
             local t = Tabs.TabBlox
             t:CreateLabel("Blox Fruit Controls")
@@ -1071,7 +871,7 @@ local function buildUI()
             t:CreateSlider({ Name = "Stage Delay (s)", Range = {0.5,6}, Increment = 0.5, CurrentValue = STATE.Modules.Boat.delay or 1.5, Callback = function(v) STATE.Modules.Boat.delay = v end })
         end)
 
-        -- Movement tab
+        -- Movement tab (fly) - unchanged
         SAFE_CALL(function()
             local t = Tabs.Move
             local flyEnabled = false; local flySpeed = 60; local flyY = 0
@@ -1103,18 +903,15 @@ local function buildUI()
             t:CreateButton({ Name = "Stop All Modules", Callback = function() SAFE_CALL(STATE.Modules.Blox.stop); SAFE_CALL(STATE.Modules.Car.stop); SAFE_CALL(STATE.Modules.Boat.stop) end })
         end)
 
-        -- Scripts tab (VexonHub & GMONExtras)
+        -- Scripts tab (Haruka picker)
         SAFE_CALL(function()
             local t = Tabs.Scripts
-            t:CreateLabel("Script Picker / Extensions")
-            t:CreateParagraph({ Title = "VexonHub", Content = "Key entry & loader for VexonHub." })
-            t:CreateButton({ Name = "Open Vexon Key UI", Callback = function() SAFE_CALL(function() if STATE.Modules.VexonHub then STATE.Modules.VexonHub.ShowKeyUI() end end) end })
-            t:CreateButton({ Name = "Try Vexon Autoload (local key)", Callback = function() SAFE_CALL(function() if STATE.Modules.VexonHub then STATE.Modules.VexonHub.TryAutoLoadIfKeyPresent() end end) end })
-            t:CreateParagraph({ Title = "GMON Extras (formerly Haruka)", Content = "AutoFarm & Gold tracker integrated into GMON." })
-            t:CreateToggle({ Name = "GMON Auto Farm", CurrentValue = false, Callback = function(v) if v then SAFE_CALL(STATE.Modules.GMONExtras.startAutoFarm) else SAFE_CALL(STATE.Modules.GMONExtras.stopAutoFarm) end end })
-            t:CreateToggle({ Name = "GMON Gold Tracker", CurrentValue = false, Callback = function(v) if v then SAFE_CALL(STATE.Modules.GMONExtras.startGoldTracker) else SAFE_CALL(STATE.Modules.GMONExtras.stopGoldTracker) end end })
-            t:CreateButton({ Name = "Stop GMON Extras", Callback = function() SAFE_CALL(STATE.Modules.GMONExtras.stopAutoFarm); SAFE_CALL(STATE.Modules.GMONExtras.stopGoldTracker) end })
-            t:CreateParagraph({ Title = "Note", Content = "VexonHub uses remote loader; GMON Extras moves your character. Use in private/testing environments." })
+            t:CreateLabel("Script Picker / Haruka Features")
+            t:CreateParagraph({ Title = "Haruka (integrated)", Content = "Lightweight Auto Farm and Gold Tracker (from Haruka Hub). Toggle below to run." })
+            t:CreateToggle({ Name = "Haruka Auto Farm", CurrentValue = false, Callback = function(v) if v then SAFE_CALL(STATE.Modules.Haruka.startAutoFarm) else SAFE_CALL(STATE.Modules.Haruka.stopAutoFarm) end end })
+            t:CreateToggle({ Name = "Haruka Gold Tracker", CurrentValue = false, Callback = function(v) if v then SAFE_CALL(STATE.Modules.Haruka.startGoldTracker) else SAFE_CALL(STATE.Modules.Haruka.stopGoldTracker) end end })
+            t:CreateButton({ Name = "Stop Haruka All", Callback = function() SAFE_CALL(STATE.Modules.Haruka.stopAutoFarm); SAFE_CALL(STATE.Modules.Haruka.stopGoldTracker) end })
+            t:CreateParagraph({ Title = "Note", Content = "Haruka features can be used across games where applicable. Do not run conflicting auto-modules simultaneously." })
         end)
     end)
 end
@@ -1143,24 +940,24 @@ task.spawn(function()
     end
 end)
 
--- INITIALIZATION (lazy) - build UI & integrate modules
+-- INITIALIZATION (lazy) - do not auto-start modules, user toggles them
 local Main = {}
 
 function Main.Start()
     SAFE_CALL(function()
+        -- build UI once (includes Scripts tab)
         buildUI()
+        -- detect & apply game
         local det = Utils.FlexibleDetectByAliases()
         STATE.GAME = det
         ApplyGame(STATE.GAME)
         Utils.AntiAFK()
-        if STATE.Rayfield and STATE.Rayfield.Notify then STATE.Rayfield:Notify({Title="G-MON Hub", Content="Loaded — use tabs to control modules (Scripts tab contains VexonHub & GMON Extras)", Duration=5}) end
-        print("[G-MON] main_with_vexon_and_gmonextras started. Detected game:", STATE.GAME)
+        -- notify ready
+        if STATE.Rayfield and STATE.Rayfield.Notify then STATE.Rayfield:Notify({Title="G-MON Hub", Content="Loaded — use tabs to control modules (Scripts tab contains Haruka features)", Duration=5}) end
+        print("[G-MON] main.lua started. Detected game:", STATE.GAME)
     end)
     return true
 end
 
--- Auto-start (can be removed if you prefer manual start)
-pcall(function() Main.Start() end)
-
--- Return Main for loader compatibility
+-- Return Main table for loader compatibility
 return Main
