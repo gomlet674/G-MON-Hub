@@ -162,3 +162,9 @@ else
     status.Text = "Game not supported"
     setProgress(1)
 end
+
+return {
+    Start = function()
+        -- main.lua sudah auto-run
+    end
+}
