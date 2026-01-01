@@ -1,9 +1,13 @@
 --[[
-  G-MON Hub - Haruka - Vexno (Merged)
-  - G-MON core (Blox / Car / Boat modules) kept intact
-  - Added Haruka module (AutoFarm + Gold Tracker) as "Script Picker" features
-  - UI: extra "Scripts" tab to toggle Haruka features
-  - SAFE_CALL wrappers, status GUI, fallback Rayfield preserved
+  G-MON Hub - main_with_haruka_fixed.lua
+  Merged + fixes:
+    - G-MON modules kept intact
+    - Haruka module integrated and fixed:
+        * no duplicate CharacterAdded connections
+        * no use of `continue` (Luau compatibility)
+        * proper GUI creation / destroy
+        * safer loops (task.wait), stored connections/tasks
+        * corrected numeric-text detection
 --]]
 
 -- BOOTSTRAP
@@ -116,9 +120,7 @@ end
 STATE.Modules.Utils = Utils
 
 -- ===== MODULES (original G-MON kept) =====
--- [BLOX module, CAR module, BOAT module]
--- (copied exactly from your provided script; preserved as-is to avoid changing behavior)
--- For brevity in this merged snippet they are kept intact:
+-- (Blox / Car / Boat modules kept as-is except minimal formatting; not changed in logic)
 -- (BEGIN Blox module)
 do
     local M = {}
@@ -434,53 +436,87 @@ do
 end
 -- (END Boat module)
 
--- ===== HARUKA module (added) =====
+-- ===== HARUKA module (added & FIXED) =====
 do
     local M = {}
     M.autoRunning = false
     M.goldRunning = false
     M._autoTask = nil
+    M._goldTask = nil
     M._goldGui = nil
+    M._charConn = nil
 
-    -- AutoFarm behavior lifted/adapted from previous clean Haruka
-    local function haruka_auto_loop(character)
+    -- Helper: get local character safely
+    local function getLocalChar()
+        local ok, c = pcall(function() return game.Players.LocalPlayer and game.Players.LocalPlayer.Character end)
+        if not ok then return nil end
+        if c and c.Parent then return c end
+        return nil
+    end
+
+    -- AutoFarm behavior adapted from Haruka with safer flow
+    local function haruka_auto_loop()
+        local character = getLocalChar()
         while M.autoRunning do
+            -- refresh character if needed
             if not character or not character.Parent then
-                wait(1)
-                character = game.Players.LocalPlayer.Character
-                if not character then continue end
+                task.wait(1)
+                character = getLocalChar()
+                -- next iteration if still invalid
+                if not character or not character.Parent then
+                    task.wait(0.5)
+                    goto continue_loop
+                end
             end
 
-            wait(1.24)
             local hrp = character:FindFirstChild("HumanoidRootPart")
-            if not hrp then wait(1) continue end
+            if not hrp then
+                task.wait(1)
+                character = getLocalChar()
+                goto continue_loop
+            end
 
-            -- lightweight velocity object
-            local velObj = Instance.new("BodyVelocity", hrp)
-            velObj.Velocity = Vector3.new(0, -0.1, 0)
+            -- create a very small downwards velocity object to stabilize (destroy later)
+            local okVel, velObj = pcall(function()
+                local vb = Instance.new("BodyVelocity")
+                vb.Name = "_HarukaVel"
+                vb.MaxForce = Vector3.new(1e5,1e5,1e5)
+                vb.Velocity = Vector3.new(0, -0.1, 0)
+                vb.Parent = hrp
+                return vb
+            end)
+            if not okVel then velObj = nil end
+
             -- path & movements (kept same coordinates as Haruka)
             pcall(function() hrp.CFrame = CFrame.new(-135.900,72,623.750) end)
 
-            while hrp and hrp.CFrame and hrp.CFrame.Z < 8600.75 and M.autoRunning do
+            -- walk forward in micro-steps until a target z (safe small loop)
+            while M.autoRunning and hrp and hrp.CFrame and hrp.CFrame.Z < 8600.75 do
                 for i=1,50 do
                     if not M.autoRunning then break end
                     if hrp then pcall(function() hrp.CFrame = hrp.CFrame + Vector3.new(0,0,0.3) end) end
                 end
-                wait()
+                task.wait(0.1)
             end
 
-            if velObj then pcall(function() velObj:Destroy() end) end
+            -- safe destroy velObj
+            if velObj and velObj.Destroy then
+                pcall(function() velObj:Destroy() end)
+            end
 
             if M.autoRunning then
-                pcall(function() hrp.CFrame = CFrame.new(-150.900,72,2000.750) end); wait(0.2)
-                pcall(function() hrp.CFrame = CFrame.new(-150.900,72,2500.750) end); wait(0.5)
-                pcall(function() hrp.CFrame = CFrame.new(-55.8801956,-361.116333,9488.1377) end); wait(0.5)
-                pcall(function() hrp.CFrame = CFrame.new(-55.8801956,-361.116333,9495.1377) end); wait(1)
-                pcall(function() hrp.CFrame = CFrame.new(-205.900,20,1700.750) end); wait(2.3)
-                pcall(function() hrp.CFrame = CFrame.new(-55.8801956,-361.116333,9488.1377) end); wait(0.6)
-                pcall(function() hrp.CFrame = CFrame.new(-55.8801956,-361.116333,9495.1377) end); wait(1.4)
+                pcall(function() hrp.CFrame = CFrame.new(-150.900,72,2000.750) end); task.wait(0.2)
+                pcall(function() hrp.CFrame = CFrame.new(-150.900,72,2500.750) end); task.wait(0.5)
+                pcall(function() hrp.CFrame = CFrame.new(-55.8801956,-361.116333,9488.1377) end); task.wait(0.5)
+                pcall(function() hrp.CFrame = CFrame.new(-55.8801956,-361.116333,9495.1377) end); task.wait(1)
+                pcall(function() hrp.CFrame = CFrame.new(-205.900,20,1700.750) end); task.wait(2.3)
+                pcall(function() hrp.CFrame = CFrame.new(-55.8801956,-361.116333,9488.1377) end); task.wait(0.6)
+                pcall(function() hrp.CFrame = CFrame.new(-55.8801956,-361.116333,9495.1377) end); task.wait(1.4)
                 pcall(function() hrp.CFrame = CFrame.new(-55.8801956,-361.116333,9488.1377) end)
             end
+
+            ::continue_loop::
+            task.wait(0.25)
         end
     end
 
@@ -488,19 +524,31 @@ do
         if M.autoRunning then return end
         M.autoRunning = true
         STATE.Flags.HarukaAuto = true
-        if game.Players.LocalPlayer.Character then
-            M._autoTask = task.spawn(function() haruka_auto_loop(game.Players.LocalPlayer.Character) end)
+        -- ensure only one task and one connection
+        if M._autoTask == nil then
+            M._autoTask = task.spawn(function() haruka_auto_loop() end)
         end
-        game.Players.LocalPlayer.CharacterAdded:Connect(function(char)
-            wait(2)
-            if M.autoRunning then task.spawn(function() haruka_auto_loop(char) end) end
-        end)
+        if M._charConn == nil then
+            M._charConn = game.Players.LocalPlayer.CharacterAdded:Connect(function(char)
+                -- short delay then run loop again if still enabled
+                task.wait(2)
+                if M.autoRunning then
+                    if M._autoTask == nil then
+                        M._autoTask = task.spawn(function() haruka_auto_loop() end)
+                    end
+                end
+            end)
+        end
     end
 
     function M.stopAutoFarm()
         M.autoRunning = false
         STATE.Flags.HarukaAuto = false
         M._autoTask = nil
+        if M._charConn then
+            pcall(function() M._charConn:Disconnect() end)
+            M._charConn = nil
+        end
     end
 
     -- Gold Tracker (UI). A minimal, compatible version of Haruka Gold Tracker
@@ -525,7 +573,7 @@ do
         local Stroke = Instance.new("UIStroke"); Stroke.Color = Color3.fromRGB(50,50,50); Stroke.Thickness = 2; Stroke.Parent = Frame
 
         local labels = {}
-        local texts = {"Начальный баланс:", "Текущий баланс:", "Заработано:", "Время работы:"}
+        local texts = {"Start Balance:", "Current:", "Earned:", "Uptime:"}
         for i, t in ipairs(texts) do
             local holder = Instance.new("Frame"); holder.Size = UDim2.new(1,-20,0,30); holder.Position = UDim2.new(0,10,0,15+(i-1)*35); holder.BackgroundTransparency = 1; holder.Parent = Frame
             local left = Instance.new("TextLabel"); left.Size = UDim2.new(0.6,0,1,0); left.Text = t; left.TextColor3 = Color3.fromRGB(180,180,180); left.BackgroundTransparency = 1; left.TextSize = 14; left.Font = Enum.Font.Gotham; left.TextXAlignment = Enum.TextXAlignment.Left; left.Parent = holder
@@ -536,9 +584,9 @@ do
         return {Gui = GoldGui, Labels = labels, StartTime = os.time()}
     end
 
+    -- Improved numeric-text detection: strips non-digits, returns label if numeric string exists
     local function try_find_amount_label(root)
         if not root then return nil end
-        -- find TextLabel that looks numeric
         local function findRec(n)
             local out = {}
             if n:IsA("TextLabel") then table.insert(out, n) end
@@ -549,12 +597,25 @@ do
         end
         local candidates = findRec(root)
         for _, lbl in ipairs(candidates) do
-            local s = lbl.Text:gsub("%%D","")
-            local num = s:gsub("%s",""):gsub(",","")
-            if num ~= "" and tonumber(num) then return lbl end
-            -- try stripping non-digits
-            local digits = num:match("(%d+)")
-            if digits and tonumber(digits) then return lbl end
+            local ok, txt = pcall(function() return tostring(lbl.Text or "") end)
+            if not ok or not txt then goto continue_label end
+            local cleaned = txt:gsub("%s",""):gsub(",","")
+            local digits = cleaned:match("(%d+)")
+            if digits and tonumber(digits) then
+                return lbl
+            end
+            ::continue_label::
+        end
+        -- fallback brute-force: any TextLabel with digits
+        for _, child in ipairs(root:GetDescendants()) do
+            if child:IsA("TextLabel") then
+                local ok, txt = pcall(function() return tostring(child.Text or "") end)
+                if ok and txt then
+                    local cleaned = txt:gsub("%s",""):gsub(",","")
+                    local digits = cleaned:match("(%d+)")
+                    if digits and tonumber(digits) then return child end
+                end
+            end
         end
         return nil
     end
@@ -562,24 +623,19 @@ do
     local function gold_loop(stateObj)
         if not stateObj then return end
         local player = game.Players.LocalPlayer
-        local root = player:FindFirstChild("PlayerGui")
-        local Mroot = nil
-        -- try detect stored UI first
-        SAFE_CALL(function()
-            if player and player:FindFirstChild("PlayerGui") then Mroot = player.PlayerGui end
-        end)
+        if not player then return end
+        local Mroot = player:FindFirstChild("PlayerGui")
         local startLabel = nil
         local baseAmount = 0
-        stateObj.Labels[1].Text = "0" -- initial
+        stateObj.Labels[1].Text = "0"
         stateObj.Labels[2].Text = "0"
         stateObj.Labels[3].Text = "0"
-        stateObj.Labels[4].Text = "0:00"
+        stateObj.Labels[4].Text = "00:00"
         while M.goldRunning do
-            -- attempt to find the in-game label with the amount
             if Mroot then
                 local found = nil
+                -- game-specific: GoldGui.Frame
                 if Mroot:FindFirstChild("GoldGui") and Mroot.GoldGui:FindFirstChild("Frame") then
-                    -- some game-specific path
                     local ok, frame = pcall(function() return Mroot.GoldGui.Frame end)
                     if ok and frame then found = try_find_amount_label(frame) end
                 end
@@ -587,10 +643,11 @@ do
                     -- fallback: brute search for numeric TextLabel
                     for _, child in ipairs(Mroot:GetDescendants()) do
                         if child:IsA("TextLabel") then
-                            local txt = child.Text:gsub("%%D",""):gsub("%s","")
-                            if txt ~= "" then
-                                local num = txt:match("(%d+)")
-                                if num and tonumber(num) then found = child; break end
+                            local ok, txt = pcall(function() return tostring(child.Text or "") end)
+                            if ok and txt then
+                                local cleaned = txt:gsub("%s",""):gsub(",","")
+                                local digits = cleaned:match("(%d+)")
+                                if digits and tonumber(digits) then found = child; break end
                             end
                         end
                     end
@@ -612,7 +669,7 @@ do
             local elapsed = os.time() - stateObj.StartTime
             local mm = math.floor(elapsed/60); local ss = elapsed%60
             stateObj.Labels[4].Text = string.format("%02d:%02d", mm, ss)
-            wait(1)
+            task.wait(1)
         end
     end
 
@@ -623,7 +680,9 @@ do
         local obj = create_gold_gui()
         if obj then
             M._goldGui = obj
-            task.spawn(function() gold_loop(obj) end)
+            if M._goldTask == nil then
+                M._goldTask = task.spawn(function() gold_loop(obj) end)
+            end
         end
     end
 
@@ -634,6 +693,7 @@ do
             pcall(function() M._goldGui.Gui:Destroy() end)
         end
         M._goldGui = nil
+        M._goldTask = nil
     end
 
     function M.ExposeConfig()
@@ -662,9 +722,9 @@ do
                 local tab = {}
                 function tab:CreateLabel() end
                 function tab:CreateParagraph() end
-                function tab:CreateButton(tbl) end
-                function tab:CreateToggle(tbl) end
-                function tab:CreateSlider(tbl) end
+                function tab:CreateButton() end
+                function tab:CreateToggle() end
+                function tab:CreateSlider() end
                 return tab
             end
             function win:CreateNotification() end
@@ -908,8 +968,12 @@ local function buildUI()
             local t = Tabs.Scripts
             t:CreateLabel("Script Picker / Haruka Features")
             t:CreateParagraph({ Title = "Haruka (integrated)", Content = "Lightweight Auto Farm and Gold Tracker (from Haruka Hub). Toggle below to run." })
-            t:CreateToggle({ Name = "Haruka Auto Farm", CurrentValue = false, Callback = function(v) if v then SAFE_CALL(STATE.Modules.Haruka.startAutoFarm) else SAFE_CALL(STATE.Modules.Haruka.stopAutoFarm) end end })
-            t:CreateToggle({ Name = "Haruka Gold Tracker", CurrentValue = false, Callback = function(v) if v then SAFE_CALL(STATE.Modules.Haruka.startGoldTracker) else SAFE_CALL(STATE.Modules.Haruka.stopGoldTracker) end end })
+            t:CreateToggle({ Name = "Haruka Auto Farm", CurrentValue = false, Callback = function(v)
+                if v then SAFE_CALL(STATE.Modules.Haruka.startAutoFarm) else SAFE_CALL(STATE.Modules.Haruka.stopAutoFarm) end
+            end })
+            t:CreateToggle({ Name = "Haruka Gold Tracker", CurrentValue = false, Callback = function(v)
+                if v then SAFE_CALL(STATE.Modules.Haruka.startGoldTracker) else SAFE_CALL(STATE.Modules.Haruka.stopGoldTracker) end
+            end })
             t:CreateButton({ Name = "Stop Haruka All", Callback = function() SAFE_CALL(STATE.Modules.Haruka.stopAutoFarm); SAFE_CALL(STATE.Modules.Haruka.stopGoldTracker) end })
             t:CreateParagraph({ Title = "Note", Content = "Haruka features can be used across games where applicable. Do not run conflicting auto-modules simultaneously." })
         end)
