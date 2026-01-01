@@ -1,29 +1,29 @@
--- main.lua
--- G-MON Hub - Final with fixed CDT AutoFarm + BuyCar GUI + Haruka separated (Build A Boat)
--- Single-file client script
+-- G-MON Hub - merged CDT + Haruka version
+-- Keeps Blox Fruit module, replaces Car tab with Car Dealership Tycoon (CDT) features,
+-- replaces Build A Boat tab with Haruka features. Removed Scripts tab.
 
+-- BOOTSTRAP
 repeat task.wait() until game:IsLoaded()
-
--- Services
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UIS = game:GetService("UserInputService")
 local VirtualUser = game:GetService("VirtualUser")
 local Workspace = workspace
 local TextService = game:GetService("TextService")
+local LP = Players.LocalPlayer
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
-local StarterGui = game:GetService("StarterGui")
-
-local LP = Players.LocalPlayer
 
 -- SAFE helpers
 local function SAFE_CALL(fn, ...)
     if type(fn) ~= "function" then return false end
     local ok, res = pcall(fn, ...)
-    if not ok then warn("[G-MON] SAFE_CALL error:", res) end
+    if not ok then
+        warn("[G-MON] SAFE_CALL error:", res)
+    end
     return ok, res
 end
+
 local function SAFE_WAIT(sec)
     sec = tonumber(sec) or 0.1
     if sec < 0.01 then sec = 0.01 end
@@ -44,7 +44,7 @@ local STATE = {
     LastAction = "Idle"
 }
 
--- Utils
+-- UTILS & DETECTION (unchanged)
 local Utils = {}
 
 function Utils.SafeChar()
@@ -79,14 +79,6 @@ function Utils.FormatTime(sec)
     return string.format("%02dm:%02ds", m,s)
 end
 
-function Utils.ShortLabelForGame(g)
-    if g == "BLOX_FRUIT" then return "Blox" end
-    if g == "CAR_TYCOON" then return "CDT" end
-    if g == "BUILD_A_BOAT" then return "Build A Boat" end
-    return tostring(g or "Unknown")
-end
-
--- Game detection (keeps from prior)
 function Utils.FlexibleDetectByAliases()
     local pid = game.PlaceId
     if pid == 2753915549 then return "BLOX_FRUIT" end
@@ -112,11 +104,18 @@ function Utils.FlexibleDetectByAliases()
     return "UNKNOWN"
 end
 
+function Utils.ShortLabelForGame(g)
+    if g == "BLOX_FRUIT" then return "Blox" end
+    if g == "CAR_TYCOON" then return "CDT" end
+    if g == "BUILD_A_BOAT" then return "Haruka" end
+    return tostring(g or "Unknown")
+end
+
 STATE.Modules.Utils = Utils
 
--- ---------- Modules kept: Blox (unchanged minimal), CarBase ----------
--- (omitted here for brevity; assume previous sections included - but for single-file we include simplified ones)
--- Minimal Blox module (kept)
+-- ===== MODULES (Blox/Built-in kept) =====
+-- For brevity, keep Blox module, Car baseline and Boat baseline from prior script unchanged.
+-- (BEGIN Blox module)
 do
     local M = {}
     M.config = { attack_delay = 0.35, range = 10, long_range = false, fast_attack = false }
@@ -141,6 +140,7 @@ do
                 local hrp = char:FindFirstChild("HumanoidRootPart"); if not hrp then return end
                 local folder = findEnemyFolder()
                 if not folder then return end
+
                 local nearest, bestDist = nil, math.huge
                 for _, mob in ipairs(folder:GetChildren()) do
                     if mob:IsA("Model") and mob:FindFirstChild("HumanoidRootPart") and mob:FindFirstChild("Humanoid") then
@@ -151,6 +151,7 @@ do
                         end
                     end
                 end
+
                 if not nearest and M.config.long_range then
                     for _, mob in ipairs(folder:GetChildren()) do
                         if mob:IsA("Model") and mob:FindFirstChild("HumanoidRootPart") and mob:FindFirstChild("Humanoid") then
@@ -162,7 +163,9 @@ do
                         end
                     end
                 end
+
                 if not nearest then return end
+
                 if M.config.long_range then
                     local dmg = M.config.fast_attack and 35 or 20
                     local hits = M.config.fast_attack and 3 or 1
@@ -182,24 +185,43 @@ do
         end
     end
 
-    function M.start() if M.running then return end M.running=true STATE.Flags.Blox=true M._task=task.spawn(loop) end
-    function M.stop() M.running=false STATE.Flags.Blox=false M._task=nil end
-    function M.ExposeConfig() return {
-        { type="slider", name="Range (studs)", min=1, max=50, current=M.config.range, onChange=function(v) M.config.range = v end },
-        { type="slider", name="Attack Delay (ms)", min=50, max=1000, current=math.floor(M.config.attack_delay*1000), onChange=function(v) M.config.attack_delay = v/1000 end },
-        { type="toggle", name="Fast Attack", current=M.config.fast_attack, onChange=function(v) M.config.fast_attack = v end },
-        { type="toggle", name="Long Range Hit", current=M.config.long_range, onChange=function(v) M.config.long_range = v end }
-    } end
+    function M.start()
+        if M.running then return end
+        M.running = true
+        STATE.Flags.Blox = true
+        M._task = task.spawn(loop)
+    end
+
+    function M.stop()
+        M.running = false
+        STATE.Flags.Blox = false
+        M._task = nil
+    end
+
+    function M.ExposeConfig()
+        return {
+            { type="slider", name="Range (studs)", min=1, max=50, current=M.config.range, onChange=function(v) M.config.range = v end },
+            { type="slider", name="Attack Delay (ms)", min=50, max=1000, current=math.floor(M.config.attack_delay*1000), onChange=function(v) M.config.attack_delay = v/1000 end },
+            { type="toggle", name="Fast Attack", current=M.config.fast_attack, onChange=function(v) M.config.fast_attack = v end },
+            { type="toggle", name="Long Range Hit", current=M.config.long_range, onChange=function(v) M.config.long_range = v end }
+        }
+    end
 
     STATE.Modules.Blox = M
 end
+-- (END Blox module)
 
--- CarBase (kept basic)
+-- Keep Car baseline module (for generic cars) but we will add a NEW CarDeal module for CDT features
 do
     local M = {}
-    M.running=false; M.chosen=nil; M.speed=60; M._task=nil
+    M.running = false
+    M.chosen = nil
+    M.speed = 60
+    M._task = nil
+
     local function isOwnedByPlayer(m)
         if not m or not m:IsA("Model") then return false end
+        if tostring(m.Name) == tostring(LP.Name) then return true end
         local ok, ownerVal = pcall(function()
             local o = m:FindFirstChild("Owner") or m:FindFirstChild("OwnerName")
             if o then return tostring(o.Value) end
@@ -207,7 +229,7 @@ do
             return nil
         end)
         if ok and ownerVal and tostring(ownerVal) == tostring(LP.Name) then return true end
-        local ok2,idVal = pcall(function()
+        local ok2, idVal = pcall(function()
             local v = m:FindFirstChild("OwnerUserId") or m:FindFirstChild("UserId")
             if v then return tonumber(v.Value) end
             if m.GetAttribute then return m:GetAttribute("OwnerUserId") end
@@ -216,39 +238,137 @@ do
         if ok2 and tonumber(idVal) and tonumber(idVal) == LP.UserId then return true end
         return false
     end
-    function M.ExposeConfig() return { { type="slider", name="Car Speed", min=20, max=200, current=M.speed, onChange=function(v) M.speed=v end } } end
+
+    function M.choosePlayerFastestCar()
+        local carsRoot = Workspace:FindFirstChild("Cars") or Workspace
+        local candidates = {}
+        for _, m in ipairs(carsRoot:GetDescendants()) do
+            if m:IsA("Model") and m.PrimaryPart then
+                if isOwnedByPlayer(m) then table.insert(candidates, m) end
+            end
+        end
+        if #candidates == 0 then
+            for _, m in ipairs(Workspace:GetChildren()) do
+                if m:IsA("Model") and m.PrimaryPart and #m:GetDescendants() > 5 then table.insert(candidates, m) end
+            end
+        end
+        if #candidates == 0 then return nil end
+        local best, bestVal = nil, -math.huge
+        for _, car in ipairs(candidates) do
+            local val = #car:GetDescendants()
+            if val > bestVal then bestVal, best = val, car end
+        end
+        return best
+    end
+
+    local function ensureLinearVelocity(prim)
+        if not prim then return nil end
+        local att = prim:FindFirstChild("_GmonAttach")
+        if not att then att = Instance.new("Attachment"); att.Name = "_GmonAttach"; att.Parent = prim end
+        local lv = prim:FindFirstChild("_GmonLV")
+        if not lv then
+            lv = Instance.new("LinearVelocity")
+            lv.Name = "_GmonLV"
+            lv.Attachment0 = att
+            lv.MaxForce = math.huge
+            lv.RelativeTo = Enum.ActuatorRelativeTo.Attachment0
+            lv.Parent = prim
+        end
+        return lv, att
+    end
+
+    local function loop()
+        while M.running do
+            task.wait(0.2)
+            SAFE_CALL(function()
+                if STATE.GAME ~= "CAR_TYCOON" then return end
+                if not M.chosen or not M.chosen.PrimaryPart then
+                    local car = M.choosePlayerFastestCar()
+                    if not car or not car.PrimaryPart then STATE.Flags.Car = false; return end
+                    M.chosen = car
+                    if not car:FindFirstChild("_GmonStartPos") then
+                        local cv = Instance.new("CFrameValue"); cv.Name = "_GmonStartPos"; cv.Value = car.PrimaryPart.CFrame; cv.Parent = car
+                    end
+                    pcall(function()
+                        local orig = car.PrimaryPart.CFrame
+                        car:SetPrimaryPartCFrame(CFrame.new(orig.Position.X, orig.Position.Y - 500, orig.Position.Z))
+                    end)
+                end
+                if M.chosen and M.chosen.PrimaryPart then
+                    local prim = M.chosen.PrimaryPart
+                    local lv = ensureLinearVelocity(prim)
+                    if lv then lv.VectorVelocity = prim.CFrame.LookVector * (M.speed or 60) end
+                end
+            end)
+        end
+    end
+
+    function M.start()
+        if M.running then return end
+        M.running = true
+        STATE.Flags.Car = true
+        M._task = task.spawn(loop)
+    end
+
+    function M.stop()
+        M.running = false
+        STATE.Flags.Car = false
+        if M.chosen then
+            SAFE_CALL(function()
+                if M.chosen.PrimaryPart then
+                    local prim = M.chosen.PrimaryPart
+                    local lv = prim:FindFirstChild("_GmonLV"); if lv then pcall(function() lv:Destroy() end) end
+                    local att = prim:FindFirstChild("_GmonAttach"); if att then pcall(function() att:Destroy() end) end
+                end
+                local tag = M.chosen:FindFirstChild("_GmonStartPos")
+                if tag and tag:IsA("CFrameValue") and M.chosen.PrimaryPart then pcall(function() M.chosen:SetPrimaryPartCFrame(tag.Value) end); pcall(function() tag:Destroy() end) end
+                local fv = M.chosen:FindFirstChild("_GmonFloorRef"); if fv and fv.Value and fv.Value.Parent then pcall(function() fv.Value:Destroy() end) end
+                if M.chosen.GetAttribute and M.chosen:GetAttribute("GmonFloor") then pcall(function() M.chosen:SetAttribute("GmonFloor", nil) end) end
+            end)
+        end
+        M.chosen = nil
+    end
+
+    function M.ExposeConfig()
+        return {
+            { type="slider", name="Car Speed", min=20, max=200, current=M.speed, onChange=function(v) M.speed = v end }
+        }
+    end
+
     STATE.Modules.CarBase = M
 end
 
--- ---------- CDT Module (fixed auto farm) ----------
+-- ===== CAR DEALERSHIP TYCOON (CDT) MODULE (NEW) =====
 do
     local CDT = {}
+    -- flags & state
     CDT.Auto = false
     CDT.collectables = false
     CDT.open = false
     CDT.fireman = false
     CDT.Customer = false
     CDT.deliver = false
+    CDT.deliver2 = false
     CDT.buyer = false
     CDT.annoy = false
+    CDT.checkif = nil
     CDT.spawned = false
-    CDT.speed = 300
+    CDT.speed = 300 -- default auto-drive speed used in original script
     CDT._tasks = {}
+
+    -- delivery config (stars,min,max) loaded/saved via cdtdelivery.txt
     CDT.stars = 0
     CDT.smaller = 0
     CDT.bigger = 999999999
 
+    -- helper to save/load delivery config
     local function saveDeliveryConfig()
-        SAFE_CALL(function()
-            if type(writefile) == "function" then
-                local s = tostring(CDT.stars.." "..CDT.smaller.." "..CDT.bigger)
-                pcall(function() writefile("cdtdelivery.txt", s) end)
-            end
-        end)
+        local s = tostring(CDT.stars.." "..CDT.smaller.." "..CDT.bigger)
+        pcall(function() writefile("cdtdelivery.txt", s) end)
     end
     local function loadDeliveryConfig()
-        SAFE_CALL(function()
-            if type(isfile) == "function" and isfile("cdtdelivery.txt") then
+        pcall(function()
+            if isfile and isfile("cdtdelivery.txt") then
                 local content = readfile("cdtdelivery.txt")
                 if content and #content>0 then
                     local parts = {}
@@ -262,8 +382,8 @@ do
     end
     loadDeliveryConfig()
 
+    -- small helper: find player's tycoon plot (from original)
     local function findPlayerPlot()
-        if not Workspace:FindFirstChild("Tycoons") then return nil end
         for _,v in pairs(Workspace.Tycoons:GetDescendants()) do
             if v.Name == "Owner" and v.ClassName == "StringValue" and (string.find(v.Parent.Name,"Plot") or string.find(v.Parent.Name,"Slot")) and v.Value == LP.Name then
                 return v.Parent
@@ -272,144 +392,56 @@ do
         return nil
     end
 
-    ---- FIXED AUTO FARM: drive straight over long solid block and return to start ----
-    -- Behavior:
-    -- 1) Wait until player is seated in a vehicle with PrimaryPart.
-    -- 2) Record originalCFrame of vehicle.PrimaryPart (origVehicleCFrame).
-    -- 3) Compute forward vector on XZ plane from vehicle.PrimaryPart.CFrame.LookVector.
-    -- 4) Create or reuse long anchored solid part "gmon_jap" positioned under path (midpoint).
-    -- 5) Create CFrameValue and Tween between start and target; PivotTo on Changed (stable straight movement).
-    -- 6) Loop A->B->A until CDT.Auto == false.
-    -- 7) On stop, cancel tween, restore vehicle to origVehicleCFrame, optionally destroy platform if it was created by script.
+    -- Auto Farm (drive back/forth) simplified from original Auto Farm code
     function CDT.startAutoFarm()
         if CDT.Auto then return end
         CDT.Auto = true
         CDT._tasks.auto = task.spawn(function()
             SAFE_CALL(function()
-                local waited = 0
-                -- wait for player to sit in a vehicle
-                local vehicle = nil
-                local seat = nil
-                local origVehicleCFrame = nil
-                local createdPlatform = false
-                local platform = Workspace:FindFirstChild("gmon_jap")
+                -- create "justapart" ground part if absent
+                if not Workspace:FindFirstChild("justapart") then
+                    local new = Instance.new("Part",Workspace)
+                    new.Name = "justapart"
+                    new.Size = Vector3.new(10000,20,10000)
+                    new.Anchored = true
+                    new.Position = LP.Character.HumanoidRootPart.Position + Vector3.new(0,1000,0)
+                end
                 while CDT.Auto do
-                    local chr = Utils.SafeChar()
-                    if not chr then task.wait(0.5); waited = waited + 0.5; if waited>60 then break end; continue end
-                    seat = chr:FindFirstChild("Humanoid") and chr.Humanoid.SeatPart
-                    if seat then
-                        if seat.Parent and seat.Parent.PrimaryPart then
-                            vehicle = seat.Parent
-                            break
-                        else
-                            -- maybe seat.Parent is seat model, try parent parent's PrimaryPart
-                            if seat.Parent and seat.Parent.Parent and seat.Parent.Parent.PrimaryPart then
-                                vehicle = seat.Parent.Parent
-                                break
-                            end
-                        end
+                    task.wait()
+                    local chr = LP.Character
+                    if not chr or not chr:FindFirstChild("Humanoid") or not chr:FindFirstChild("HumanoidRootPart") then continue end
+                    if not chr.Humanoid.SeatPart then
+                        -- nothing to do until in vehicle
+                        continue
                     end
-                    task.wait(0.5)
-                end
-                if not vehicle or not vehicle.PrimaryPart then
-                    CDT.Auto = false
-                    return
-                end
-                -- record original
-                origVehicleCFrame = vehicle.PrimaryPart.CFrame
-                -- compute forward vector projected to XZ plane
-                local startCF = vehicle.PrimaryPart.CFrame
-                local lv = startCF.LookVector
-                local forward = Vector3.new(lv.X, 0, lv.Z)
-                if forward.Magnitude < 0.01 then forward = Vector3.new(0,0,1) end
-                forward = forward.Unit
+                    local car = chr.Humanoid.SeatPart.Parent.Parent
+                    if not car or not car.PrimaryPart then
+                        continue
+                    end
 
-                local distance = 2000 -- default travel distance (can be exposed later)
-                -- compute target CFrame by moving along forward (no Y change)
-                local targetPos = startCF.Position + forward * distance
-                local targetCF = CFrame.new(targetPos.X, startCF.Position.Y, targetPos.Z, startCF:ToEulerAnglesXYZ()) -- keep orientation roughly same
-
-                -- create long platform under path
-                if not platform or not platform.Parent then
-                    local midPos = (startCF.Position + targetPos) / 2
-                    local length = (startCF.Position - targetPos).Magnitude + 100
-                    platform = Instance.new("Part")
-                    platform.Name = "gmon_jap"
-                    platform.Size = Vector3.new(20, 6, math.max(50, length))
-                    platform.Anchored = true
-                    platform.CanCollide = true
-                    platform.Material = Enum.Material.SmoothPlastic
-                    platform.Position = Vector3.new(midPos.X, startCF.Position.Y - 5, midPos.Z)
-                    platform.TopSurface = Enum.SurfaceType.Smooth
-                    platform.Parent = Workspace
-                    createdPlatform = true
-                else
-                    -- ensure length large enough and position under mid
+                    -- position to far point and tween to opposite like original
                     pcall(function()
-                        local midPos = (startCF.Position + targetPos) / 2
-                        local length = (startCF.Position - targetPos).Magnitude + 100
-                        platform.Size = Vector3.new(math.max(20, platform.Size.X), math.max(4, platform.Size.Y), math.max(length, platform.Size.Z))
-                        platform.Position = Vector3.new(midPos.X, startCF.Position.Y - 5, midPos.Z)
-                        platform.Anchored = true
-                        platform.CanCollide = true
+                        car:PivotTo(Workspace:FindFirstChild("justapart").CFrame * CFrame.new(0,10,1000))
                     end)
-                end
-
-                -- create CFrameValue and tween between start and target
-                local stateTweenActive = true
-                local cv = Instance.new("CFrameValue")
-                cv.Value = vehicle.PrimaryPart.CFrame
-                local function onChanged()
-                    if not vehicle or not vehicle.PrimaryPart then return end
-                    pcall(function() vehicle:PivotTo(cv.Value) end)
-                end
-                cv.Changed:Connect(onChanged)
-
-                local function tweenTo(cfTarget, duration)
-                    local ti = TweenInfo.new(math.max(0.01, duration), Enum.EasingStyle.Linear)
-                    local tw = TweenService:Create(cv, ti, {Value = cfTarget})
-                    tw:Play()
-                    local ok, msg = pcall(function() tw.Completed:Wait() end)
-                    return ok
-                end
-
-                -- loop back and forth until stopped
-                local currentStart = vehicle.PrimaryPart.CFrame
-                local currentTarget = CFrame.new(targetPos.X, currentStart.Position.Y, targetPos.Z) * CFrame.Angles(0, math.atan2(forward.X, forward.Z), 0)
-                -- compute duration = distance / speed
-                local speed = CDT.speed or 300
-                local dur = (currentStart.Position - currentTarget.Position).Magnitude / math.max(1, speed)
-
-                while CDT.Auto do
-                    -- forward
-                    if not vehicle or not vehicle.PrimaryPart then break end
-                    cv.Value = vehicle.PrimaryPart.CFrame
-                    local ok1 = false
-                    ok1 = pcall(function() tweenTo(currentTarget, dur) end)
-                    if not ok1 then break end
-                    task.wait(0.1)
-                    if not CDT.Auto then break end
-                    -- backward
-                    if not vehicle or not vehicle.PrimaryPart then break end
-                    local backTarget = origVehicleCFrame
-                    dur = (vehicle.PrimaryPart.CFrame.Position - backTarget.Position).Magnitude / math.max(1, speed)
-                    pcall(function() tweenTo(backTarget, dur) end)
-                    task.wait(0.1)
-                end
-
-                -- cleanup: return to original position and destroy platform if created
-                pcall(function()
-                    if vehicle and vehicle.PrimaryPart and origVehicleCFrame then
-                        vehicle:PivotTo(origVehicleCFrame)
-                        vehicle.PrimaryPart.AssemblyLinearVelocity = Vector3.new(0,0,0)
+                    local pos = Workspace:FindFirstChild("justapart").CFrame * CFrame.new(0,10,-1000)
+                    local dist = (car.PrimaryPart.Position - pos.Position).magnitude
+                    local speed = CDT.speed or 300
+                    local TweenInfoToUse = TweenInfo.new(dist/speed, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, 0, true, 0)
+                    local TweenValue = Instance.new("CFrameValue")
+                    TweenValue.Value = car.WorldPivot
+                    TweenValue.Changed:Connect(function()
+                        if car.PrimaryPart then
+                            car.PrimaryPart.AssemblyLinearVelocity = car.PrimaryPart.CFrame.LookVector * speed
+                            pcall(function() car:PivotTo(TweenValue.Value) end)
+                        end
+                    end)
+                    local OnTween = TweenService:Create(TweenValue, TweenInfoToUse, {Value = pos})
+                    OnTween:Play()
+                    OnTween.Completed:Wait()
+                    if car.PrimaryPart then
+                        car.PrimaryPart.AssemblyLinearVelocity = car.PrimaryPart.CFrame.LookVector * speed
                     end
-                end)
-                if createdPlatform and platform and platform.Parent then
-                    pcall(function() platform:Destroy() end)
                 end
-                cv:Destroy()
-                CDT.Auto = false
-                CDT._tasks.auto = nil
             end)
         end)
     end
@@ -420,153 +452,306 @@ do
             pcall(function() task.cancel(CDT._tasks.auto) end)
             CDT._tasks.auto = nil
         end
-        -- best-effort: try destroy platform if exists
-        local p = Workspace:FindFirstChild("gmon_jap")
-        if p and p.Parent then
-            pcall(function() p:Destroy() end)
-        end
     end
 
-    -- other CDT features (kept simplified/working)
+    -- Auto Collectibles (drives to collectibles)
     function CDT.startCollectibles()
         if CDT.collectables then return end
         CDT.collectables = true
         CDT._tasks.collect = task.spawn(function()
             while CDT.collectables do
-                task.wait(0.7)
-                local chr = Utils.SafeChar()
-                if not chr then continue end
+                task.wait()
+                local chr = LP.Character
+                if not chr or not chr:FindFirstChild("Humanoid") or not chr:FindFirstChild("HumanoidRootPart") then continue end
                 if not chr.Humanoid.SeatPart then continue end
-                local car = chr.Humanoid.SeatPart.Parent
-                if not car or not car.PrimaryPart then continue end
-                if not Workspace:FindFirstChild("Collectibles") then continue end
+                local car = chr.Humanoid.SeatPart.Parent.Parent
                 for _,v in pairs(Workspace.Collectibles:GetDescendants()) do
-                    if not CDT.collectables then break end
-                    if v:IsA("BasePart") and v.Parent and v.Parent.PrimaryPart then
-                        pcall(function() car:PivotTo(v.Parent.PrimaryPart.CFrame) end)
-                        task.wait(0.5)
+                    if v:IsA("Model") and v.Parent ~= nil and v.Parent.Parent == Workspace.Collectibles and v.PrimaryPart and v:GetChildren()[2] and v:GetChildren()[2]:FindFirstChild("Part") and v:GetChildren()[2]:FindFirstChildOfClass("BillboardGui") and v:GetChildren()[2]:FindFirstChildOfClass("BillboardGui").Enabled then
+                        pcall(function() car:PivotTo(v.PrimaryPart.CFrame) end)
                         break
                     end
                 end
             end
         end)
     end
-    function CDT.stopCollectibles() CDT.collectables=false if CDT._tasks.collect then pcall(function() task.cancel(CDT._tasks.collect) end); CDT._tasks.collect=nil end end
 
-    function CDT.startOpenKit() if CDT.open then return end CDT.open=true CDT._tasks.open = task.spawn(function() while CDT.open do task.wait(1.5) SAFE_CALL(function() local svc = ReplicatedStorage:FindFirstChild("Remotes") or ReplicatedStorage:FindFirstChild("RemotesFolder") if svc and svc:FindFirstChild("Services") and svc.Services:FindFirstChild("CarKitEventServiceRemotes") and svc.Services.CarKitEventServiceRemotes:FindFirstChild("ClaimFreePack") then pcall(function() svc.Services.CarKitEventServiceRemotes.ClaimFreePack:InvokeServer() end) end end) end end) end
-    function CDT.stopOpenKit() CDT.open=false if CDT._tasks.open then pcall(function() task.cancel(CDT._tasks.open) end); CDT._tasks.open=nil end end
+    function CDT.stopCollectibles()
+        CDT.collectables = false
+        if CDT._tasks.collect then pcall(function() task.cancel(CDT._tasks.collect) end); CDT._tasks.collect = nil end
+    end
 
+    -- Auto Open Vehicle Kit (invoke remote)
+    function CDT.startOpenKit()
+        if CDT.open then return end
+        CDT.open = true
+        CDT._tasks.open = task.spawn(function()
+            while CDT.open do
+                task.wait()
+                pcall(function()
+                    local svc = ReplicatedStorage:FindFirstChild("Remotes")
+                    if svc and svc:FindFirstChild("Services") and svc.Services:FindFirstChild("CarKitEventServiceRemotes") and svc.Services.CarKitEventServiceRemotes:FindFirstChild("ClaimFreePack") then
+                        svc.Services.CarKitEventServiceRemotes.ClaimFreePack:InvokeServer()
+                    end
+                end)
+            end
+        end)
+    end
+
+    function CDT.stopOpenKit()
+        CDT.open = false
+        if CDT._tasks.open then pcall(function() task.cancel(CDT._tasks.open) end); CDT._tasks.open = nil end
+    end
+
+    -- Auto Extinguish Fire (uses TaskController ActionGameDataReplication remote like original)
     function CDT.startExtinguishFire()
         if CDT.fireman then return end
         CDT.fireman = true
         CDT._tasks.fire = task.spawn(function()
             while CDT.fireman do
                 SAFE_CALL(function()
-                    local rem = ReplicatedStorage:FindFirstChild("Remotes")
-                    if rem and rem:FindFirstChild("Switch") then
-                        pcall(function() rem.Switch:FireServer("FireDealership") end)
+                    workspace.Gravity = 196
+                    if not LP.Backpack:FindFirstChildOfClass("Tool") and not LP.Character:FindFirstChildOfClass("Tool") then
+                        local rem = ReplicatedStorage:FindFirstChild("Remotes")
+                        if rem and rem:FindFirstChild("Switch") then
+                            pcall(function() rem.Switch:FireServer("FireDealership") end)
+                        end
+                        wait(10)
+                    elseif LP.Backpack:FindFirstChildOfClass("Tool") then
+                        pcall(function() LP.Character.Humanoid:EquipTool(LP.Backpack:FindFirstChildOfClass("Tool")) end)
+                        wait(1)
+                    elseif LP.Character:FindFirstChildOfClass("Tool") then
+                        if LP.PlayerGui:FindFirstChild("FireGuide") then
+                            local test = nil
+                            for _,v in pairs(workspace:GetDescendants()) do
+                                if v.Name == "FirePart" then test = v; pcall(function() LP.Character.HumanoidRootPart.CFrame = v.CFrame end) end
+                            end
+                            if test == nil then
+                                pcall(function() LP.Character.HumanoidRootPart.CFrame = LP.PlayerGui.FireGuide.Adornee.CFrame end)
+                            else
+                                pcall(function()
+                                    for _,vv in pairs(test.Parent:GetDescendants()) do
+                                        if (vv.ClassName == "Part" and vv.CanCollide == true) or (vv.ClassName == "MeshPart" and vv.CanCollide == true) then
+                                            vv.CanCollide = false
+                                        end
+                                    end
+                                    workspace.Gravity = 0
+                                    repeat
+                                        task.wait()
+                                        ReplicatedStorage.Remotes.TaskController.ActionGameDataReplication:FireServer("TryInteractWithItem", {["GameName"] = "FirefighterGame", ["Action"] = "UpdatePlayerToolState", ["Data"] = {["IsActive"] = true, ["ToolName"] = "Extinguisher"}})
+                                        LP.Character.HumanoidRootPart.CFrame = test.CFrame * CFrame.new(0,10,0)
+                                        LP.Character.HumanoidRootPart.CFrame = LP.Character.HumanoidRootPart.CFrame * CFrame.Angles(math.rad(-90),0,0)
+                                    until not LP.PlayerGui:FindFirstChild("FireGuide")
+                                    LP.Character.HumanoidRootPart.Velocity = Vector3.new(0,0,0)
+                                    wait(5)
+                                    ReplicatedStorage.Remotes.TaskController.ActionGameDataReplication:FireServer("TryInteractWithItem", {["GameName"] = "FirefighterGame", ["Action"] = "TryToCollectReward", ["Data"] = {}})
+                                end)
+                            end
+                        end
                     end
                 end)
-                task.wait(1)
+                wait(0.5)
             end
         end)
     end
-    function CDT.stopExtinguishFire() CDT.fireman=false if CDT._tasks.fire then pcall(function() task.cancel(CDT._tasks.fire) end); CDT._tasks.fire=nil end end
 
+    function CDT.stopExtinguishFire()
+        CDT.fireman = false
+        workspace.Gravity = 196
+        if CDT._tasks.fire then pcall(function() task.cancel(CDT._tasks.fire) end); CDT._tasks.fire = nil end
+    end
+
+    -- Auto Sell Cars (Dealership flow from original)
     function CDT.startAutoSellCars()
         if CDT.Customer then return end
         CDT.Customer = true
         CDT._tasks.sell = task.spawn(function()
             while CDT.Customer do
-                task.wait(1)
+                task.wait()
                 SAFE_CALL(function()
-                    local tycoon = findPlayerPlot()
-                    if not tycoon or not tycoon:FindFirstChild("Dealership") then return end
+                    local function plot()
+                        return findPlayerPlot()
+                    end
+                    local tycoon = plot()
+                    if not tycoon then return end
                     local customer = nil
                     for _,v in pairs(tycoon.Dealership:GetChildren()) do
-                        if v.ClassName == "Model" and v.PrimaryPart and v.PrimaryPart.Name == "HumanoidRootPart" then
-                            customer = v; break
+                        if v.ClassName == "Model" and v.PrimaryPart ~= nil and v.PrimaryPart.Name == "HumanoidRootPart" then
+                            customer = v
+                            break
                         end
                     end
                     if not customer then return end
-                    local npcRem = ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("DealershipCustomerController")
-                    if npcRem and npcRem:FindFirstChild("NPCHandler") then
-                        pcall(function()
-                            npcRem.NPCHandler:FireServer({Action="AcceptOrder", OrderId = customer:GetAttribute("OrderId")})
-                            task.wait(0.4)
-                            npcRem.NPCHandler:FireServer({OrderId = customer:GetAttribute("OrderId"), Action="CompleteOrder", Specs = {}})
-                            task.wait(0.6)
-                            npcRem.NPCHandler:FireServer({Action="CollectReward", OrderId = customer:GetAttribute("OrderId")})
-                        end)
+                    wait(5)
+                    local text = customer:GetAttribute("OrderSpecBudget"):split(";")
+                    local num = tonumber(text[2]) or 99999999
+                    local guis = LP.PlayerGui
+                    local menu = guis.Menu
+                    if not menu then return end
+                    local bestChoice = nil
+                    -- scan menu for price values
+                    for _,v in pairs(menu.Inventory.CarShop.Frame.Frame:GetDescendants()) do
+                        if v.Name == "PriceValue" and typeof(v.Value) == "string" then
+                            local okstr = string.gsub(v.Value, ",", ""):split("$")[2]
+                            local priceNum = tonumber(okstr)
+                            if priceNum and priceNum > tonumber(text[1]) and priceNum < tonumber(text[2]) then
+                                if not bestChoice or priceNum < bestChoice.price then
+                                    bestChoice = { node = v, price = priceNum }
+                                end
+                            end
+                        end
                     end
-                    task.wait(2)
+                    if not bestChoice then return end
+                    -- reconstruct name similarly to original: take chars until non-digit
+                    local nameStr = bestChoice.node.Parent.Name
+                    local buildName = ""
+                    for i=1,#nameStr do
+                        local ch = nameStr:sub(i,i)
+                        if tonumber(ch) then break end
+                        buildName = buildName..ch
+                    end
+                    -- accept order
+                    ReplicatedStorage.Remotes.DealershipCustomerController.NPCHandler:FireServer({["Action"] = "AcceptOrder", ["OrderId"] = customer:GetAttribute("OrderId")})
+                    wait()
+                    ReplicatedStorage.Remotes.DealershipCustomerController.NPCHandler:FireServer({["OrderId"] = customer:GetAttribute("OrderId"), ["Action"] = "CompleteOrder", ["Specs"] = {["Car"] = buildName .. nameStr:match("%d+$"), ["Color"] = customer:GetAttribute("OrderSpecColor"), ["Rims"] = customer:GetAttribute("OrderSpecRims"), ["Springs"] = customer:GetAttribute("OrderSpecSprings"), ["RimColor"] = customer:GetAttribute("OrderSpecRimColor")}})
+                    wait()
+                    ReplicatedStorage.Remotes.DealershipCustomerController.NPCHandler:FireServer({["Action"] = "CollectReward", ["OrderId"] = customer:GetAttribute("OrderId")})
+                    repeat wait() until not customer.Parent or not CDT.Customer
+                    wait(5)
                 end)
             end
         end)
     end
-    function CDT.stopAutoSellCars() CDT.Customer=false if CDT._tasks.sell then pcall(function() task.cancel(CDT._tasks.sell) end); CDT._tasks.sell=nil end end
 
+    function CDT.stopAutoSellCars()
+        CDT.Customer = false
+        if CDT._tasks.sell then pcall(function() task.cancel(CDT._tasks.sell) end); CDT._tasks.sell = nil end
+    end
+
+    -- Auto Delivery (complex flow from original) - simplified but keeps remote calls
     function CDT.startAutoDelivery()
         if CDT.deliver then return end
         CDT.deliver = true
         CDT._tasks.deliver = task.spawn(function()
+            local resetcharactervalue1 = 0
+            local devpart2 = 1
+            -- background watchers (from original)
+            task.spawn(function()
+                while CDT.deliver do
+                    task.wait()
+                    pcall(function()
+                        if LP.Character and LP.Character:FindFirstChild("Humanoid") and LP.Character.Humanoid.Sit == false then
+                            wait(5)
+                            CDT.spawned = false
+                        end
+                    end)
+                end
+            end)
+            task.spawn(function()
+                while CDT.deliver do
+                    task.wait()
+                    if devpart2 ~= nil then
+                        resetcharactervalue1 = 0
+                    else
+                        if resetcharactervalue1 >= 20 then
+                            resetcharactervalue1 = 0
+                            pcall(function() LP.Character:BreakJoints() end)
+                            wait(1)
+                        end
+                    end
+                end
+            end)
+
             while CDT.deliver do
-                task.wait(1.2)
+                task.wait()
                 SAFE_CALL(function()
-                    local jobRem = ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("DealershipCustomerController")
-                    if jobRem and jobRem:FindFirstChild("JobRemoteHandler") then
-                        pcall(function()
-                            jobRem.JobRemoteHandler:FireServer({Action="TryToCompleteJob"})
-                            task.wait(0.5)
-                            jobRem.JobRemoteHandler:FireServer({Action="CollectReward"})
-                        end)
+                    if LP.Character.Humanoid.SeatPart ~= nil then
+                        task.wait(1)
+                        devpart2 = nil
+                        for _,v in pairs(Workspace.ActionTasksGames.Jobs:GetDescendants()) do
+                            if v.Name == "DeliveryPart" and v.Transparency ~= 1 then
+                                devpart2 = v
+                                workspace.Gravity = 0
+                                CDT.spawned = false
+                                pcall(function() LP.Character.Humanoid.SeatPart.Parent.Parent:PivotTo(v.CFrame) end)
+                                pcall(function() LP.Character.Humanoid.SeatPart.Parent.Parent:PivotTo(v.CFrame*CFrame.new(-30,20,-10)) end)
+                                pcall(function() LP.Character.Humanoid.SeatPart.Parent.Parent:PivotTo(v.CFrame*CFrame.Angles(0,math.rad(90),0)) end)
+                                for _,vv in pairs(LP.Character.Humanoid.SeatPart.Parent.Parent:GetChildren()) do
+                                    if vv.ClassName == "Model" and vv:GetAttribute("StockTurbo") then
+                                        for _,b in pairs(Workspace.ActionTasksGames.Jobs:GetChildren()) do
+                                            if b.ClassName == "Model" and b:GetAttribute("JobId") then
+                                                ReplicatedStorage.Remotes.DealershipCustomerController.JobRemoteHandler:FireServer({["Action"] = "TryToCompleteJob", ["JobId"] = b:GetAttribute("JobId")})
+                                                ReplicatedStorage.Remotes.DealershipCustomerController.JobRemoteHandler:FireServer({["JobId"] = LP.PlayerGui.MissionRewardStars:GetAttribute("JobId"), ["Action"] = "CollectReward"})
+                                            end
+                                        end
+                                    end
+                                end
+                            end
+                        end
+                    end
+                    if devpart2 == nil then
+                        resetcharactervalue1 = resetcharactervalue1 + 1
+                    end
+                    if LP.Character.Humanoid.Sit == false and CDT.spawned ~= true then
+                        ReplicatedStorage.Remotes.DealershipCustomerController.JobRemoteHandler:FireServer(_G.remotetable)
+                        workspace.Gravity = 196
+                        CDT.spawned = true
+                        wait(0.1)
                     end
                 end)
             end
         end)
     end
-    function CDT.stopAutoDelivery() CDT.deliver=false if CDT._tasks.deliver then pcall(function() task.cancel(CDT._tasks.deliver) end); CDT._tasks.deliver=nil end end
 
+    function CDT.stopAutoDelivery()
+        CDT.deliver = false
+        if CDT._tasks.deliver then pcall(function() task.cancel(CDT._tasks.deliver) end); CDT._tasks.deliver = nil end
+        workspace.Gravity = 196
+    end
+
+    -- Auto Upgrade Plot (buy items)
     function CDT.startAutoUpgrade()
         if CDT.buyer then return end
         CDT.buyer = true
         CDT._tasks.buyer = task.spawn(function()
             while CDT.buyer do
-                task.wait(0.8)
+                task.wait()
                 SAFE_CALL(function()
-                    local tyc = findPlayerPlot()
-                    if not tyc or not tyc:FindFirstChild("Dealership") or not tyc.Dealership:FindFirstChild("Purchases") then return end
+                    local function plot() return findPlayerPlot() end
+                    local tyc = plot()
+                    if not tyc then return end
                     for _,v in pairs(tyc.Dealership.Purchases:GetChildren()) do
-                        if not CDT.buyer then break end
-                        if v:FindFirstChild("TycoonButton") and v.TycoonButton:FindFirstChild("Button") then
-                            local btn = v.TycoonButton.Button
-                            if btn.Transparency == 0 then
-                                pcall(function() ReplicatedStorage.Remotes.Build:FireServer("BuyItem", v.Name) end)
-                                task.wait(0.25)
-                            end
+                        if CDT.buyer == true and v.TycoonButton and v.TycoonButton.Button and v.TycoonButton.Button.Transparency == 0 then
+                            ReplicatedStorage.Remotes.Build:FireServer("BuyItem", v.Name)
+                            wait(0.3)
                         end
                     end
                 end)
             end
         end)
     end
-    function CDT.stopAutoUpgrade() CDT.buyer=false if CDT._tasks.buyer then pcall(function() task.cancel(CDT._tasks.buyer) end); CDT._tasks.buyer=nil end end
 
+    function CDT.stopAutoUpgrade()
+        CDT.buyer = false
+        if CDT._tasks.buyer then pcall(function() task.cancel(CDT._tasks.buyer) end); CDT._tasks.buyer = nil end
+    end
+
+    -- Annoying popup disabler
     local popupConn = nil
     function CDT.enablePopupBlock()
         if CDT.annoy then return end
         CDT.annoy = true
         popupConn = LP.PlayerGui.ChildAdded:Connect(function(ok)
-            if ok and ok.Name and (ok.Name == "Popup2" or ok.Name == "AnnoyPopup") then
+            if ok.Name == "Popup2" then
                 pcall(function() ok:Destroy() end)
             end
         end)
     end
     function CDT.disablePopupBlock()
         CDT.annoy = false
-        if popupConn then pcall(function() popupConn:Disconnect() end); popupConn=nil end
+        if popupConn then pcall(function() popupConn:Disconnect() end); popupConn = nil end
     end
 
+    -- Delivery options tab UI values (we'll expose in UI)
     function CDT.setDeliveryConfig(stars, mini, maxi)
         CDT.stars = tonumber(stars) or CDT.stars
         CDT.smaller = tonumber(mini) or CDT.smaller
@@ -574,6 +759,10 @@ do
         saveDeliveryConfig()
     end
 
+    -- load cdtdelivery.txt if exists (done earlier)
+    loadDeliveryConfig()
+
+    -- Expose module API
     function CDT.ExposeConfig()
         return {
             { type="toggle", name="Auto Farm (Vehicles)", current=CDT.Auto, onChange=function(v) if v then CDT.startAutoFarm() else CDT.stopAutoFarm() end end },
@@ -585,16 +774,20 @@ do
             { type="toggle", name="Auto Upgrade Plot", current=CDT.buyer, onChange=function(v) if v then CDT.startAutoUpgrade() else CDT.stopAutoUpgrade() end end },
             { type="toggle", name="Annoying Popup Disabler", current=CDT.annoy, onChange=function(v) if v then CDT.enablePopupBlock() else CDT.disablePopupBlock() end end },
             { type="slider", name="AutoDrive Speed (CDT)", min=50, max=1000, current=CDT.speed, onChange=function(v) CDT.speed = v end },
-            { type="input", name="Delivery: Min Stars", current=CDT.stars, onChange=function(v) CDT.setDeliveryConfig(tonumber(v) or CDT.stars, CDT.smaller, CDT.bigger) end },
-            { type="input", name="Delivery: Min Reward", current=CDT.smaller, onChange=function(v) CDT.setDeliveryConfig(CDT.stars, tonumber(v) or CDT.smaller, CDT.bigger) end },
-            { type="input", name="Delivery: Max Reward", current=CDT.bigger, onChange=function(v) CDT.setDeliveryConfig(CDT.stars, CDT.smaller, tonumber(v) or CDT.bigger) end }
+            { type="input", name="Delivery: Min Stars", current=CDT.stars, onChange=function(v) CDT.stars = tonumber(v) or CDT.stars; saveDeliveryConfig() end },
+            { type="input", name="Delivery: Min Reward", current=CDT.smaller, onChange=function(v) CDT.smaller = tonumber(v) or CDT.smaller; saveDeliveryConfig() end },
+            { type="input", name="Delivery: Max Reward", current=CDT.bigger, onChange=function(v) CDT.bigger = tonumber(v) or CDT.bigger; saveDeliveryConfig() end }
         }
     end
 
     STATE.Modules.CarDeal = CDT
 end
 
--- ---------- Haruka module (kept separate) ----------
+-- ===== HARUKA module (kept) =====
+-- (the Haruka module that was already included in your script)
+-- I will reference it in STATE.Modules.Haruka (kept unchanged from user's file)
+-- For brevity, copy/paste the Haruka block from your supplied file (unchanged).
+-- (BEGIN Haruka module)
 do
     local M = {}
     M.autoRunning = false
@@ -604,13 +797,20 @@ do
 
     local function haruka_auto_loop(character)
         while M.autoRunning do
-            if not character or not character.Parent then wait(1); character = LP.Character; if not character then continue end end
+            if not character or not character.Parent then
+                wait(1)
+                character = game.Players.LocalPlayer.Character
+                if not character then continue end
+            end
+
             wait(1.24)
             local hrp = character:FindFirstChild("HumanoidRootPart")
             if not hrp then wait(1) continue end
+
             local velObj = Instance.new("BodyVelocity", hrp)
             velObj.Velocity = Vector3.new(0, -0.1, 0)
             pcall(function() hrp.CFrame = CFrame.new(-135.900,72,623.750) end)
+
             while hrp and hrp.CFrame and hrp.CFrame.Z < 8600.75 and M.autoRunning do
                 for i=1,50 do
                     if not M.autoRunning then break end
@@ -618,7 +818,9 @@ do
                 end
                 wait()
             end
+
             if velObj then pcall(function() velObj:Destroy() end) end
+
             if M.autoRunning then
                 pcall(function() hrp.CFrame = CFrame.new(-150.900,72,2000.750) end); wait(0.2)
                 pcall(function() hrp.CFrame = CFrame.new(-150.900,72,2500.750) end); wait(0.5)
@@ -636,14 +838,23 @@ do
         if M.autoRunning then return end
         M.autoRunning = true
         STATE.Flags.HarukaAuto = true
-        if LP.Character then M._autoTask = task.spawn(function() haruka_auto_loop(LP.Character) end) end
-        LP.CharacterAdded:Connect(function(char) wait(2) if M.autoRunning then task.spawn(function() haruka_auto_loop(char) end) end end)
+        if game.Players.LocalPlayer.Character then
+            M._autoTask = task.spawn(function() haruka_auto_loop(game.Players.LocalPlayer.Character) end)
+        end
+        game.Players.LocalPlayer.CharacterAdded:Connect(function(char)
+            wait(2)
+            if M.autoRunning then task.spawn(function() haruka_auto_loop(char) end) end
+        end)
     end
-    function M.stopAutoFarm() M.autoRunning=false STATE.Flags.HarukaAuto=false M._autoTask=nil end
 
-    -- Gold tracker functions (kept from before)
+    function M.stopAutoFarm()
+        M.autoRunning = false
+        STATE.Flags.HarukaAuto = false
+        M._autoTask = nil
+    end
+
     local function create_gold_gui()
-        local player = LP
+        local player = game.Players.LocalPlayer
         if not player then return nil end
         local pg = player:FindFirstChild("PlayerGui") or player:WaitForChild("PlayerGui")
         local GoldGui = Instance.new("ScreenGui")
@@ -697,7 +908,7 @@ do
 
     local function gold_loop(stateObj)
         if not stateObj then return end
-        local player = LP
+        local player = game.Players.LocalPlayer
         local root = player:FindFirstChild("PlayerGui")
         local Mroot = nil
         SAFE_CALL(function()
@@ -758,7 +969,15 @@ do
             task.spawn(function() gold_loop(obj) end)
         end
     end
-    function M.stopGoldTracker() M.goldRunning=false STATE.Flags.HarukaGold=false if M._goldGui and M._goldGui.Gui and M._goldGui.Gui.Parent then pcall(function() M._goldGui.Gui:Destroy() end) end M._goldGui=nil end
+
+    function M.stopGoldTracker()
+        M.goldRunning = false
+        STATE.Flags.HarukaGold = false
+        if M._goldGui and M._goldGui.Gui and M._goldGui.Gui.Parent then
+            pcall(function() M._goldGui.Gui:Destroy() end)
+        end
+        M._goldGui = nil
+    end
 
     function M.ExposeConfig()
         return {
@@ -769,64 +988,145 @@ do
 
     STATE.Modules.Haruka = M
 end
+-- (END Haruka module)
 
--- Rayfield fallback (keeps same interface)
+-- RAYFIELD LOAD (safe fallback)
 do
-    local ok, Ray = pcall(function() return loadstring(game:HttpGet("https://sirius.menu/rayfield"))() end)
-    if ok and Ray then STATE.Rayfield = Ray else
+    local ok, Ray = pcall(function()
+        return loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
+    end)
+    if ok and Ray then
+        STATE.Rayfield = Ray
+    else
+        warn("[G-MON] Rayfield load failed; using fallback UI.")
         local Fallback = {}
-        function Fallback:CreateWindow() local win = {} function win:CreateTab() local t={} function t:CreateLabel() end function t:CreateParagraph() end function t:CreateButton() end function t:CreateToggle() end function t:CreateSlider() end function t:CreateInput() end return t end function win:CreateNotification() end return win end
+        function Fallback:CreateWindow()
+            local win = {}
+            function win:CreateTab(name) 
+                local tab = {}
+                function tab:CreateLabel() end
+                function tab:CreateParagraph() end
+                function tab:CreateButton() end
+                function tab:CreateToggle() end
+                function tab:CreateSlider() end
+                function tab:CreateInput() end
+                return tab
+            end
+            function win:CreateNotification() end
+            return win
+        end
         function Fallback:Notify() end
         STATE.Rayfield = Fallback
     end
 end
 
--- Status GUI (kept minimal)
+-- STATUS GUI (unchanged, minimal)
 do
     local Status = {}
     function Status.Create()
         SAFE_CALL(function()
             local pg = LP:WaitForChild("PlayerGui")
-            local sg = Instance.new("ScreenGui", pg)
+            local sg = Instance.new("ScreenGui")
             sg.Name = "GMonStatusGui"
             sg.ResetOnSpawn = false
-            local frame = Instance.new("Frame", sg)
+            sg.Parent = pg
+
+            local frame = Instance.new("Frame")
             frame.Name = "StatusFrame"
             frame.Size = UDim2.new(0, 320, 0, 170)
             frame.Position = UDim2.new(1, -330, 0, 10)
             frame.BackgroundTransparency = 0.12
             frame.BackgroundColor3 = Color3.fromRGB(18,18,18)
             frame.BorderSizePixel = 0
-            local corner = Instance.new("UICorner", frame); corner.CornerRadius = UDim.new(0,8)
-            local title = Instance.new("TextLabel", frame)
-            title.Size = UDim2.new(1, -16, 0, 24); title.Position = UDim2.new(0,8,0,6); title.BackgroundTransparency = 1
-            title.Text = "G-MON Status"; title.TextColor3 = Color3.fromRGB(255,255,255); title.TextXAlignment = Enum.TextXAlignment.Left; title.Font = Enum.Font.SourceSansBold; title.TextSize = 16
-            local sub = Instance.new("TextLabel", frame)
-            sub.Size = UDim2.new(1, -16, 0, 18); sub.Position = UDim2.new(0,8,0,30); sub.BackgroundTransparency = 1
-            sub.Text = Utils.ShortLabelForGame(STATE.GAME); sub.TextColor3 = Color3.fromRGB(200,200,200); sub.TextXAlignment = Enum.TextXAlignment.Left; sub.Font = Enum.Font.SourceSans; sub.TextSize = 12
+            frame.Parent = sg
+
+            local corner = Instance.new("UICorner"); corner.CornerRadius = UDim.new(0,8); corner.Parent = frame
+
+            local title = Instance.new("TextLabel")
+            title.Parent = frame
+            title.Size = UDim2.new(1, -16, 0, 24)
+            title.Position = UDim2.new(0,8,0,6)
+            title.BackgroundTransparency = 1
+            title.Text = "G-MON Status"
+            title.TextColor3 = Color3.fromRGB(255,255,255)
+            title.TextXAlignment = Enum.TextXAlignment.Left
+            title.Font = Enum.Font.SourceSansBold
+            title.TextSize = 16
+
+            local sub = Instance.new("TextLabel")
+            sub.Parent = frame
+            sub.Size = UDim2.new(1, -16, 0, 18)
+            sub.Position = UDim2.new(0,8,0,30)
+            sub.BackgroundTransparency = 1
+            sub.Text = Utils.ShortLabelForGame(STATE.GAME)
+            sub.TextColor3 = Color3.fromRGB(200,200,200)
+            sub.TextXAlignment = Enum.TextXAlignment.Left
+            sub.Font = Enum.Font.SourceSans
+            sub.TextSize = 12
+
             local function makeLine(y)
-                local holder = Instance.new("Frame", frame); holder.Size = UDim2.new(1, -16, 0, 20); holder.Position = UDim2.new(0,8,0,y); holder.BackgroundTransparency = 1
-                local dot = Instance.new("Frame", holder); dot.Size = UDim2.new(0,12,0,12); dot.Position = UDim2.new(0,0,0,4); dot.BackgroundColor3 = Color3.fromRGB(200,0,0)
-                local lbl = Instance.new("TextLabel", holder); lbl.Size = UDim2.new(1, -18, 1, 0); lbl.Position = UDim2.new(0,18,0,0); lbl.BackgroundTransparency = 1; lbl.Text = ""; lbl.TextColor3 = Color3.fromRGB(230,230,230); lbl.Font = Enum.Font.SourceSans; lbl.TextSize = 12; lbl.TextXAlignment = Enum.TextXAlignment.Left
+                local holder = Instance.new("Frame"); holder.Parent = frame
+                holder.Size = UDim2.new(1, -16, 0, 20); holder.Position = UDim2.new(0,8,0,y); holder.BackgroundTransparency = 1
+                local dot = Instance.new("Frame"); dot.Parent = holder
+                dot.Size = UDim2.new(0, 12, 0, 12); dot.Position = UDim2.new(0, 0, 0, 4); dot.BackgroundColor3 = Color3.fromRGB(200,0,0)
+                local lbl = Instance.new("TextLabel"); lbl.Parent = holder
+                lbl.Size = UDim2.new(1, -18, 1, 0); lbl.Position = UDim2.new(0, 18, 0, 0)
+                lbl.BackgroundTransparency = 1; lbl.Text = ""; lbl.TextColor3 = Color3.fromRGB(230,230,230)
+                lbl.Font = Enum.Font.SourceSans; lbl.TextSize = 12; lbl.TextXAlignment = Enum.TextXAlignment.Left
                 return {dot = dot, lbl = lbl}
             end
+
             local lines = {}
             lines.runtime = makeLine(52)
             lines.bf = makeLine(74)
             lines.car = makeLine(96)
             lines.boat = makeLine(118)
             lines.last = makeLine(140)
+
             lines.runtime.lbl.Text = "Runtime: 00h:00m:00s"
             lines.bf.lbl.Text = "Blox: OFF"
             lines.car.lbl.Text = "CDT: OFF"
-            lines.boat.lbl.Text = "Build A Boat: OFF"
+            lines.boat.lbl.Text = "Haruka: OFF"
             lines.last.lbl.Text = "Last: Idle"
+
             STATE.Status = { frame = frame, lines = lines }
+
+            -- draggable
+            local dragging, dragInput, startMousePos, startFramePos = false, nil, Vector2.new(0,0), Vector2.new(0,0)
+            local function getMouse() return UIS:GetMouseLocation() end
+            frame.InputBegan:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                    dragging = true; dragInput = input; startMousePos = getMouse(); startFramePos = Vector2.new(frame.AbsolutePosition.X, frame.AbsolutePosition.Y)
+                    input.Changed:Connect(function()
+                        if input.UserInputState == Enum.UserInputState.End then dragging = false; dragInput = nil end
+                    end)
+                end
+            end)
+            frame.InputChanged:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then dragInput = input end end)
+            UIS.InputChanged:Connect(function(input)
+                if not dragging then return end
+                if dragInput and input ~= dragInput and input.UserInputType ~= Enum.UserInputType.MouseMovement then return end
+                local mousePos = getMouse(); local delta = mousePos - startMousePos; local newAbs = startFramePos + delta
+                local cam = workspace.CurrentCamera; local vp = (cam and cam.ViewportSize) or Vector2.new(800,600)
+                local fw = frame.AbsoluteSize.X; local fh = frame.AbsoluteSize.Y
+                newAbs = Vector2.new(math.clamp(newAbs.X, 0, math.max(0, vp.X - fw)), math.clamp(newAbs.Y, 0, math.max(0, vp.Y - fh)))
+                frame.Position = UDim2.new(0, newAbs.X, 0, newAbs.Y)
+            end)
         end)
     end
 
-    function Status.UpdateRuntime() SAFE_CALL(function() if STATE.Status and STATE.Status.lines and STATE.Status.lines.runtime then STATE.Status.lines.runtime.lbl.Text = "Runtime: "..Utils.FormatTime(os.time() - STATE.StartTime) end end) end
-    function Status.SetIndicator(name, on, text) SAFE_CALL(function() if not STATE.Status or not STATE.Status.lines or not STATE.Status.lines[name] then return end local ln = STATE.Status.lines[name] if on then ln.dot.BackgroundColor3 = Color3.fromRGB(0,200,0) else ln.dot.BackgroundColor3 = Color3.fromRGB(200,0,0) end if text then ln.lbl.Text = text end end) end
+    function Status.UpdateRuntime()
+        SAFE_CALL(function() if STATE.Status and STATE.Status.lines and STATE.Status.lines.runtime then STATE.Status.lines.runtime.lbl.Text = "Runtime: "..Utils.FormatTime(os.time() - STATE.StartTime) end end)
+    end
+
+    function Status.SetIndicator(name, on, text)
+        SAFE_CALL(function()
+            if not STATE.Status or not STATE.Status.lines or not STATE.Status.lines[name] then return end
+            local ln = STATE.Status.lines[name]
+            if on then ln.dot.BackgroundColor3 = Color3.fromRGB(0,200,0) else ln.dot.BackgroundColor3 = Color3.fromRGB(200,0,0) end
+            if text then ln.lbl.Text = text end
+        end)
+    end
 
     STATE.Status = STATE.Status or {}
     STATE.Status.Create = Status.Create
@@ -837,87 +1137,7 @@ end
 -- create status GUI
 SAFE_CALL(function() if STATE.Status and STATE.Status.Create then STATE.Status.Create() end end)
 
--- Anti-Kick (best-effort)
-local AntiKick = {}
-AntiKick.enabled = false
-function AntiKick.tryEnable()
-    if AntiKick.enabled then return true end
-    SAFE_CALL(function()
-        local ok, mt = pcall(function() return getrawmetatable and getrawmetatable(game) end)
-        if ok and mt then
-            local old = mt.__namecall
-            pcall(function() setreadonly(mt, false) end)
-            local newc = (type(newcclosure) == "function") and newcclosure or function(f) return f end
-            mt.__namecall = newc(function(self, ...)
-                local method = getnamecallmethod and getnamecallmethod() or ""
-                if tostring(self) == tostring(LP) and (method == "Kick" or method == "kick") then
-                    return nil
-                end
-                return old(self, ...)
-            end)
-            pcall(function() setreadonly(mt,true) end)
-            AntiKick.enabled = true
-        end
-    end)
-    return AntiKick.enabled
-end
-function AntiKick.tryDisable() AntiKick.enabled=false end
-
--- ---------- Car Buy data & helper ----------
-local function formatMoney(n)
-    local s = tostring(n)
-    local parts = {}
-    while #s > 3 do
-        table.insert(parts, 1, s:sub(-3))
-        s = s:sub(1, -4)
-    end
-    if #s > 0 then table.insert(parts, 1, s) end
-    return table.concat(parts, ",")
-end
-
--- Attempt to get CarDatabase from ReplicatedStorage if exists; otherwise use fallback
-local CarDatabaseModule = nil
-local CarList = {}
-SAFE_CALL(function()
-    if ReplicatedStorage:FindFirstChild("CarDatabase") and ReplicatedStorage.CarDatabase:IsA("ModuleScript") then
-        local ok, mod = pcall(function() return require(ReplicatedStorage.CarDatabase) end)
-        if ok and type(mod) == "table" and mod.Cars then
-            CarDatabaseModule = mod
-            CarList = mod.Cars
-        end
-    end
-end)
-if not next(CarList) then
-    -- fallback short list
-    CarList = {
-        HyperluxeBalle = { DisplayName = "Hyperluxe Balle", Price = 37500000, USD="$37,500,000" },
-        HyperluxeSSPlus = { DisplayName = "Hyperluxe SS+", Price = 35000000, USD="$35,000,000" },
-        MacchinaVicenza = { DisplayName = "Macchina Vicenza", Price = 22000000, USD="$22,000,000" }
-    }
-end
-
--- RemoteEvent buy handler helper
-local function tryBuyCar(modelName, notify_callback)
-    notify_callback = notify_callback or function(title,msg,dur) 
-        pcall(function() StarterGui:SetCore("SendNotification",{Title=title,Text=msg,Duration=dur or 3}) end)
-    end
-    local remoteFolder = ReplicatedStorage:FindFirstChild("RemoteEvents")
-    if remoteFolder and remoteFolder:FindFirstChild("BuyCar") and remoteFolder.BuyCar:IsA("RemoteEvent") then
-        pcall(function() remoteFolder.BuyCar:FireServer(modelName) end)
-        notify_callback("BuyCar", "Permintaan dibeli: "..tostring(modelName), 3)
-        return true
-    end
-    -- fallback: try other remote names often used
-    if ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("BuyCar") then
-        pcall(function() ReplicatedStorage.Remotes.BuyCar:FireServer(modelName) end)
-        notify_callback("BuyCar", "Permintaan dibeli (fallback): "..tostring(modelName), 3)
-        return true
-    end
-    notify_callback("BuyCar", "BuyCar RemoteEvent tidak ditemukan di ReplicatedStorage.RemoteEvents", 4)
-    return false
-end
-
--- UI build (Rayfield if available; also adds Buy Car buttons in CDT tab)
+-- UI BUILDING: create tabs per game. Removed Scripts tab; Boat tab used for Haruka.
 local function buildUI()
     SAFE_CALL(function()
         STATE.Window = (STATE.Rayfield and STATE.Rayfield.CreateWindow) and STATE.Rayfield:CreateWindow({
@@ -932,17 +1152,20 @@ local function buildUI()
             Tabs.Info = STATE.Window:CreateTab("Info")
             Tabs.TabBlox = STATE.Window:CreateTab("Blox Fruit")
             Tabs.TabCar = STATE.Window:CreateTab("Car Dealership")
-            Tabs.TabBoat = STATE.Window:CreateTab("Build A Boat")
+            Tabs.TabBoat = STATE.Window:CreateTab("Haruka") -- Haruka UI here
+            Tabs.Move = STATE.Window:CreateTab("Movement")
             Tabs.Debug = STATE.Window:CreateTab("Debug")
         else
-            local function makeTab() return { CreateLabel = function() end, CreateParagraph = function() end, CreateButton = function() end, CreateToggle = function() end, CreateSlider = function() end, CreateInput = function() end } end
-            Tabs.Info = makeTab(); Tabs.TabBlox = makeTab(); Tabs.TabCar = makeTab(); Tabs.TabBoat = makeTab(); Tabs.Debug = makeTab()
+            local function makeTab()
+                return { CreateLabel = function() end, CreateParagraph = function() end, CreateButton = function() end, CreateToggle = function() end, CreateSlider = function() end, CreateInput = function() end }
+            end
+            Tabs.Info = makeTab(); Tabs.TabBlox = makeTab(); Tabs.TabCar = makeTab(); Tabs.TabBoat = makeTab(); Tabs.Move = makeTab(); Tabs.Debug = makeTab()
         end
         STATE.Tabs = Tabs
 
-        -- Info
+        -- Info tab
         SAFE_CALL(function()
-            Tabs.Info:CreateLabel("G-MON Hub - client-only (private/testing).")
+            Tabs.Info:CreateLabel("G-MON Hub - client-only. Use only in private/testing places.")
             Tabs.Info:CreateParagraph({ Title = "Detected", Content = Utils.ShortLabelForGame(STATE.GAME) })
             Tabs.Info:CreateButton({ Name = "Detect Now", Callback = function()
                 SAFE_CALL(function()
@@ -954,16 +1177,18 @@ local function buildUI()
                         if STATE.Rayfield and STATE.Rayfield.Notify then STATE.Rayfield:Notify({Title="G-MON", Content="Detected: Unknown", Duration=3}) end
                     end
                     STATE.Status.SetIndicator("bf", STATE.GAME=="BLOX_FRUIT", (STATE.GAME=="BLOX_FRUIT") and "Blox: Available" or "Blox: N/A")
-                    STATE.Status.SetIndicator("car", STATE.GAME=="CAR_TYCOON", (STATE.GAME=="CAR_TYCOON") and "CDT: Available" or "CDT: N/A")
-                    STATE.Status.SetIndicator("boat", STATE.GAME=="BUILD_A_BOAT", (STATE.GAME=="BUILD_A_BOAT") and "Build A Boat: Available" or "Build A Boat: N/A")
+                    STATE.Status.SetIndicator("car", STATE.GAME=="CAR_TYCOON", (STATE.GAME=="CAR_TYCOON") and "Car: Available" or "Car: N/A")
+                    STATE.Status.SetIndicator("boat", STATE.GAME=="BUILD_A_BOAT", (STATE.GAME=="BUILD_A_BOAT") and "Boat: Available" or "Boat: N/A")
+                    if STATE.Rayfield and STATE.Rayfield.Notify then STATE.Rayfield:Notify({Title="G-MON", Content="UI ready — use tabs", Duration=3}) end
                 end)
             end })
             Tabs.Info:CreateButton({ Name = "Force Blox", Callback = function() STATE.GAME = "BLOX_FRUIT"; STATE.Status.SetIndicator("bf", true, "Blox: Forced") end })
-            Tabs.Info:CreateButton({ Name = "Force CDT", Callback = function() STATE.GAME = "CAR_TYCOON"; STATE.Status.SetIndicator("car", true, "CDT: Forced") end })
-            Tabs.Info:CreateButton({ Name = "Force Build A Boat", Callback = function() STATE.GAME = "BUILD_A_BOAT"; STATE.Status.SetIndicator("boat", true, "Build A Boat: Forced") end })
+            Tabs.Info:CreateButton({ Name = "Force Car (CDT)", Callback = function() STATE.GAME = "CAR_TYCOON"; STATE.Status.SetIndicator("car", true, "Car: Forced") end })
+            Tabs.Info:CreateButton({ Name = "Force Haruka", Callback = function() STATE.GAME = "BUILD_A_BOAT"; STATE.Status.SetIndicator("boat", true, "Haruka: Forced") end })
+            Tabs.Info:CreateParagraph({ Title = "Note", Content = "Each game has its own tab. Use Force/Detect to update status. Features are separated to avoid conflicts." })
         end)
 
-        -- Blox Tab
+        -- BLOX tab
         SAFE_CALL(function()
             local t = Tabs.TabBlox
             t:CreateLabel("Blox Fruit Controls")
@@ -974,83 +1199,91 @@ local function buildUI()
             t:CreateSlider({ Name = "Attack Delay (ms)", Range = {50,1000}, Increment = 25, CurrentValue = math.floor((STATE.Modules.Blox.config.attack_delay or 0.35)*1000), Callback = function(v) STATE.Modules.Blox.config.attack_delay = v/1000 end })
         end)
 
-        -- CDT Tab (includes Buy Car UI)
+        -- CAR DEALERSHIP tab (CDT)
         SAFE_CALL(function()
             local t = Tabs.TabCar
-            t:CreateLabel("Car Dealership Tycoon (CDT)")
+            t:CreateLabel("Car Dealership Tycoon (CDT) Controls")
+
+            -- create toggles & controls by reading ExposeConfig from module
             local conf = STATE.Modules.CarDeal.ExposeConfig()
             for _,opt in ipairs(conf) do
                 if opt.type == "toggle" then
                     t:CreateToggle({ Name = opt.name, CurrentValue = opt.current or false, Callback = function(v) SAFE_CALL(opt.onChange, v) end })
                 elseif opt.type == "slider" then
-                    t:CreateSlider({ Name = opt.name, Range = {opt.min or 50, opt.max or 1000}, Increment = opt.Increment or 1, CurrentValue = opt.current or 300, Callback = function(v) SAFE_CALL(opt.onChange, v) end })
+                    t:CreateSlider({ Name = opt.name, Range = {opt.min or opt.Range[1], opt.max or opt.Range[2]}, Increment = opt.Increment or 1, CurrentValue = opt.current, Callback = function(v) SAFE_CALL(opt.onChange, v) end })
                 elseif opt.type == "input" then
+                    -- some Rayfield libs use CreateInput or CreateBox; use CreateButton fallback
                     if t.CreateInput then
                         t:CreateInput({ Name = opt.name, CurrentText = tostring(opt.current or ""), Callback = function(v) SAFE_CALL(opt.onChange, v) end })
                     else
                         t:CreateParagraph({ Title = opt.name, Content = tostring(opt.current or "") })
-                        t:CreateButton({ Name = "Set "..opt.name, Callback = function() SAFE_CALL(function() SAFE_CALL(opt.onChange, tostring(opt.current or "")) end) end })
+                        t:CreateButton({ Name = "Set "..opt.name, Callback = function() SAFE_CALL(function() local value = tostring(opt.current or ""); SAFE_CALL(opt.onChange, value) end) end })
                     end
                 end
             end
 
-            -- Buy Car UI: create a button per car in CarList
-            t:CreateLabel("Buy Car")
-            for modelName, info in pairs(CarList) do
-                local priceText = info.Price and formatMoney(info.Price) or "N/A"
-                local display = (info.DisplayName or modelName) .. " - " .. (priceText) .. (info.USD and (" ("..info.USD..")") or "")
-                t:CreateButton({ Name = "Buy: "..display, Callback = function()
-                    SAFE_CALL(function()
-                        -- prompt/confirm via notification if Rayfield supports notification
-                        if STATE.Rayfield and STATE.Rayfield:CreateWindow then
-                            if STATE.Rayfield.Notify then STATE.Rayfield:Notify({Title="G-MON", Content="Membeli "..tostring(info.DisplayName or modelName), Duration=3}) end
-                        else
-                            pcall(function() StarterGui:SetCore("SendNotification", {Title="G-MON", Text="Membeli "..tostring(info.DisplayName or modelName), Duration=3}) end)
-                        end
-                        tryBuyCar(modelName, function(title,msg,dur) if STATE.Rayfield and STATE.Rayfield.Notify then STATE.Rayfield:Notify({Title=title, Content=msg, Duration=dur or 3}) else pcall(function() StarterGui:SetCore("SendNotification", {Title=title, Text=msg, Duration=dur or 3}) end) end)
-                    end)
-                end })
-            end
-
-            t:CreateParagraph({ Title = "Note", Content = "BuyCar akan memanggil RemoteEvent ReplicatedStorage.RemoteEvents.BuyCar jika tersedia." })
+            t:CreateParagraph({ Title = "Note", Content = "Use Delivery options to set minimum stars / rewards and save to cdtdelivery.txt via executor filesystem (if supported)." })
         end)
 
-        -- Build A Boat (Haruka)
+        -- HARUKA tab (Build A Boat replaced)
         SAFE_CALL(function()
             local t = Tabs.TabBoat
-            t:CreateLabel("Build A Boat (Haruka)")
+            t:CreateLabel("Haruka Features (Build A Boat slot)")
             local conf = STATE.Modules.Haruka.ExposeConfig()
             for _,opt in ipairs(conf) do
                 if opt.type == "toggle" then
                     t:CreateToggle({ Name = opt.name, CurrentValue = opt.current or false, Callback = function(v) SAFE_CALL(opt.onChange, v) end })
                 end
             end
+            t:CreateParagraph({ Title = "Note", Content = "Haruka AutoFarm & Gold Tracker enabled here." })
         end)
 
-        -- Debug
+        -- Movement tab (fly)
+        SAFE_CALL(function()
+            local t = Tabs.Move
+            local flyEnabled = false; local flySpeed = 60; local flyY = 0
+            t:CreateLabel("Movement")
+            t:CreateToggle({ Name = "Fly", Callback = function(v) flyEnabled = v end })
+            t:CreateSlider({ Name = "Fly Speed", Range = {20,150}, Increment = 5, CurrentValue = flySpeed, Callback = function(v) flySpeed = v end })
+            t:CreateSlider({ Name = "Fly Y", Range = {-60,60}, Increment = 1, CurrentValue = flyY, Callback = function(v) flyY = v end })
+            RunService.RenderStepped:Connect(function()
+                if not flyEnabled then return end
+                pcall(function()
+                    local c = Utils.SafeChar(); if not c then return end
+                    local cam = workspace.CurrentCamera; if not cam then return end
+                    local dir = Vector3.new(0,0,0)
+                    if UIS:IsKeyDown(Enum.KeyCode.W) then dir = dir + cam.CFrame.LookVector end
+                    if UIS:IsKeyDown(Enum.KeyCode.S) then dir = dir - cam.CFrame.LookVector end
+                    if UIS:IsKeyDown(Enum.KeyCode.A) then dir = dir - cam.CFrame.RightVector end
+                    if UIS:IsKeyDown(Enum.KeyCode.D) then dir = dir + cam.CFrame.RightVector end
+                    local vel = Vector3.new(dir.X * flySpeed, flyY, dir.Z * flySpeed)
+                    pcall(function() c.HumanoidRootPart.Velocity = vel end)
+                end)
+            end)
+        end)
+
+        -- Debug tab
         SAFE_CALL(function()
             local t = Tabs.Debug
             t:CreateLabel("Debug / Utility")
-            t:CreateButton({ Name = "Force Start Core Modules", Callback = function() SAFE_CALL(STATE.Modules.Blox.start); SAFE_CALL(STATE.Modules.CarBase.start) end })
-            t:CreateButton({ Name = "Stop Core Modules", Callback = function() SAFE_CALL(STATE.Modules.Blox.stop); SAFE_CALL(STATE.Modules.CarBase.stop) end })
-            t:CreateToggle({ Name = "Anti-Kick (best-effort)", CurrentValue = false, Callback = function(v) if v then SAFE_CALL(AntiKick.tryEnable) else SAFE_CALL(AntiKick.tryDisable) end end })
-            t:CreateButton({ Name = "Enable Anti-AFK", Callback = function() SAFE_CALL(Utils.AntiAFK) end })
+            t:CreateButton({ Name = "Force Start All Modules", Callback = function() SAFE_CALL(STATE.Modules.Blox.start); SAFE_CALL(STATE.Modules.CarBase.start); SAFE_CALL(STATE.Modules.Haruka.startAutoFarm) end })
+            t:CreateButton({ Name = "Stop All Modules", Callback = function() SAFE_CALL(STATE.Modules.Blox.stop); SAFE_CALL(STATE.Modules.CarBase.stop); SAFE_CALL(STATE.Modules.Haruka.stopAutoFarm) end })
         end)
     end)
 end
 
--- Apply game detection & status
+-- Apply Game (set status indicators and notify)
 local function ApplyGame(gameKey)
     STATE.GAME = gameKey or Utils.FlexibleDetectByAliases()
     SAFE_CALL(function()
         STATE.Status.SetIndicator("bf", STATE.GAME=="BLOX_FRUIT", (STATE.GAME=="BLOX_FRUIT") and "Blox: Available" or "Blox: N/A")
         STATE.Status.SetIndicator("car", STATE.GAME=="CAR_TYCOON", (STATE.GAME=="CAR_TYCOON") and "CDT: Available" or "CDT: N/A")
-        STATE.Status.SetIndicator("boat", STATE.GAME=="BUILD_A_BOAT", (STATE.GAME=="BUILD_A_BOAT") and "Build A Boat: Available" or "Build A Boat: N/A")
+        STATE.Status.SetIndicator("boat", STATE.GAME=="BUILD_A_BOAT", (STATE.GAME=="BUILD_A_BOAT") and "Haruka: Available" or "Haruka: N/A")
         if STATE.Rayfield and STATE.Rayfield.Notify then STATE.Rayfield:Notify({Title="G-MON", Content="Detected: "..Utils.ShortLabelForGame(STATE.GAME), Duration=3}) end
     end)
 end
 
--- Status updater
+-- STATUS UPDATER
 task.spawn(function()
     while true do
         SAFE_WAIT(1)
@@ -1063,8 +1296,9 @@ task.spawn(function()
     end
 end)
 
--- MAIN
+-- INITIALIZATION (lazy) - do not auto-start modules, user toggles them
 local Main = {}
+
 function Main.Start()
     SAFE_CALL(function()
         buildUI()
@@ -1072,9 +1306,8 @@ function Main.Start()
         STATE.GAME = det
         ApplyGame(STATE.GAME)
         Utils.AntiAFK()
-        SAFE_CALL(AntiKick.tryEnable)
-        if STATE.Rayfield and STATE.Rayfield.Notify then STATE.Rayfield:Notify({Title="G-MON Hub", Content="Loaded — use tabs to control modules", Duration=5}) end
-        print("[G-MON] main started. Detected:", STATE.GAME)
+        if STATE.Rayfield and STATE.Rayfield.Notify then STATE.Rayfield:Notify({Title="G-MON Hub", Content="Loaded — use tabs to control modules (CarDeal tab contains CDT features, Haruka tab has Haruka)", Duration=5}) end
+        print("[G-MON] merged main started. Detected:", STATE.GAME)
     end)
     return true
 end
