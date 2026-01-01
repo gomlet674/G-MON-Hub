@@ -501,7 +501,7 @@ do
         CDT.open = false
         if CDT._tasks.open then pcall(function() task.cancel(CDT._tasks.open) end); CDT._tasks.open = nil end
     end
-
+    
     -- Auto Extinguish Fire (uses TaskController ActionGameDataReplication remote like original)
     function CDT.startExtinguishFire()
         if CDT.fireman then return end
@@ -759,6 +759,17 @@ do
         saveDeliveryConfig()
     end
 
+    Tabs.CDT:CreateButton({
+    Name = "Buy Car",
+    CurrentValue = false,
+    Callback = function(v)
+        STATE.Modules.CarDeal.AutoBuy = v
+        if v then
+            STATE.Modules.CarDeal:AutoBuyLoop()
+        end
+    end
+})
+    
     -- load cdtdelivery.txt if exists (done earlier)
     loadDeliveryConfig()
 
@@ -777,6 +788,14 @@ do
             { type="input", name="Delivery: Min Stars", current=CDT.stars, onChange=function(v) CDT.stars = tonumber(v) or CDT.stars; saveDeliveryConfig() end },
             { type="input", name="Delivery: Min Reward", current=CDT.smaller, onChange=function(v) CDT.smaller = tonumber(v) or CDT.smaller; saveDeliveryConfig() end },
             { type="input", name="Delivery: Max Reward", current=CDT.bigger, onChange=function(v) CDT.bigger = tonumber(v) or CDT.bigger; saveDeliveryConfig() end }
+            type="button",
+    name="Buy Car",
+    onClick=function()
+        if CDT and CDT.AutoBuyLoop then
+            CDT.AutoBuy = true
+            CDT:AutoBuyLoop()
+        end
+    end
         }
     end
 
@@ -981,11 +1000,14 @@ do
 
     function M.ExposeConfig()
         return {
-            { type="toggle", name="Haruka AutoFarm", current=false, onChange=function(v) if v then M.startAutoFarm() else M.stopAutoFarm() end end },
-            { type="toggle", name="Haruka Gold Tracker", current=false, onChange=function(v) if v then M.startGoldTracker() else M.stopGoldTracker() end end }
-        }
-    end
-
+            { type="toggle", name="Auto Farm (Build A Boat)", current=false,
+  onChange=function(v)
+      STATE.Flags.BoatAuto = v
+      if v then M.startAutoFarm() else M.stopAutoFarm() 
+     end
+  end
+   }
+            
     STATE.Modules.Haruka = M
 end
 -- (END Haruka module)
@@ -1228,7 +1250,7 @@ local function buildUI()
         -- HARUKA tab (Build A Boat replaced)
         SAFE_CALL(function()
             local t = Tabs.TabBoat
-            t:CreateLabel("Haruka Features (Build A Boat slot)")
+            t:CreateLabel("Features (Build A Boat slot)")
             local conf = STATE.Modules.Haruka.ExposeConfig()
             for _,opt in ipairs(conf) do
                 if opt.type == "toggle" then
@@ -1311,5 +1333,45 @@ function Main.Start()
     end)
     return true
 end
+-- ===============================
+-- GMON SAVE / LOAD SETTINGS
+-- ===============================
+local SETTINGS_FILE = "gmon_settings.json"
 
+local function collectSettings()
+    return {
+        Blox = STATE.Flags.Blox or false,
+        CDT_AutoFarm = STATE.Modules.CarDeal and STATE.Modules.CarDeal.Auto or false,
+        CDT_Delivery = STATE.Modules.CarDeal and STATE.Modules.CarDeal.deliver or false,
+        CDT_Sell = STATE.Modules.CarDeal and STATE.Modules.CarDeal.Customer or false,
+        Boat_AutoFarm = STATE.Flags.BoatAuto or false,
+        FullBright = STATE.Flags.FullBright or false
+    }
+end
+
+local function applySettings(data)
+    if not data then return end
+    SAFE_CALL(function()
+        if data.Blox then STATE.Modules.Blox.start() end
+        if data.CDT_AutoFarm then STATE.Modules.CarDeal.startAutoFarm() end
+        if data.CDT_Delivery then STATE.Modules.CarDeal.startAutoDelivery() end
+        if data.CDT_Sell then STATE.Modules.CarDeal.startAutoSellCars() end
+        if data.Boat_AutoFarm then STATE.Modules.Haruka.startAutoFarm() end
+        if data.FullBright then _G.GMON_FullBright(true) end
+    end)
+end
+
+local function saveSettings()
+    if writefile then
+        writefile(SETTINGS_FILE, game:GetService("HttpService"):JSONEncode(collectSettings()))
+    end
+end
+
+local function loadSettings()
+    if readfile and isfile and isfile(SETTINGS_FILE) then
+        local data = game:GetService("HttpService"):JSONDecode(readfile(SETTINGS_FILE))
+        applySettings(data)
+    end
+        end
+        
 return Main
