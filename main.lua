@@ -14,7 +14,7 @@ local GameId = game.GameId
 -- ================= GAME DATABASE =================
 -- Gunakan GameId (AMAN untuk semua map)
 local Games = {
-    [994732206] = { -- Car Dealership Tycoon
+    [1554960397] = { -- Car Dealership Tycoon
         Name = "Car Dealership Tycoon",
         Url  = "https://pandadevelopment.net/virtual/file/fef83e33e7275173"
     },
