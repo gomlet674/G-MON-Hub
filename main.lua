@@ -1,32 +1,18 @@
---[[
-  G-MON Hub - main_with_haruka_fixed.lua
-  Merged + fixes:
-    - G-MON modules kept intact
-    - Haruka module integrated and fixed:
-        * no duplicate CharacterAdded connections
-        * no use of `continue` (Luau compatibility)
-        * proper GUI creation / destroy
-        * safer loops (task.wait), stored connections/tasks
-        * corrected numeric-text detection
---]]
+-- main.lua (G-MON merged, PlaceId checks removed)
+-- Merged G-MON + Haruka features. PlaceId auto-picker removed.
 
--- BOOTSTRAP
 repeat task.wait() until game:IsLoaded()
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UIS = game:GetService("UserInputService")
 local VirtualUser = game:GetService("VirtualUser")
 local Workspace = workspace
-local TextService = game:GetService("TextService")
 local LP = Players.LocalPlayer
 
--- SAFE helpers
 local function SAFE_CALL(fn, ...)
     if type(fn) ~= "function" then return false end
     local ok, res = pcall(fn, ...)
-    if not ok then
-        warn("[G-MON] SAFE_CALL error:", res)
-    end
+    if not ok then warn("[G-MON] SAFE_CALL error:", res) end
     return ok, res
 end
 
@@ -37,9 +23,8 @@ local function SAFE_WAIT(sec)
     task.wait(sec)
 end
 
--- STATE
 local STATE = {
-    GAME = "UNKNOWN",
+    GAME = "ALL",
     StartTime = os.time(),
     Modules = {},
     Rayfield = nil,
@@ -50,7 +35,6 @@ local STATE = {
     LastAction = "Idle"
 }
 
--- UTILS & DETECTION
 local Utils = {}
 
 function Utils.SafeChar()
@@ -85,12 +69,8 @@ function Utils.FormatTime(sec)
     return string.format("%02dm:%02ds", m,s)
 end
 
+-- Flexible detection: NO PlaceId usage. Only scans workspace names / folders.
 function Utils.FlexibleDetectByAliases()
-    local pid = game.PlaceId
-    if pid == 2753915549 then return "BLOX_FRUIT" end
-    if pid == 1554960397 then return "CAR_TYCOON" end
-    if pid == 537413528 then return "BUILD_A_BOAT" end
-
     local aliasMap = {
         BLOX_FRUIT = {"Enemies","Sea1Enemies","Sea2Enemies","Monsters","Mobs","Quests","NPCQuests"},
         CAR_TYCOON = {"Cars","VehicleFolder","Vehicles","Dealership","Garage","CarShop","CarStages","CarsFolder"},
@@ -102,26 +82,24 @@ function Utils.FlexibleDetectByAliases()
         end
     end
     for _, obj in ipairs(Workspace:GetChildren()) do
-        local n = string.lower(obj.Name or "")
+        local n = tostring(obj.Name or ""):lower()
         if string.find(n, "enemy") or string.find(n, "mob") or string.find(n, "monster") then return "BLOX_FRUIT" end
         if string.find(n, "car") or string.find(n, "vehicle") or string.find(n, "garage") then return "CAR_TYCOON" end
         if string.find(n, "boat") or string.find(n, "stage") or string.find(n, "chest") then return "BUILD_A_BOAT" end
     end
-    return "UNKNOWN"
+    return "ALL"
 end
 
 function Utils.ShortLabelForGame(g)
     if g == "BLOX_FRUIT" then return "Blox" end
     if g == "CAR_TYCOON" then return "Car" end
     if g == "BUILD_A_BOAT" then return "Boat" end
-    return tostring(g or "Unknown")
+    return tostring(g or "All")
 end
 
 STATE.Modules.Utils = Utils
 
--- ===== MODULES (original G-MON kept) =====
--- (Blox / Car / Boat modules kept as-is except minimal formatting; not changed in logic)
--- (BEGIN Blox module)
+-- ===================== BLOX MODULE =====================
 do
     local M = {}
     M.config = { attack_delay = 0.35, range = 10, long_range = false, fast_attack = false }
@@ -130,10 +108,7 @@ do
 
     local function findEnemyFolder()
         local hints = {"Enemies","Sea1Enemies","Sea2Enemies","Monsters","Mobs"}
-        for _, name in ipairs(hints) do
-            local f = Workspace:FindFirstChild(name)
-            if f then return f end
-        end
+        for _, name in ipairs(hints) do local f = Workspace:FindFirstChild(name) if f then return f end end
         return nil
     end
 
@@ -141,7 +116,7 @@ do
         while M.running do
             task.wait(0.12)
             SAFE_CALL(function()
-                if STATE.GAME ~= "BLOX_FRUIT" then return end
+                if STATE.GAME ~= "BLOX_FRUIT" and STATE.GAME ~= "ALL" then return end
                 local char = Utils.SafeChar(); if not char then return end
                 local hrp = char:FindFirstChild("HumanoidRootPart"); if not hrp then return end
                 local folder = findEnemyFolder()
@@ -193,14 +168,12 @@ do
 
     function M.start()
         if M.running then return end
-        M.running = true
-        STATE.Flags.Blox = true
+        M.running = true; STATE.Flags.Blox = true
         M._task = task.spawn(loop)
     end
 
     function M.stop()
-        M.running = false
-        STATE.Flags.Blox = false
+        M.running = false; STATE.Flags.Blox = false
         M._task = nil
     end
 
@@ -215,9 +188,8 @@ do
 
     STATE.Modules.Blox = M
 end
--- (END Blox module)
 
--- (BEGIN Car module)
+-- ===================== CAR MODULE =====================
 do
     local M = {}
     M.running = false
@@ -287,7 +259,7 @@ do
         while M.running do
             task.wait(0.2)
             SAFE_CALL(function()
-                if STATE.GAME ~= "CAR_TYCOON" then return end
+                if STATE.GAME ~= "CAR_TYCOON" and STATE.GAME ~= "ALL" then return end
                 if not M.chosen or not M.chosen.PrimaryPart then
                     local car = M.choosePlayerFastestCar()
                     if not car or not car.PrimaryPart then STATE.Flags.Car = false; return end
@@ -311,14 +283,12 @@ do
 
     function M.start()
         if M.running then return end
-        M.running = true
-        STATE.Flags.Car = true
+        M.running = true; STATE.Flags.Car = true
         M._task = task.spawn(loop)
     end
 
     function M.stop()
-        M.running = false
-        STATE.Flags.Car = false
+        M.running = false; STATE.Flags.Car = false
         if M.chosen then
             SAFE_CALL(function()
                 if M.chosen.PrimaryPart then
@@ -343,9 +313,8 @@ do
 
     STATE.Modules.Car = M
 end
--- (END Car module)
 
--- (BEGIN Boat module)
+-- ===================== BOAT MODULE =====================
 do
     local M = {}
     M.running = false
@@ -373,7 +342,7 @@ do
         while M.running do
             task.wait(0.2)
             SAFE_CALL(function()
-                if STATE.GAME ~= "BUILD_A_BOAT" then return end
+                if STATE.GAME ~= "BUILD_A_BOAT" and STATE.GAME ~= "ALL" then return end
                 local char = Utils.SafeChar(); if not char then return end
                 local hrp = char:FindFirstChild("HumanoidRootPart"); if not hrp then return end
 
@@ -415,14 +384,12 @@ do
 
     function M.start()
         if M.running then return end
-        M.running = true
-        STATE.Flags.Boat = true
+        M.running = true; STATE.Flags.Boat = true
         M._task = task.spawn(loop)
     end
 
     function M.stop()
-        M.running = false
-        STATE.Flags.Boat = false
+        M.running = false; STATE.Flags.Boat = false
         M._task = nil
     end
 
@@ -434,9 +401,8 @@ do
 
     STATE.Modules.Boat = M
 end
--- (END Boat module)
 
--- ===== HARUKA module (added & FIXED) =====
+-- ===================== HARUKA MODULE (AutoFarm + Gold) =====================
 do
     local M = {}
     M.autoRunning = false
@@ -446,37 +412,25 @@ do
     M._goldGui = nil
     M._charConn = nil
 
-    -- Helper: get local character safely
     local function getLocalChar()
-        local ok, c = pcall(function() return game.Players.LocalPlayer and game.Players.LocalPlayer.Character end)
+        local ok, c = pcall(function() return Players.LocalPlayer and Players.LocalPlayer.Character end)
         if not ok then return nil end
         if c and c.Parent then return c end
         return nil
     end
 
-    -- AutoFarm behavior adapted from Haruka with safer flow
     local function haruka_auto_loop()
         local character = getLocalChar()
         while M.autoRunning do
-            -- refresh character if needed
             if not character or not character.Parent then
                 task.wait(1)
                 character = getLocalChar()
-                -- next iteration if still invalid
-                if not character or not character.Parent then
-                    task.wait(0.5)
-                    goto continue_loop
-                end
+                if not character or not character.Parent then task.wait(0.5) end
             end
 
-            local hrp = character:FindFirstChild("HumanoidRootPart")
-            if not hrp then
-                task.wait(1)
-                character = getLocalChar()
-                goto continue_loop
-            end
+            local hrp = character and character:FindFirstChild("HumanoidRootPart")
+            if not hrp then task.wait(1); character = getLocalChar(); goto cont end
 
-            -- create a very small downwards velocity object to stabilize (destroy later)
             local okVel, velObj = pcall(function()
                 local vb = Instance.new("BodyVelocity")
                 vb.Name = "_HarukaVel"
@@ -487,10 +441,8 @@ do
             end)
             if not okVel then velObj = nil end
 
-            -- path & movements (kept same coordinates as Haruka)
             pcall(function() hrp.CFrame = CFrame.new(-135.900,72,623.750) end)
 
-            -- walk forward in micro-steps until a target z (safe small loop)
             while M.autoRunning and hrp and hrp.CFrame and hrp.CFrame.Z < 8600.75 do
                 for i=1,50 do
                     if not M.autoRunning then break end
@@ -499,10 +451,7 @@ do
                 task.wait(0.1)
             end
 
-            -- safe destroy velObj
-            if velObj and velObj.Destroy then
-                pcall(function() velObj:Destroy() end)
-            end
+            if velObj and velObj.Destroy then pcall(function() velObj:Destroy() end) end
 
             if M.autoRunning then
                 pcall(function() hrp.CFrame = CFrame.new(-150.900,72,2000.750) end); task.wait(0.2)
@@ -515,45 +464,31 @@ do
                 pcall(function() hrp.CFrame = CFrame.new(-55.8801956,-361.116333,9488.1377) end)
             end
 
-            ::continue_loop::
+            ::cont::
             task.wait(0.25)
         end
     end
 
     function M.startAutoFarm()
         if M.autoRunning then return end
-        M.autoRunning = true
-        STATE.Flags.HarukaAuto = true
-        -- ensure only one task and one connection
-        if M._autoTask == nil then
-            M._autoTask = task.spawn(function() haruka_auto_loop() end)
-        end
+        M.autoRunning = true; STATE.Flags.HarukaAuto = true
+        if M._autoTask == nil then M._autoTask = task.spawn(function() haruka_auto_loop() end) end
         if M._charConn == nil then
-            M._charConn = game.Players.LocalPlayer.CharacterAdded:Connect(function(char)
-                -- short delay then run loop again if still enabled
+            M._charConn = Players.LocalPlayer.CharacterAdded:Connect(function()
                 task.wait(2)
-                if M.autoRunning then
-                    if M._autoTask == nil then
-                        M._autoTask = task.spawn(function() haruka_auto_loop() end)
-                    end
-                end
+                if M.autoRunning and M._autoTask == nil then M._autoTask = task.spawn(function() haruka_auto_loop() end) end
             end)
         end
     end
 
     function M.stopAutoFarm()
-        M.autoRunning = false
-        STATE.Flags.HarukaAuto = false
+        M.autoRunning = false; STATE.Flags.HarukaAuto = false
         M._autoTask = nil
-        if M._charConn then
-            pcall(function() M._charConn:Disconnect() end)
-            M._charConn = nil
-        end
+        if M._charConn then pcall(function() M._charConn:Disconnect() end); M._charConn = nil end
     end
 
-    -- Gold Tracker (UI). A minimal, compatible version of Haruka Gold Tracker
     local function create_gold_gui()
-        local player = game.Players.LocalPlayer
+        local player = Players.LocalPlayer
         if not player then return nil end
         local pg = player:FindFirstChild("PlayerGui") or player:WaitForChild("PlayerGui")
         local GoldGui = Instance.new("ScreenGui")
@@ -584,7 +519,6 @@ do
         return {Gui = GoldGui, Labels = labels, StartTime = os.time()}
     end
 
-    -- Improved numeric-text detection: strips non-digits, returns label if numeric string exists
     local function try_find_amount_label(root)
         if not root then return nil end
         local function findRec(n)
@@ -598,15 +532,12 @@ do
         local candidates = findRec(root)
         for _, lbl in ipairs(candidates) do
             local ok, txt = pcall(function() return tostring(lbl.Text or "") end)
-            if not ok or not txt then goto continue_label end
+            if not ok or not txt then goto contlbl end
             local cleaned = txt:gsub("%s",""):gsub(",","")
             local digits = cleaned:match("(%d+)")
-            if digits and tonumber(digits) then
-                return lbl
-            end
-            ::continue_label::
+            if digits and tonumber(digits) then return lbl end
+            ::contlbl::
         end
-        -- fallback brute-force: any TextLabel with digits
         for _, child in ipairs(root:GetDescendants()) do
             if child:IsA("TextLabel") then
                 local ok, txt = pcall(function() return tostring(child.Text or "") end)
@@ -622,25 +553,20 @@ do
 
     local function gold_loop(stateObj)
         if not stateObj then return end
-        local player = game.Players.LocalPlayer
+        local player = Players.LocalPlayer
         if not player then return end
         local Mroot = player:FindFirstChild("PlayerGui")
         local startLabel = nil
         local baseAmount = 0
-        stateObj.Labels[1].Text = "0"
-        stateObj.Labels[2].Text = "0"
-        stateObj.Labels[3].Text = "0"
-        stateObj.Labels[4].Text = "00:00"
+        stateObj.Labels[1].Text = "0"; stateObj.Labels[2].Text = "0"; stateObj.Labels[3].Text = "0"; stateObj.Labels[4].Text = "00:00"
         while M.goldRunning do
             if Mroot then
                 local found = nil
-                -- game-specific: GoldGui.Frame
                 if Mroot:FindFirstChild("GoldGui") and Mroot.GoldGui:FindFirstChild("Frame") then
                     local ok, frame = pcall(function() return Mroot.GoldGui.Frame end)
                     if ok and frame then found = try_find_amount_label(frame) end
                 end
                 if not found then
-                    -- fallback: brute search for numeric TextLabel
                     for _, child in ipairs(Mroot:GetDescendants()) do
                         if child:IsA("TextLabel") then
                             local ok, txt = pcall(function() return tostring(child.Text or "") end)
@@ -675,25 +601,15 @@ do
 
     function M.startGoldTracker()
         if M.goldRunning then return end
-        M.goldRunning = true
-        STATE.Flags.HarukaGold = true
+        M.goldRunning = true; STATE.Flags.HarukaGold = true
         local obj = create_gold_gui()
-        if obj then
-            M._goldGui = obj
-            if M._goldTask == nil then
-                M._goldTask = task.spawn(function() gold_loop(obj) end)
-            end
-        end
+        if obj then M._goldGui = obj if M._goldTask == nil then M._goldTask = task.spawn(function() gold_loop(obj) end) end end
     end
 
     function M.stopGoldTracker()
-        M.goldRunning = false
-        STATE.Flags.HarukaGold = false
-        if M._goldGui and M._goldGui.Gui and M._goldGui.Gui.Parent then
-            pcall(function() M._goldGui.Gui:Destroy() end)
-        end
-        M._goldGui = nil
-        M._goldTask = nil
+        M.goldRunning = false; STATE.Flags.HarukaGold = false
+        if M._goldGui and M._goldGui.Gui and M._goldGui.Gui.Parent then pcall(function() M._goldGui.Gui:Destroy() end) end
+        M._goldGui = nil; M._goldTask = nil
     end
 
     function M.ExposeConfig()
@@ -706,84 +622,45 @@ do
     STATE.Modules.Haruka = M
 end
 
--- RAYFIELD LOAD (safe fallback)
+-- Rayfield (fallback if not loaded)
 do
-    local ok, Ray = pcall(function()
-        return loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
-    end)
-    if ok and Ray then
-        STATE.Rayfield = Ray
-    else
-        warn("[G-MON] Rayfield load failed; using fallback UI.")
+    local ok, Ray = pcall(function() return loadstring(game:HttpGet("https://sirius.menu/rayfield"))() end)
+    if ok and Ray then STATE.Rayfield = Ray else
         local Fallback = {}
-        function Fallback:CreateWindow() -- returns object with CreateTab
-            local win = {}
-            function win:CreateTab(name)
-                local tab = {}
-                function tab:CreateLabel() end
-                function tab:CreateParagraph() end
-                function tab:CreateButton() end
-                function tab:CreateToggle() end
-                function tab:CreateSlider() end
-                return tab
-            end
-            function win:CreateNotification() end
-            return win
-        end
+        function Fallback:CreateWindow() local win = {} function win:CreateTab() local tab = {} function tab:CreateLabel() end function tab:CreateParagraph() end function tab:CreateButton() end function tab:CreateToggle() end function tab:CreateSlider() end return tab end function win:CreateNotification() end return win end
         function Fallback:Notify() end
         STATE.Rayfield = Fallback
     end
 end
 
--- STATUS GUI (draggable) - unchanged
+-- Status GUI (draggable)
 do
     local Status = {}
     function Status.Create()
         SAFE_CALL(function()
             local pg = LP:WaitForChild("PlayerGui")
             local sg = Instance.new("ScreenGui")
-            sg.Name = "GMonStatusGui"
-            sg.ResetOnSpawn = false
-            sg.Parent = pg
+            sg.Name = "GMonStatusGui"; sg.ResetOnSpawn = false; sg.Parent = pg
 
-            local frame = Instance.new("Frame")
-            frame.Name = "StatusFrame"
-            frame.Size = UDim2.new(0, 320, 0, 170)
-            frame.Position = UDim2.new(1, -330, 0, 10)
-            frame.BackgroundTransparency = 0.12
-            frame.BackgroundColor3 = Color3.fromRGB(18,18,18)
-            frame.BorderSizePixel = 0
-            frame.Parent = sg
-
+            local frame = Instance.new("Frame"); frame.Name = "StatusFrame"
+            frame.Size = UDim2.new(0, 320, 0, 170); frame.Position = UDim2.new(1, -330, 0, 10)
+            frame.BackgroundTransparency = 0.12; frame.BackgroundColor3 = Color3.fromRGB(18,18,18); frame.BorderSizePixel = 0; frame.Parent = sg
             local corner = Instance.new("UICorner"); corner.CornerRadius = UDim.new(0,8); corner.Parent = frame
 
-            local title = Instance.new("TextLabel")
-            title.Parent = frame
-            title.Size = UDim2.new(1, -16, 0, 24)
-            title.Position = UDim2.new(0,8,0,6)
-            title.BackgroundTransparency = 1
-            title.Text = "G-MON Status"
-            title.TextColor3 = Color3.fromRGB(255,255,255)
-            title.TextXAlignment = Enum.TextXAlignment.Left
-            title.Font = Enum.Font.SourceSansBold
-            title.TextSize = 16
+            local title = Instance.new("TextLabel"); title.Parent = frame
+            title.Size = UDim2.new(1, -16, 0, 24); title.Position = UDim2.new(0,8,0,6)
+            title.BackgroundTransparency = 1; title.Text = "G-MON Status"; title.TextColor3 = Color3.fromRGB(255,255,255)
+            title.TextXAlignment = Enum.TextXAlignment.Left; title.Font = Enum.Font.SourceSansBold; title.TextSize = 16
 
-            local sub = Instance.new("TextLabel")
-            sub.Parent = frame
-            sub.Size = UDim2.new(1, -16, 0, 18)
-            sub.Position = UDim2.new(0,8,0,30)
-            sub.BackgroundTransparency = 1
-            sub.Text = Utils.ShortLabelForGame(STATE.GAME)
-            sub.TextColor3 = Color3.fromRGB(200,200,200)
-            sub.TextXAlignment = Enum.TextXAlignment.Left
-            sub.Font = Enum.Font.SourceSans
-            sub.TextSize = 12
+            local sub = Instance.new("TextLabel"); sub.Parent = frame
+            sub.Size = UDim2.new(1, -16, 0, 18); sub.Position = UDim2.new(0,8,0,30)
+            sub.BackgroundTransparency = 1; sub.Text = Utils.ShortLabelForGame(STATE.GAME)
+            sub.TextColor3 = Color3.fromRGB(200,200,200); sub.TextXAlignment = Enum.TextXAlignment.Left; sub.Font = Enum.Font.SourceSans; sub.TextSize = 12
 
             local function makeLine(y)
                 local holder = Instance.new("Frame"); holder.Parent = frame
                 holder.Size = UDim2.new(1, -16, 0, 20); holder.Position = UDim2.new(0,8,0,y); holder.BackgroundTransparency = 1
-                local dot = Instance.new("Frame"); dot.Parent = holder
-                dot.Size = UDim2.new(0, 12, 0, 12); dot.Position = UDim2.new(0, 0, 0, 4); dot.BackgroundColor3 = Color3.fromRGB(200,0,0)
+                local dot = Instance.new("Frame"); dot.Parent = holder; dot.Size = UDim2.new(0, 12, 0, 12); dot.Position = UDim2.new(0, 0, 0, 4); dot.BackgroundColor3 = Color3.fromRGB(200,0,0)
                 local lbl = Instance.new("TextLabel"); lbl.Parent = holder
                 lbl.Size = UDim2.new(1, -18, 1, 0); lbl.Position = UDim2.new(0, 18, 0, 0)
                 lbl.BackgroundTransparency = 1; lbl.Text = ""; lbl.TextColor3 = Color3.fromRGB(230,230,230)
@@ -806,7 +683,6 @@ do
 
             STATE.Status = { frame = frame, lines = lines }
 
-            -- draggable
             local dragging, dragInput, startMousePos, startFramePos = false, nil, Vector2.new(0,0), Vector2.new(0,0)
             local function getMouse() return UIS:GetMouseLocation() end
             frame.InputBegan:Connect(function(input)
@@ -849,10 +725,9 @@ do
     STATE.Status.SetIndicator = Status.SetIndicator
 end
 
--- create status GUI
 SAFE_CALL(function() if STATE.Status and STATE.Status.Create then STATE.Status.Create() end end)
 
--- UI BUILDING: create separate tabs per game (only once), plus Scripts (Haruka)
+-- UI Builder (Rayfield or fallback)
 local function buildUI()
     SAFE_CALL(function()
         STATE.Window = (STATE.Rayfield and STATE.Rayfield.CreateWindow) and STATE.Rayfield:CreateWindow({
@@ -870,68 +745,43 @@ local function buildUI()
             Tabs.TabBoat = STATE.Window:CreateTab("Build A Boat")
             Tabs.Move = STATE.Window:CreateTab("Movement")
             Tabs.Debug = STATE.Window:CreateTab("Debug")
-            Tabs.Scripts = STATE.Window:CreateTab("Scripts") -- Haruka / picker tab
+            Tabs.Scripts = STATE.Window:CreateTab("Scripts")
         else
-            local function makeTab()
-                return { CreateLabel = function() end, CreateParagraph = function() end, CreateButton = function() end, CreateToggle = function() end, CreateSlider = function() end }
-            end
+            local function makeTab() return { CreateLabel = function() end, CreateParagraph = function() end, CreateButton = function() end, CreateToggle = function() end, CreateSlider = function() end } end
             Tabs.Info = makeTab(); Tabs.TabBlox = makeTab(); Tabs.TabCar = makeTab(); Tabs.TabBoat = makeTab(); Tabs.Move = makeTab(); Tabs.Debug = makeTab(); Tabs.Scripts = makeTab()
         end
         STATE.Tabs = Tabs
 
-        -- Info tab
         SAFE_CALL(function()
-            Tabs.Info:CreateLabel("G-MON Hub - client-only. Use only in private/testing places.")
+            Tabs.Info:CreateLabel("G-MON Hub - merged. PlaceId auto-picker removed.")
             Tabs.Info:CreateParagraph({ Title = "Detected", Content = Utils.ShortLabelForGame(STATE.GAME) })
-            Tabs.Info:CreateButton({ Name = "Detect Now", Callback = function()
-                SAFE_CALL(function()
-                    local det = Utils.FlexibleDetectByAliases()
-                    if det and det ~= "UNKNOWN" then
-                        STATE.GAME = det
-                        if STATE.Rayfield and STATE.Rayfield.Notify then STATE.Rayfield:Notify({Title="G-MON", Content="Detected: "..Utils.ShortLabelForGame(det), Duration=3}) end
-                    else
-                        if STATE.Rayfield and STATE.Rayfield.Notify then STATE.Rayfield:Notify({Title="G-MON", Content="Detected: Unknown", Duration=3}) end
-                    end
-                    STATE.Status.SetIndicator("bf", STATE.GAME=="BLOX_FRUIT", (STATE.GAME=="BLOX_FRUIT") and "Blox: Available" or "Blox: N/A")
-                    STATE.Status.SetIndicator("car", STATE.GAME=="CAR_TYCOON", (STATE.GAME=="CAR_TYCOON") and "Car: Available" or "Car: N/A")
-                    STATE.Status.SetIndicator("boat", STATE.GAME=="BUILD_A_BOAT", (STATE.GAME=="BUILD_A_BOAT") and "Boat: Available" or "Boat: N/A")
-                    if STATE.Rayfield and STATE.Rayfield.Notify then STATE.Rayfield:Notify({Title="G-MON", Content="UI ready — use tabs", Duration=3}) end
-                end)
-            end })
-            Tabs.Info:CreateButton({ Name = "Force Blox", Callback = function() STATE.GAME = "BLOX_FRUIT"; STATE.Status.SetIndicator("bf", true, "Blox: Forced"); if STATE.Rayfield and STATE.Rayfield.Notify then STATE.Rayfield:Notify({Title="G-MON", Content="Forced: Blox", Duration=2}) end end })
-            Tabs.Info:CreateButton({ Name = "Force Car", Callback = function() STATE.GAME = "CAR_TYCOON"; STATE.Status.SetIndicator("car", true, "Car: Forced"); if STATE.Rayfield and STATE.Rayfield.Notify then STATE.Rayfield:Notify({Title="G-MON", Content="Forced: Car", Duration=2}) end end })
-            Tabs.Info:CreateButton({ Name = "Force Boat", Callback = function() STATE.GAME = "BUILD_A_BOAT"; STATE.Status.SetIndicator("boat", true, "Boat: Forced"); if STATE.Rayfield and STATE.Rayfield.Notify then STATE.Rayfield:Notify({Title="G-MON", Content="Forced: Boat", Duration=2}) end end })
-            Tabs.Info:CreateParagraph({ Title = "Note", Content = "Each game has its own tab. Use Force/Detect to update status. Features are separated to avoid duplicates." })
+            Tabs.Info:CreateParagraph({ Title = "Note", Content = "Modules can be toggled manually. Detection no longer relies on PlaceId." })
         end)
 
-        -- BLOX tab (features inside its own tab)
         SAFE_CALL(function()
             local t = Tabs.TabBlox
             t:CreateLabel("Blox Fruit Controls")
-            t:CreateToggle({ Name = "Auto Farm (Blox)", CurrentValue = false, Callback = function(v) if v then SAFE_CALL(STATE.Modules.Blox.start) else SAFE_CALL(STATE.Modules.Blox.stop) end end })
+            t:CreateToggle({ Name = "Auto Farm (Blox)", CurrentValue = false, Callback = function(v) if v then SAFE_CALL(function() STATE.Modules.Blox.start() end) else SAFE_CALL(function() STATE.Modules.Blox.stop() end) end })
             t:CreateToggle({ Name = "Fast Attack", CurrentValue = STATE.Modules.Blox.config.fast_attack, Callback = function(v) STATE.Modules.Blox.config.fast_attack = v end })
             t:CreateToggle({ Name = "Long Range Hit", CurrentValue = STATE.Modules.Blox.config.long_range, Callback = function(v) STATE.Modules.Blox.config.long_range = v end })
             t:CreateSlider({ Name = "Range Farming (studs)", Range = {1,50}, Increment = 1, CurrentValue = STATE.Modules.Blox.config.range or 10, Callback = function(v) STATE.Modules.Blox.config.range = v end })
             t:CreateSlider({ Name = "Attack Delay (ms)", Range = {50,1000}, Increment = 25, CurrentValue = math.floor((STATE.Modules.Blox.config.attack_delay or 0.35)*1000), Callback = function(v) STATE.Modules.Blox.config.attack_delay = v/1000 end })
         end)
 
-        -- CAR tab
         SAFE_CALL(function()
             local t = Tabs.TabCar
             t:CreateLabel("Car Tycoon Controls")
-            t:CreateToggle({ Name = "Car AutoDrive", CurrentValue = false, Callback = function(v) if v then SAFE_CALL(STATE.Modules.Car.start) else SAFE_CALL(STATE.Modules.Car.stop) end end })
+            t:CreateToggle({ Name = "Car AutoDrive", CurrentValue = false, Callback = function(v) if v then SAFE_CALL(function() STATE.Modules.Car.start() end) else SAFE_CALL(function() STATE.Modules.Car.stop() end) end })
             t:CreateSlider({ Name = "Car Speed", Range = {20,200}, Increment = 5, CurrentValue = STATE.Modules.Car.speed or 60, Callback = function(v) STATE.Modules.Car.speed = v end })
         end)
 
-        -- BOAT tab
         SAFE_CALL(function()
             local t = Tabs.TabBoat
             t:CreateLabel("Build A Boat Controls")
-            t:CreateToggle({ Name = "Boat Auto Stages", CurrentValue = false, Callback = function(v) if v then SAFE_CALL(STATE.Modules.Boat.start) else SAFE_CALL(STATE.Modules.Boat.stop) end end })
+            t:CreateToggle({ Name = "Boat Auto Stages", CurrentValue = false, Callback = function(v) if v then SAFE_CALL(function() STATE.Modules.Boat.start() end) else SAFE_CALL(function() STATE.Modules.Boat.stop() end) end })
             t:CreateSlider({ Name = "Stage Delay (s)", Range = {0.5,6}, Increment = 0.5, CurrentValue = STATE.Modules.Boat.delay or 1.5, Callback = function(v) STATE.Modules.Boat.delay = v end })
         end)
 
-        -- Movement tab (fly) - unchanged
         SAFE_CALL(function()
             local t = Tabs.Move
             local flyEnabled = false; local flySpeed = 60; local flyY = 0
@@ -955,73 +805,58 @@ local function buildUI()
             end)
         end)
 
-        -- Debug tab
         SAFE_CALL(function()
             local t = Tabs.Debug
             t:CreateLabel("Debug / Utility")
-            t:CreateButton({ Name = "Force Start All Modules", Callback = function() SAFE_CALL(STATE.Modules.Blox.start); SAFE_CALL(STATE.Modules.Car.start); SAFE_CALL(STATE.Modules.Boat.start) end })
-            t:CreateButton({ Name = "Stop All Modules", Callback = function() SAFE_CALL(STATE.Modules.Blox.stop); SAFE_CALL(STATE.Modules.Car.stop); SAFE_CALL(STATE.Modules.Boat.stop) end })
+            t:CreateButton({ Name = "Force Start All Modules", Callback = function() SAFE_CALL(function() STATE.Modules.Blox.start() end); SAFE_CALL(function() STATE.Modules.Car.start() end); SAFE_CALL(function() STATE.Modules.Boat.start() end) end })
+            t:CreateButton({ Name = "Stop All Modules", Callback = function() SAFE_CALL(function() STATE.Modules.Blox.stop() end); SAFE_CALL(function() STATE.Modules.Car.stop() end); SAFE_CALL(function() STATE.Modules.Boat.stop() end) end })
         end)
 
-        -- Scripts tab (Haruka picker)
         SAFE_CALL(function()
             local t = Tabs.Scripts
             t:CreateLabel("Script Picker / Haruka Features")
-            t:CreateParagraph({ Title = "Haruka (integrated)", Content = "Lightweight Auto Farm and Gold Tracker (from Haruka Hub). Toggle below to run." })
-            t:CreateToggle({ Name = "Haruka Auto Farm", CurrentValue = false, Callback = function(v)
-                if v then SAFE_CALL(STATE.Modules.Haruka.startAutoFarm) else SAFE_CALL(STATE.Modules.Haruka.stopAutoFarm) end
-            end })
-            t:CreateToggle({ Name = "Haruka Gold Tracker", CurrentValue = false, Callback = function(v)
-                if v then SAFE_CALL(STATE.Modules.Haruka.startGoldTracker) else SAFE_CALL(STATE.Modules.Haruka.stopGoldTracker) end
-            end })
-            t:CreateButton({ Name = "Stop Haruka All", Callback = function() SAFE_CALL(STATE.Modules.Haruka.stopAutoFarm); SAFE_CALL(STATE.Modules.Haruka.stopGoldTracker) end })
-            t:CreateParagraph({ Title = "Note", Content = "Haruka features can be used across games where applicable. Do not run conflicting auto-modules simultaneously." })
+            t:CreateParagraph({ Title = "Haruka (integrated)", Content = "Lightweight Auto Farm and Gold Tracker. Toggle below to run." })
+            t:CreateToggle({ Name = "Haruka Auto Farm", CurrentValue = false, Callback = function(v) if v then SAFE_CALL(function() STATE.Modules.Haruka.startAutoFarm() end) else SAFE_CALL(function() STATE.Modules.Haruka.stopAutoFarm() end) end })
+            t:CreateToggle({ Name = "Haruka Gold Tracker", CurrentValue = false, Callback = function(v) if v then SAFE_CALL(function() STATE.Modules.Haruka.startGoldTracker() end) else SAFE_CALL(function() STATE.Modules.Haruka.stopGoldTracker() end) end })
+            t:CreateButton({ Name = "Stop Haruka All", Callback = function() SAFE_CALL(function() STATE.Modules.Haruka.stopAutoFarm() end); SAFE_CALL(function() STATE.Modules.Haruka.stopGoldTracker() end) end })
+            t:CreateParagraph({ Title = "Note", Content = "Haruka features can be toggled manually. Detection no longer uses PlaceId." })
         end)
     end)
 end
 
--- Apply Game (set status indicators and notify)
 local function ApplyGame(gameKey)
-    STATE.GAME = gameKey or Utils.FlexibleDetectByAliases()
+    STATE.GAME = gameKey or "ALL"
     SAFE_CALL(function()
-        STATE.Status.SetIndicator("bf", STATE.GAME=="BLOX_FRUIT", (STATE.GAME=="BLOX_FRUIT") and "Blox: Available" or "Blox: N/A")
-        STATE.Status.SetIndicator("car", STATE.GAME=="CAR_TYCOON", (STATE.GAME=="CAR_TYCOON") and "Car: Available" or "Car: N/A")
-        STATE.Status.SetIndicator("boat", STATE.GAME=="BUILD_A_BOAT", (STATE.GAME=="BUILD_A_BOAT") and "Boat: Available" or "Boat: N/A")
-        if STATE.Rayfield and STATE.Rayfield.Notify then STATE.Rayfield:Notify({Title="G-MON", Content="Detected: "..Utils.ShortLabelForGame(STATE.GAME), Duration=3}) end
+        STATE.Status.SetIndicator("bf", (STATE.GAME=="BLOX_FRUIT" or STATE.GAME=="ALL"), (STATE.GAME=="BLOX_FRUIT") and "Blox: Available" or "Blox: N/A")
+        STATE.Status.SetIndicator("car", (STATE.GAME=="CAR_TYCOON" or STATE.GAME=="ALL"), (STATE.GAME=="CAR_TYCOON") and "Car: Available" or "Car: N/A")
+        STATE.Status.SetIndicator("boat", (STATE.GAME=="BUILD_A_BOAT" or STATE.GAME=="ALL"), (STATE.GAME=="BUILD_A_BOAT") and "Boat: Available" or "Boat: N/A")
+        if STATE.Rayfield and STATE.Rayfield.Notify then STATE.Rayfield:Notify({Title="G-MON", Content="Mode: "..Utils.ShortLabelForGame(STATE.GAME), Duration=3}) end
     end)
 end
 
--- STATUS UPDATER
 task.spawn(function()
     while true do
         SAFE_WAIT(1)
         SAFE_CALL(function()
             if STATE.Status and STATE.Status.UpdateRuntime then STATE.Status.UpdateRuntime() end
-            if STATE.Status and STATE.Status.SetIndicator then
-                STATE.Status.SetIndicator("last", false, "Last: "..(STATE.LastAction or "Idle"))
-            end
+            if STATE.Status and STATE.Status.SetIndicator then STATE.Status.SetIndicator("last", false, "Last: "..(STATE.LastAction or "Idle")) end
         end)
     end
 end)
 
--- INITIALIZATION (lazy) - do not auto-start modules, user toggles them
 local Main = {}
 
 function Main.Start()
     SAFE_CALL(function()
-        -- build UI once (includes Scripts tab)
         buildUI()
-        -- detect & apply game
-        local det = Utils.FlexibleDetectByAliases()
+        local det = Utils.FlexibleDetectByAliases() -- no placeId usage
         STATE.GAME = det
         ApplyGame(STATE.GAME)
         Utils.AntiAFK()
-        -- notify ready
         if STATE.Rayfield and STATE.Rayfield.Notify then STATE.Rayfield:Notify({Title="G-MON Hub", Content="Loaded — use tabs to control modules (Scripts tab contains Haruka features)", Duration=5}) end
-        print("[G-MON] main.lua started. Detected game:", STATE.GAME)
+        print("[G-MON] main.lua started. Mode:", STATE.GAME)
     end)
     return true
 end
 
--- Return Main table for loader compatibility
 return Main
