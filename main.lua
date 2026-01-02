@@ -21,7 +21,7 @@ local Games = {
 
     [2753915549] = { -- Blox Fruits
         Name = "Blox Fruits",
-        Url  = "https://pandadevelopment.net/virtual/file/b3fa6b2fa8b97451"))()"
+        Url  = "loadstring(game:HttpGet("https://pandadevelopment.net/virtual/file/90b056ec53c4074d"))()"))()"
     },
 
     [537413528] = { -- Build A Boat For Treasure
