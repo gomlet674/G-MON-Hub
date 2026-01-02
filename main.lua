@@ -21,12 +21,12 @@ local Games = {
 
     [2753915549] = { -- Blox Fruits
         Name = "Blox Fruits",
-        Url  = "loadstring(game:HttpGet("https://pandadevelopment.net/virtual/file/90b056ec53c4074d"))()"))()"
+        Url  = "loadstring(game:HttpGet("https://pandadevelopment.net/virtual/file/90b056ec53c4074d"))()"
     },
 
     [537413528] = { -- Build A Boat For Treasure
         Name = "Build A Boat",
-        Url  = "https://pandadevelopment.net/virtual/file/dace186f8425b825"
+        Url  = "loadstring(game:HttpGet("https://pandadevelopment.net/virtual/file/dace186f8425b825"))()"
     },
 
     [4639625707] = { -- War Tycoon
