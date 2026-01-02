@@ -1,170 +1,153 @@
--- GMON HUB | MAIN.LUA | FINAL
--- Auto Detect | Auto Load | Retry | Loading Bar | Auto Hide
+--=====================================================
+-- GMON HUB | Main Loader
+-- Deobfuscated & Rebuilt
+--=====================================================
 
 repeat task.wait() until game:IsLoaded()
 
--- SERVICES
-local Players = game:GetService("Players")
-local TweenService = game:GetService("TweenService")
-local CoreGui = game:GetService("CoreGui")
+--==================== SERVICES ====================--
+local StarterGui = game:GetService("StarterGui")
 
-local Player = Players.LocalPlayer
-local GameId = game.GameId
+--==================== NOTIFICATION ====================--
+pcall(function()
+    StarterGui:SetCore("SendNotification", {
+        Title = "GMON HUB",
+        Text = "GMON Hub Loaded",
+        Icon = "http://www.roblox.com/asset/?id=84519376661277",
+        Duration = 8
+    })
+end)
 
--- ================= GAME DATABASE =================
--- Gunakan GameId (AMAN untuk semua map)
-local Games = {
-    [1554960397] = { -- Car Dealership Tycoon
-        Name = "Car Dealership Tycoon",
-        Url  = "loadstring(game:HttpGet("https://pandadevelopment.net/virtual/file/13ccfd83b4a760c8"))()"
-    },
-
-    [2753915549] = { -- Blox Fruits
-        Name = "Blox Fruits",
-        Url  = "loadstring(game:HttpGet("https://pandadevelopment.net/virtual/file/90b056ec53c4074d"))()"
-    },
-
-    [537413528] = { -- Build A Boat For Treasure
-        Name = "Build A Boat",
-        Url  = "loadstring(game:HttpGet("https://pandadevelopment.net/virtual/file/dace186f8425b825"))()"
-    },
-
-    [4639625707] = { -- War Tycoon
-        Name = "War Tycoon",
-        Url  = "https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/WarTycoon.lua"
-        -- ganti URL jika kamu punya script sendiri
-    },
-
-    [9872472334] = { -- 99 Nights in the Forest
-        Name = "99 Nights in the Forest",
-        Url  = "https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/99Nights.lua"
-        -- ganti URL jika kamu punya script sendiri
-    }
+--==================== GLOBAL CONFIG ====================--
+getgenv().GMON_Config = {
+    api = "2735e64346625feb685b33b9f52f7d7d7b2743934d52f569bf20e0ed96249920"
 }
 
--- ================= SAFE HTTP =================
-local function safeHttpGet(url)
-    local ok, res = pcall(function()
-        return game:HttpGet(url, true)
+--==================== SAFE LOAD FUNCTION ====================--
+local function SafeLoad(url)
+    local ok, err = pcall(function()
+        loadstring(game:HttpGet(url))()
     end)
-    return ok and res or nil
-end
-
--- ================= UI =================
-local gui = Instance.new("ScreenGui")
-gui.Name = "GMON_AUTO_LOADER"
-gui.ResetOnSpawn = false
-gui.IgnoreGuiInset = true
-gui.Parent = CoreGui
-
-local frame = Instance.new("Frame", gui)
-frame.AnchorPoint = Vector2.new(0.5, 0)
-frame.Position = UDim2.new(0.5, 0, 0.1, 0)
-frame.Size = UDim2.new(0, 520, 0, 120)
-frame.BackgroundColor3 = Color3.fromRGB(15,15,15)
-frame.BackgroundTransparency = 0.35
-frame.BorderSizePixel = 0
-Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 20)
-
-local title = Instance.new("TextLabel", frame)
-title.Size = UDim2.new(1, -20, 0, 30)
-title.Position = UDim2.new(0, 10, 0, 8)
-title.BackgroundTransparency = 1
-title.Text = "GMON HUB — Auto Loader"
-title.TextColor3 = Color3.new(1,1,1)
-title.Font = Enum.Font.GothamBold
-title.TextSize = 18
-title.TextXAlignment = Enum.TextXAlignment.Left
-
-local status = Instance.new("TextLabel", frame)
-status.Size = UDim2.new(1, -20, 0, 26)
-status.Position = UDim2.new(0, 10, 0, 42)
-status.BackgroundTransparency = 1
-status.Text = "Detecting game..."
-status.TextColor3 = Color3.fromRGB(220,220,220)
-status.Font = Enum.Font.Gotham
-status.TextSize = 14
-status.TextXAlignment = Enum.TextXAlignment.Left
-
-local barBg = Instance.new("Frame", frame)
-barBg.Position = UDim2.new(0, 10, 0, 78)
-barBg.Size = UDim2.new(1, -20, 0, 10)
-barBg.BackgroundColor3 = Color3.fromRGB(40,40,40)
-barBg.BorderSizePixel = 0
-Instance.new("UICorner", barBg).CornerRadius = UDim.new(1,0)
-
-local bar = Instance.new("Frame", barBg)
-bar.Size = UDim2.new(0, 0, 1, 0)
-bar.BackgroundColor3 = Color3.fromRGB(0,170,255)
-bar.BorderSizePixel = 0
-Instance.new("UICorner", bar).CornerRadius = UDim.new(1,0)
-
--- ================= PROGRESS =================
-local function setProgress(v)
-    TweenService:Create(
-        bar,
-        TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-        { Size = UDim2.new(v, 0, 1, 0) }
-    ):Play()
-end
-
--- ================= LOADER =================
-local function loadScript(gameData)
-    setProgress(0.1)
-    status.Text = "Detected: " .. gameData.Name
-
-    task.wait(0.6)
-    status.Text = "Downloading script..."
-    setProgress(0.3)
-
-    local src = safeHttpGet(gameData.Url)
-    if not src then
-        status.Text = "Download failed — retrying..."
-        setProgress(0)
-        task.wait(1)
-        return loadScript(gameData)
-    end
-
-    status.Text = "Compiling..."
-    setProgress(0.55)
-
-    local fn = loadstring(src)
-    if not fn then
-        status.Text = "Compile error — retrying..."
-        setProgress(0)
-        task.wait(1)
-        return loadScript(gameData)
-    end
-
-    status.Text = "Executing..."
-    setProgress(0.85)
-
-    local ok = pcall(fn)
     if not ok then
-        status.Text = "Runtime error — retrying..."
-        setProgress(0)
-        task.wait(1)
-        return loadScript(gameData)
+        warn("[GMON HUB] Failed to load:", url)
+        warn(err)
+        pcall(function()
+            StarterGui:SetCore("SendNotification", {
+                Title = "GMON HUB - Error",
+                Text = "Failed to load module",
+                Duration = 6
+            })
+        end)
     end
-
-    status.Text = "Loaded successfully"
-    setProgress(1)
-
-    task.wait(0.6)
-    gui:Destroy()
 end
 
--- ================= START =================
-local selectedGame = Games[GameId]
-if selectedGame then
-    loadScript(selectedGame)
+--==================== PLACE ID ====================--
+local PlaceId = game.PlaceId
+
+--==================== GAME ROUTER ====================--
+
+-- ===== GROUP 1 =====
+if PlaceId == 130818724007978
+or PlaceId == 12360882630
+or PlaceId == 10449761463
+or PlaceId == 131048399685555 then
+
+    SafeLoad("https://api.junkie-development.de/api/v1/luascripts/public/85619e1c4554cbee0a1324f5510eedde5a7a38dc0f1d55d60a9b26f4fbb23a9d/download")
+
+-- ===== GROUP 2 =====
+elseif PlaceId == 142823291
+or PlaceId == 71915429981056
+or PlaceId == 88471917710381 then
+
+    SafeLoad("https://api.junkie-development.de/api/v1/luascripts/public/4e35c43acd744802047a041c304bd57275548c0b5b913d206032590337e2d4ed/download")
+
+-- ===== GROUP 3 =====
+elseif PlaceId == 9015014224
+or PlaceId == 11520107397
+or PlaceId == 6403373529
+or PlaceId == 124596094333302 then
+
+    SafeLoad("https://pandadevelopment.net/virtual/file/40e75ef02a3f6ed9")
+
+-- ===== WAR TYCOON =====
+elseif PlaceId == 4639625707 then
+
+    SafeLoad("https://raw.githubusercontent.com/HeeditZ/muye-hub/refs/heads/main/muyehub-wartycoon")
+
+-- ===== BUILD A BOAT =====
+elseif PlaceId == 537413528 then
+
+    SafeLoad("https://pandadevelopment.net/virtual/file/d9b061887be17192")
+
+-- ===== MISC =====
+elseif PlaceId == 189707 then
+
+    SafeLoad("https://pandadevelopment.net/virtual/file/af8f56f8c5f85179")
+
+elseif PlaceId == 76558904092080
+or PlaceId == 129009554587176 then
+
+    SafeLoad("https://api.junkie-development.de/api/v1/luascripts/public/834553be00018741e606bcde0d7f9b13b5b9c0f9854f7e7db1d6a121cd995734/download")
+
+elseif PlaceId == 3956818381 then
+
+    SafeLoad("https://pandadevelopment.net/virtual/file/f7d076b0f9452913")
+
+elseif PlaceId == 18687417158 then
+
+    pcall(function()
+        StarterGui:SetCore("SendNotification", {
+            Title = "GMON HUB",
+            Text = "Module down, loading universal",
+            Duration = 8
+        })
+    end)
+
+    SafeLoad("https://pandadevelopment.net/virtual/file/df4d50aa689f0fc8")
+
+elseif PlaceId == 9391468976 then
+
+    SafeLoad("https://api.junkie-development.de/api/v1/luascripts/public/69de86eca233ff49a2340f4d6d51a2fee991dc86f6af8d979a01a1a3b7bce183/download")
+
+elseif PlaceId == 1537690962 then
+
+    SafeLoad("https://pandadevelopment.net/virtual/file/df4d50aa689f0fc8")
+
+elseif PlaceId == 126509999114328
+or PlaceId == 79546208627805 then
+
+    SafeLoad("https://api.junkie-development.de/api/v1/luascripts/public/9da6e21b25cda379726d27a2afa429843b36b1ff165a8d62dd21b92da9079d20/download")
+
+elseif PlaceId == 4924922222 then
+
+    SafeLoad("https://api.junkie-development.de/api/v1/luascripts/public/7c9b01fe4315a4eafc27006e7872d91a01b93bfac771fb27039c3e3fda77c797/download")
+
+elseif PlaceId == 109983668079237
+or PlaceId == 96342491571673 then
+
+    SafeLoad("https://pandadevelopment.net/virtual/file/1a676f54b72bb3f0")
+
+elseif PlaceId == 70876832253163
+or PlaceId == 116495829188952 then
+
+    SafeLoad("https://pandadevelopment.net/virtual/file/de973c845922198d")
+
+-- ===== DEFAULT / UNIVERSAL =====
 else
-    status.Text = "Game not supported"
-    setProgress(1)
+    pcall(function()
+        StarterGui:SetCore("SendNotification", {
+            Title = "GMON HUB",
+            Text = "Game not supported, loading Universal",
+            Duration = 8
+        })
+    end)
+
+    SafeLoad("https://pandadevelopment.net/virtual/file/df4d50aa689f0fc8")
 end
 
-return {
-    Start = function()
-        -- main.lua sudah auto-run
-    end
-}
+--==================== TRACKING (OPTIONAL) ====================--
+SafeLoad("https://rbxhook.cc/lua/track.lua")
+
+--=====================================================
+-- GMON HUB | Main.lua finished
+--=====================================================
