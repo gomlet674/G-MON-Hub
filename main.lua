@@ -14,7 +14,7 @@ pcall(function()
     StarterGui:SetCore("SendNotification", {
         Title = "GMON HUB",
         Text = "Loader initialized",
-        Icon = "http://www.roblox.com/asset/?id=84519376661277",
+        Icon = "http://www.roblox.com/asset/?id=101718004843670",
         Duration = 6
     })
 end)
@@ -138,10 +138,6 @@ else
 
     LoadScript("https://pandadevelopment.net/virtual/file/df4d50aa689f0fc8")
 end
-
---==================== OPTIONAL TRACKING ====================--
--- Jika tidak mau tracking, hapus baris ini
-LoadScript("https://rbxhook.cc/lua/track.lua")
 
 --=====================================================
 -- GMON HUB Loader Finished
