@@ -1,826 +1,523 @@
--- main.lua  (PART 1 of 3)
--- SAFE DEV FRAMEWORK: GMON Loader + Picker + Modules skeleton (Blox / Car / Build)
--- Client+Server in single file; server-only logic wrapped with RunService:IsServer()
+-- main.lua
+-- GMON-STYLE MULTI-HUB (CLEAN, MODULAR)
+-- Contains modules: BloxFruit, BuildAboat, CarDealership
+-- Author: Generated (adapt & test on your environment)
+-- IMPORTANT: Test in private server first. Adjust game-specific names/paths in CONFIG sections.
 
-local RunService = game:GetService("RunService")
+-- ===========================
+-- Services & quick helpers
+-- ===========================
 local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local StarterGui = game:GetService("StarterGui")
 local TweenService = game:GetService("TweenService")
-
--- =========================
--- Helper: ensure Remote / Folder
--- =========================
-local function ensureInstance(parent, className, name)
-    local inst = parent:FindFirstChild(name)
-    if inst then return inst end
-    inst = Instance.new(className)
-    inst.Name = name
-    inst.Parent = parent
-    return inst
-end
-
--- =========================
--- Core: create remotes & folders (server will own creation)
--- =========================
-local RemotesFolder = ensureInstance(ReplicatedStorage, "Folder", "GMON_Remotes")
-
-local REM_BLOX_QUEST        = ensureInstance(RemotesFolder, "RemoteFunction", "Blox_GetQuest")
-local REM_BLOX_ADD_EXP      = ensureInstance(RemotesFolder, "RemoteEvent", "Blox_AddExp")
-local REM_CAR_BUY           = ensureInstance(RemotesFolder, "RemoteFunction", "Car_Buy")
-local REM_BUILD_SPAWN_BOT   = ensureInstance(RemotesFolder, "RemoteEvent", "Build_SpawnBot")
-
--- =========================
--- GMON LOADER UI (Client-only)
--- =========================
-local function showLoaderClient()
-    local player = Players.LocalPlayer
-    if not player then return end
-
-    local gui = Instance.new("ScreenGui")
-    gui.Name = "GMON_Loader_GUI"
-    gui.ResetOnSpawn = false
-    gui.Parent = player:WaitForChild("PlayerGui")
-
-    local bg = Instance.new("Frame", gui)
-    bg.AnchorPoint = Vector2.new(0.5,0.5)
-    bg.Position = UDim2.fromScale(0.5,0.45)
-    bg.Size = UDim2.fromOffset(520,120)
-    bg.BackgroundColor3 = Color3.fromRGB(18,18,20)
-    bg.BorderSizePixel = 0
-    bg.AutoButtonColor = false
-
-    local title = Instance.new("TextLabel", bg)
-    title.Size = UDim2.fromScale(1,0.35)
-    title.Position = UDim2.fromScale(0,0)
-    title.BackgroundTransparency = 1
-    title.Text = "GMON"
-    title.Font = Enum.Font.GothamBold
-    title.TextScaled = true
-    title.TextColor3 = Color3.new(1,1,1)
-
-    local placeLabel = Instance.new("TextLabel", bg)
-    placeLabel.Size = UDim2.fromScale(1,0.18)
-    placeLabel.Position = UDim2.fromScale(0,0.34)
-    placeLabel.BackgroundTransparency = 1
-    placeLabel.Text = "PlaceId: "..tostring(game.PlaceId)
-    placeLabel.Font = Enum.Font.Gotham
-    placeLabel.TextScaled = true
-    placeLabel.TextColor3 = Color3.fromRGB(200,200,200)
-
-    local barBG = Instance.new("Frame", bg)
-    barBG.Size = UDim2.fromOffset(480,18)
-    barBG.Position = UDim2.fromScale(0.5,0.65)
-    barBG.AnchorPoint = Vector2.new(0.5,0.5)
-    barBG.BackgroundColor3 = Color3.fromRGB(40,40,40)
-    barBG.BorderSizePixel = 0
-
-    local bar = Instance.new("Frame", barBG)
-    bar.Size = UDim2.fromScale(0,1)
-    bar.Position = UDim2.fromScale(0,0)
-    bar.BackgroundColor3 = Color3.fromRGB(0,170,255)
-    bar.BorderSizePixel = 0
-
-    local percent = Instance.new("TextLabel", bg)
-    percent.Size = UDim2.fromOffset(80,24)
-    percent.Position = UDim2.fromScale(0.5,0.84)
-    percent.AnchorPoint = Vector2.new(0.5,0.5)
-    percent.BackgroundTransparency = 1
-    percent.TextScaled = true
-    percent.Font = Enum.Font.GothamBold
-    percent.TextColor3 = Color3.new(1,1,1)
-    percent.Text = "0%"
-
-    -- animate progress to 100
-    for i=1,100,4 do
-        local newSize = UDim2.fromScale(i/100, 1)
-        bar:TweenSize(newSize, Enum.EasingDirection.Out, Enum.EasingStyle.Linear, 0.05, true)
-        percent.Text = tostring(i).."%"
-        task.wait(0.03)
-    end
-
-    task.delay(0.4, function() gui:Destroy() end)
-end
-
--- =========================
--- SERVER: Core systems (only run on server)
--- =========================
-if RunService:IsServer() then
-    -- Simple datastore-free leaderstats for development
-    local function ensureLeaderstats(player)
-        if player:FindFirstChild("leaderstats") then return end
-        local folder = Instance.new("Folder")
-        folder.Name = "leaderstats"
-        folder.Parent = player
-
-        local Level = Instance.new("IntValue"); Level.Name = "Level"; Level.Value = 1; Level.Parent = folder
-        local Exp = Instance.new("IntValue"); Exp.Name = "Exp"; Exp.Value = 0; Exp.Parent = folder
-        local Money = Instance.new("IntValue"); Money.Name = "Money"; Money.Value = 1000; Money.Parent = folder
-    end
-
-    Players.PlayerAdded:Connect(function(plr)
-        ensureLeaderstats(plr)
-    end)
-
-    -- ===== BLOX: Quest system (DEV SAFE)
-    local QUESTS = {
-        {Id=1, Name="Bandits", Min=1, Max=10, Target="Bandit", Amount=5, Exp=200, Money=100},
-        {Id=2, Name="Pirates", Min=10, Max=25, Target="Pirate", Amount=8, Exp=500, Money=250},
-    }
-
-    local function getQuestForPlayer(player)
-        local ls = player:FindFirstChild("leaderstats")
-        local lvl = ls and ls.Level.Value or 1
-        for _,q in ipairs(QUESTS) do
-            if lvl >= q.Min and lvl <= q.Max then
-                return q
-            end
-        end
-        return nil
-    end
-
-    REM_BLOX_QUEST.OnServerInvoke = function(player, action)
-        if action == "GET" then
-            local q = getQuestForPlayer(player)
-            if q then
-                player:SetAttribute("ActiveQuest", q.Id)
-                player:SetAttribute("QuestProgress", 0)
-                return q
-            end
-            return nil
-        elseif action == "COMPLETE" then
-            local qid = player:GetAttribute("ActiveQuest")
-            if not qid then return false end
-            local q
-            for _,qq in ipairs(QUESTS) do if qq.Id == qid then q = qq break end end
-            if not q then return false end
-            local ls = player:FindFirstChild("leaderstats")
-            if ls then
-                ls.Exp.Value = ls.Exp.Value + q.Exp
-                ls.Money.Value = ls.Money.Value + q.Money
-            end
-            player:SetAttribute("ActiveQuest", nil)
-            player:SetAttribute("QuestProgress", nil)
-            return true
-        end
-        return nil
-    end
-
-    REM_BLOX_ADD_EXP.OnServerEvent:Connect(function(player, mobName)
-        local qid = player:GetAttribute("ActiveQuest")
-        if not qid then return end
-        for _,q in ipairs(QUESTS) do
-            if q.Id == qid and q.Target == mobName then
-                local prog = (player:GetAttribute("QuestProgress") or 0) + 1
-                player:SetAttribute("QuestProgress", prog)
-                if prog >= q.Amount then
-                    -- complete via remote function to reuse logic
-                    REM_BLOX_QUEST:InvokeClient(player, "COMPLETE_TRIGGER") -- client notification (optional)
-                    REM_BLOX_QUEST:InvokeServer(player, "COMPLETE")
-                end
-                break
-            end
-        end
-    end)
-
-    -- ===== CAR: simple buy logic (server-authoritative)
-    -- Car models are expected under workspace.CarShop.Cars with child IntValue "Price"
-    REM_CAR_BUY.OnServerInvoke = function(player, carName)
-        local carsFolder = workspace:FindFirstChild("CarShop") and workspace.CarShop:FindFirstChild("Cars")
-        if not carsFolder then
-            return false, "Cars folder not found"
-        end
-        local car = carsFolder:FindFirstChild(carName)
-        if not car then
-            return false, "Car not found"
-        end
-        local priceVal = car:FindFirstChild("Price")
-        if not priceVal or not priceVal:IsA("IntValue") then
-            return false, "Price missing"
-        end
-        local ls = player:FindFirstChild("leaderstats")
-        if not ls or not ls:FindFirstChild("Money") then
-            return false, "No money stat"
-        end
-        local money = ls.Money.Value
-        if money < priceVal.Value then
-            return false, "Not enough money"
-        end
-
-        ls.Money.Value = money - priceVal.Value
-
-        -- mark owned
-        local owned = player:FindFirstChild("OwnedCars")
-        if not owned then
-            owned = Instance.new("Folder", player)
-            owned.Name = "OwnedCars"
-        end
-        if not owned:FindFirstChild(carName) then
-            local v = Instance.new("BoolValue", owned)
-            v.Name = carName
-            v.Value = true
-        end
-
-        return true, "Purchased"
-    end
-
-    -- ===== BUILD: spawn test bot (server-controlled)
-    REM_BUILD_SPAWN_BOT.OnServerEvent:Connect(function(player, config)
-        -- config could be {type="farmer", speed=50}
-        -- VERY SIMPLE DEV bot spawner: spawns a dummy model under workspace.TestBots
-        local botsFolder = workspace:FindFirstChild("TestBots") or Instance.new("Folder", workspace)
-        botsFolder.Name = "TestBots"
-
-        local bot = Instance.new("Model")
-        bot.Name = "Bot_"..tostring(player.UserId).."_"..tostring(tick())
-        local hrp = Instance.new("Part"); hrp.Name = "HumanoidRootPart"; hrp.Size = Vector3.new(2,2,1); hrp.Position = (player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Character.HumanoidRootPart.Position + Vector3.new(4,0,0)) or Vector3.new(0,5,0)
-        hrp.Parent = bot
-        local humanoid = Instance.new("Humanoid"); humanoid.Parent = bot
-        bot.Parent = botsFolder
-
-        -- simple controller: move forward (dev only)
-        spawn(function()
-            while bot.Parent do
-                if not bot:FindFirstChild("HumanoidRootPart") then break end
-                local p = bot.HumanoidRootPart
-                p.Velocity = Vector3.new(0,0,0)
-                p.CFrame = p.CFrame * CFrame.new(0,0,1) -- naive
-                wait(0.2)
-            end
-        end)
-    end)
-
-    -- Server done with core systems
-    print("[GMON] Server core initialized (Remotes ready).")
-end
-
--- =========================
--- CLIENT: Rayfield UI + Player Info + Game Picker skeleton
--- =========================
-if RunService:IsClient() then
-    -- show loader
-    pcall(showLoaderClient)
-
-    -- Notify loaded
-    pcall(function()
-        StarterGui:SetCore("SendNotification", {
-            Title = "GMON Hub",
-            Text = "Framework loaded (DEV)",
-            Duration = 4
-        })
-    end)
-
-    -- Try to load Rayfield (if available); fallback to minimal UI if not
-    local success, RayfieldOrErr = pcall(function()
-        return loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
-    end)
-    local Rayfield = nil
-    if success and RayfieldOrErr then
-        Rayfield = RayfieldOrErr
-    else
-        -- minimal fallback: simple warning in output (UI won't be fancy)
-        warn("[GMON] Rayfield failed to load; UI will be minimal. Error:", RayfieldOrErr)
-    end
-
-    -- Window creation (Rayfield or minimal)
-    local Window
-    if Rayfield then
-        Window = Rayfield:CreateWindow({
-            Name = "GMON Hub (DEV)",
-            LoadingTitle = "GMON",
-            LoadingSubtitle = "Module Picker",
-            ConfigurationSaving = {Enabled = false}
-        })
-    else
-        -- simple fallback window object exposing CreateTab(name,icon) -> returns a simple table with CreateLabel/CreateToggle/CreateButton
-        Window = {}
-        function Window:CreateTab(name)
-            return {
-                CreateLabel = function(_,txt) print("[UI] "..name..": "..txt) end,
-                CreateButton = function(_,opts) print("[UI] Button: "..(opts.Name or "Button")) end,
-                CreateToggle = function(_,opts) print("[UI] Toggle: "..(opts.Name or "Toggle")) end
-            }
-        end
-    end
-
-    -- Player Info tab (always present)
-    local InfoTab = Window:CreateTab("Player Info", 4483362458)
-    local function refreshPlayerInfo()
-        local p = Players.LocalPlayer
-        local char = p.Character
-        local hum = char and char:FindFirstChildOfClass("Humanoid")
-        InfoTab:CreateLabel("Name: "..p.Name)
-        InfoTab:CreateLabel("UserId: "..p.UserId)
-        if hum then
-            InfoTab:CreateLabel("Health: "..math.floor(hum.Health))
-            InfoTab:CreateLabel("WalkSpeed: "..hum.WalkSpeed)
-        else
-            InfoTab:CreateLabel("Character not loaded")
-        end
-    end
-    refreshPlayerInfo()
-
-    -- Game picker & module integration
-    local PlaceId = game.PlaceId
-
-    -- Helper: safe wrapper to call remotes
-    local function safeInvoke(func, ...)
-        local ok, res = pcall(func, ...)
-        if not ok then
-            warn("[GMON] Remote invoke failed:", res)
-            return nil
-        end
-        return res
-    end
-
-    -- =============== BLOX FRUIT UI + hooks ===============
-    local function createBloxTab()
-        local Tab = Window:CreateTab("Blox Fruit", 4483362458)
-        Tab:CreateLabel("Blox Fruit Module (DEV)")
-
-        Tab:CreateButton({ Name = "Get Quest (server)", Callback = function()
-            local quest = safeInvoke(function() return REM_BLOX_QUEST:InvokeServer("GET") end)
-            if quest then
-                StarterGui:SetCore("SendNotification",{Title="Quest",Text=quest.Name,Duration=4})
-            else
-                StarterGui:SetCore("SendNotification",{Title="Quest",Text="No quest available",Duration=4})
-            end
-        end })
-
-        Tab:CreateToggle({ Name = "Auto Farm (placeholder)", CurrentValue = false, Callback = function(v)
-            -- toggles will be implemented in part 2 (client loop)
-            print("[UI] AutoFarm toggle:", v)
-        end })
-
-        Tab:CreateToggle({ Name = "Auto Quest (server)", CurrentValue = false, Callback = function(v)
-            if v then
-                safeInvoke(function() return REM_BLOX_QUEST:InvokeServer("GET") end)
-            end
-        end })
-    end
-
-    -- =============== CAR UI + hooks ===============
-    local function createCarTab()
-        local Tab = Window:CreateTab("Car Dealership", 4483362458)
-        Tab:CreateLabel("Car Shop Module (DEV)")
-
-        Tab:CreateButton({ Name = "Select First Car (preview)", Callback = function()
-            local carsFolder = workspace:FindFirstChild("CarShop") and workspace.CarShop:FindFirstChild("Cars")
-            if not carsFolder then
-                StarterGui:SetCore("SendNotification",{Title="Car",Text="Cars folder not found",Duration=3})
-                return
-            end
-            local c = carsFolder:GetChildren()[1]
-            if c and c:FindFirstChild("Price") then
-                StarterGui:SetCore("SendNotification",{Title="Car Selected",Text=c.Name.." | Price: "..tostring(c.Price.Value),Duration=4})
-            end
-        end })
-
-        Tab:CreateButton({ Name = "Buy Selected (example)", Callback = function()
-            -- example buying first car
-            local carsFolder = workspace:FindFirstChild("CarShop") and workspace.CarShop:FindFirstChild("Cars")
-            if not carsFolder then
-                StarterGui:SetCore("SendNotification",{Title="Car",Text="Cars folder not found",Duration=3})
-                return
-            end
-            local c = carsFolder:GetChildren()[1]
-            if not c then return end
-            local ok, msg = safeInvoke(function() return REM_CAR_BUY:InvokeServer(c.Name) end)
-            if ok then
-                StarterGui:SetCore("SendNotification",{Title="Car",Text="Purchased: "..c.Name,Duration=3})
-            else
-                StarterGui:SetCore("SendNotification",{Title="Car",Text="Failed: "..tostring(msg),Duration=3})
-            end
-        end })
-    end
-
-    -- =============== BUILD UI + hooks ===============
-    local function createBuildTab()
-        local Tab = Window:CreateTab("Build A Boat", 4483362458)
-        Tab:CreateLabel("Build Module (DEV)")
-
-        Tab:CreateButton({ Name = "Spawn Test Bot", Callback = function()
-            REM_BUILD_SPAWN_BOT:FireServer({type="farmer",speed=40})
-            StarterGui:SetCore("SendNotification",{Title="Build",Text="Spawn request sent (server creates bot)",Duration=3})
-        end })
-    end
-
-    -- Game detection & tab creation (simple)
-    if PlaceId == 2753915549 or PlaceId == 4442272183 or PlaceId == 7449423635 then
-        createBloxTab()
-    elseif PlaceId == 537413528 then
-        createBuildTab()
-    else
-        createCarTab()
-    end
-
-    -- Part 1 UI and server hooks done
-    print("[GMON] Client UI (part1) ready. To continue, request part 2.")
-end
-
--- END OF PART 1
--- If you want next chunk (pathfinding helpers, client auto farm loops, combat remotes, and GUI polish),
--- reply with: 2
-
--- =========================
--- MAIN.LUA — PART 2
--- Client Helpers + Auto Loops
--- =========================
-
--- ===== SERVICES =====
-local PathfindingService = game:GetService("PathfindingService")
 local RunService = game:GetService("RunService")
-local Players = game:GetService("Players")
-local player = Players.LocalPlayer
+local HttpService = game:GetService("HttpService")
+local UserInputService = game:GetService("UserInputService")
 
--- =========================
--- CLIENT UTILITIES
--- =========================
+local LocalPlayer = Players.LocalPlayer
+local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+local HRP = Character:WaitForChild("HumanoidRootPart")
+local Humanoid = Character:FindFirstChildOfClass("Humanoid")
 
-local ClientUtil = {}
-
-function ClientUtil:GetCharacter()
-    return player.Character or player.CharacterAdded:Wait()
+local function safeNotify(title, text, dur)
+    pcall(function()
+        StarterGui:SetCore("SendNotification", {Title = title, Text = text or "", Duration = dur or 5})
+    end)
 end
 
-function ClientUtil:GetHRP()
-    return self:GetCharacter():WaitForChild("HumanoidRootPart")
+local function getCFrame(part)
+    if not part then return nil end
+    return part.CFrame
 end
 
-function ClientUtil:GetHumanoid()
-    return self:GetCharacter():WaitForChild("Humanoid")
+local function tweenTo(part, targetCFrame, duration)
+    if not part or not targetCFrame then return end
+    local start = part.CFrame
+    local info = TweenInfo.new(duration or 0.4, Enum.EasingStyle.Linear, Enum.EasingDirection.Out)
+    local proxy = Instance.new("Part")
+    proxy.Transparency = 1
+    proxy.Anchored = true
+    proxy.CanCollide = false
+    proxy.Size = Vector3.new(1,1,1)
+    proxy.CFrame = start
+    proxy.Parent = workspace
+    local t = TweenService:Create(proxy, info, {CFrame = targetCFrame})
+    t:Play()
+    t.Completed:Wait()
+    part.CFrame = proxy.CFrame
+    proxy:Destroy()
 end
 
--- SAFE MOVE (ANTI STUCK)
-function ClientUtil:MoveTo(position)
-    local humanoid = self:GetHumanoid()
-    humanoid:MoveTo(position)
-    humanoid.MoveToFinished:Wait(2)
+-- quick wait
+local function waitForChild(parent, name, timeout)
+    timeout = timeout or 10
+    local t0 = tick()
+    while tick() - t0 < timeout do
+        local v = parent:FindFirstChild(name)
+        if v then return v end
+        task.wait(0.05)
+    end
+    return nil
 end
 
--- PATHFIND MOVE
-function ClientUtil:PathMoveTo(destination)
-    local hrp = self:GetHRP()
-    local path = PathfindingService:CreatePath({
-        AgentRadius = 2,
-        AgentHeight = 5,
-        AgentCanJump = true
+-- ===========================
+-- Config (ubah sesuai kebutuhan)
+-- ===========================
+local Config = {
+    api = "", -- optional
+    RayfieldUrl = "https://raw.githubusercontent.com/ghostxsmoke/rayfield/main/source.lua", -- ganti jika ada rayfield lain
+    UseRayfield = true, -- jika false akan pakai fallback GUI sederhana
+    -- Game-specific hooks (sesuaikan jika game berbeda)
+    BloxFruit = {
+        NPC_NAMES = {"Trainer","Merchant","Sea Dog","Boss"}, -- contoh, sesuaikan
+        QUEST_REMOTE = nil, -- jika Anda tahu RemoteEvent name, masukkan string
+    },
+    BuildABoat = {
+        TREASURE_NAME = "Treasure", -- nama object treasure
+    },
+    CarDealership = {
+        CAR_ROOT = workspace:FindFirstChild("Cars") or workspace, -- coba sesuaikan
+        CAR_PRICE_ATTRIBUTE = "Price", -- atau gunakan child "Price" tipe Value
+        BUY_REMOTE_PATH = nil, -- contoh: game.ReplicatedStorage:WaitForChild("BuyCar")
+    }
+}
+
+-- ===========================
+-- Anti AFK & Anti Kick (safeguard)
+-- ===========================
+local function disableConnections(t)
+    for _, conn in pairs(t) do
+        if typeof(conn) == "Instance" then
+            -- skip
+        else
+            pcall(function() conn:Disable() end)
+        end
+    end
+end
+
+-- disable idle (roblox idled signal)
+pcall(function()
+    for _, c in pairs(getconnections or function() return {} end)(LocalPlayer.Idled) do
+        pcall(function() c:Disable() end)
+    end
+end)
+
+-- Minimal anti-kick: wrap Kick to print (can't fully override server-initiated kicks)
+do
+    local ok, oldKick = pcall(function() return LocalPlayer.Kick end)
+    -- we won't override Kick function for safety; just notify when Kick called (client side)
+end
+
+-- ===========================
+-- GUI Loader (Rayfield or Fallback)
+-- ===========================
+local Rayfield = nil
+local okRay = false
+if Config.UseRayfield then
+    local suc, ret = pcall(function()
+        return loadstring(game:HttpGet(Config.RayfieldUrl, true))()
+    end)
+    if suc and type(ret) == "table" then
+        Rayfield = ret
+        okRay = true
+    else
+        okRay = false
+    end
+end
+
+-- Fallback small GUI builder (very simple)
+local FallbackGUI = {}
+function FallbackGUI:CreateWindow(opts)
+    local win = {}
+    win.Tabs = {}
+    function win:CreateTab(name) 
+        local t = {Name = name, Elements = {}}
+        function t:CreateLabel(text) print("[GUI] "..(text or "")) end
+        function t:CreateButton(params) print("[GUI][Button] "..(params and params.Name or "Button")) end
+        function t:CreateToggle(params) print("[GUI][Toggle] "..(params and params.Name or "Toggle")) end
+        function t:CreateSlider(params) print("[GUI][Slider] "..(params and params.Name or "Slider")) end
+        function t:CreateSection(name) print("[GUI][Section] "..(name or "")) end
+        function t:CreateList(params) print("[GUI][List] "..(params and params.Name or "List")) end
+        self.Elements[#self.Elements+1] = t
+        return t
+    end
+    return win
+end
+
+local Window = nil
+if okRay then
+    Window = Rayfield:CreateWindow({
+        Name = "GMON HUB",
+        LoadingTitle = "GMON HUB",
+        LoadingSubtitle = "Universal Script",
+        ConfigurationSaving = { Enabled = true, FolderName = "GMON", FileName = "GMONHub" }
     })
-
-    path:ComputeAsync(hrp.Position, destination)
-
-    if path.Status ~= Enum.PathStatus.Success then
-        self:MoveTo(destination)
-        return
-    end
-
-    for _, waypoint in ipairs(path:GetWaypoints()) do
-        self:MoveTo(waypoint.Position)
-    end
+else
+    Window = FallbackGUI:CreateWindow({Name="GMON HUB"})
+    safeNotify("GMON", "Rayfield not found, using fallback GUI", 5)
 end
 
--- FIND NEAREST NPC (GENERIC)
-function ClientUtil:FindNearestNPC(filterName)
-    local hrp = self:GetHRP()
-    local nearest, dist = nil, math.huge
+-- ===========================
+-- Info Tab
+-- ===========================
+local InfoTab = Window:CreateTab and Window:CreateTab("Info") or Window:CreateTab("Info")
+if InfoTab.CreateLabel then
+    InfoTab:CreateLabel("Player: "..tostring(LocalPlayer.Name))
+    InfoTab:CreateLabel("UserId: "..tostring(LocalPlayer.UserId))
+    InfoTab:CreateLabel("PlaceId: "..tostring(game.PlaceId))
+end
 
-    for _, m in pairs(workspace:GetChildren()) do
-        if m:IsA("Model")
-            and m:FindFirstChild("Humanoid")
-            and m:FindFirstChild("HumanoidRootPart")
-            and m.Humanoid.Health > 0
-        then
-            if not filterName or m.Name == filterName then
-                local d = (m.HumanoidRootPart.Position - hrp.Position).Magnitude
-                if d < dist then
-                    dist = d
-                    nearest = m
+-- ===========================
+-- Detect Game Type by PlaceId (edit arrays as needed)
+-- ===========================
+local PlaceId = game.PlaceId
+local GameType = "Universal"
+
+local BLOX_PLACES = {2753915549, 4442272183} -- contoh, edit
+local BABFT_PLACES = {537413528}
+local CDT_PLACES = {3351674303}
+
+local function inList(tab, val)
+    for _,v in ipairs(tab) do if v == val then return true end end
+    return false
+end
+
+if inList(BLOX_PLACES, PlaceId) then GameType = "BloxFruit"
+elseif inList(BABFT_PLACES, PlaceId) then GameType = "BuildAboat"
+elseif inList(CDT_PLACES, PlaceId) then GameType = "CarDealership" end
+
+if InfoTab.CreateLabel then InfoTab:CreateLabel("Detected: "..GameType) end
+
+-- ===========================
+-- Module: Utilities (common)
+-- ===========================
+local Utilities = {}
+
+function Utilities:teleportTo(cframe)
+    if not cframe then return false end
+    pcall(function()
+        HRP.CFrame = cframe + Vector3.new(0, 3, 0)
+    end)
+    return true
+end
+
+function Utilities:walkTo(part, speed)
+    speed = speed or 60
+    local target = part
+    if not target then return false end
+    pcall(function()
+        local dest = target.Position
+        -- simple movement: tween the HRP CFrame to destination
+        tweenTo(HRP, CFrame.new(dest + Vector3.new(0,3,0)), math.clamp((HRP.Position - dest).Magnitude / speed, 0.2, 3))
+    end)
+    return true
+end
+
+function Utilities:clickTool()
+    local tool = Character:FindFirstChildOfClass("Tool")
+    if tool and tool.Parent == Character then
+        pcall(function() tool:Activate() end)
+        return true
+    end
+    return false
+end
+
+-- Anti-AFK simulate
+do
+    spawn(function()
+        while true do
+            -- small simulated input
+            pcall(function()
+                local char = LocalPlayer.Character
+                if char and char:FindFirstChild("HumanoidRootPart") then
+                    char.HumanoidRootPart.CFrame = char.HumanoidRootPart.CFrame + Vector3.new(0,0.01,0)
+                end
+            end)
+            task.wait(20)
+        end
+    end)
+end
+
+-- ===========================
+-- Module: Blox Fruit (IMPLEMENTASI GENERIK)
+-- Note: sesuaikan NPC names / remotes per versi game
+-- ===========================
+local BloxModule = {}
+BloxModule.Enabled = false
+BloxModule.Config = Config.BloxFruit
+
+function BloxModule:findNearestNPC(names)
+    local best, bestDist = nil, math.huge
+    for _, npcName in ipairs(names) do
+        for _, obj in pairs(workspace:GetDescendants()) do
+            if obj.Name == npcName and obj:IsA("Model") then
+                local root = obj:FindFirstChild("HumanoidRootPart") or obj:FindFirstChild("Torso") or obj.PrimaryPart
+                if root then
+                    local dist = (HRP.Position - root.Position).Magnitude
+                    if dist < bestDist then bestDist, best = dist, root end
                 end
             end
         end
     end
-
-    return nearest
+    return best
 end
 
--- =========================
--- BLOX FRUIT AUTO LOGIC (CLIENT)
--- =========================
-
-local BloxAuto = {
-    AutoFarm = false,
-    AutoQuest = false
-}
-
--- AUTO FARM LOOP
-task.spawn(function()
-    while true do
-        if BloxAuto.AutoFarm then
-            local questId = player:GetAttribute("ActiveQuest")
-            local targetName = nil
-
-            if questId then
-                -- server quest table mirrored (safe)
-                if questId == 1 then targetName = "Bandit" end
-                if questId == 2 then targetName = "Pirate" end
-            end
-
-            local npc = ClientUtil:FindNearestNPC(targetName)
-            if npc then
-                ClientUtil:PathMoveTo(npc.HumanoidRootPart.Position + Vector3.new(0,0,3))
-
-                -- SIMULATED HIT (SERVER VALIDATED)
-                task.wait(0.3)
-                game.ReplicatedStorage.GMON_Remotes.Blox_AddExp:FireServer(npc.Name)
-            end
-        end
-        task.wait(0.4)
-    end
-end)
-
--- AUTO QUEST LOOP
-task.spawn(function()
-    while true do
-        if BloxAuto.AutoQuest then
-            if not player:GetAttribute("ActiveQuest") then
-                game.ReplicatedStorage.GMON_Remotes.Blox_GetQuest:InvokeServer("GET")
-            end
-        end
-        task.wait(2)
-    end
-end)
-
--- =========================
--- CAR DEALERSHIP CLIENT LOGIC
--- =========================
-
-local SelectedCar = nil
-
-local function getAllCars()
-    local carsFolder = workspace:FindFirstChild("CarShop") and workspace.CarShop:FindFirstChild("Cars")
-    local list = {}
-    if carsFolder then
-        for _, c in ipairs(carsFolder:GetChildren()) do
-            if c:FindFirstChild("Price") then
-                table.insert(list, c.Name)
-            end
-        end
-    end
-    return list
-end
-
--- =========================
--- BUILD A BOAT CLIENT LOGIC
--- =========================
-
-local BuildAuto = {
-    AutoMove = false
-}
-
-task.spawn(function()
-    while true do
-        if BuildAuto.AutoMove then
-            local hrp = ClientUtil:GetHRP()
-            hrp.CFrame = hrp.CFrame * CFrame.new(0, 0, 3)
-        end
+function BloxModule:autoFarmStep()
+    -- find nearest quest NPC or enemy
+    local target = self:findNearestNPC(self.Config.NPC_NAMES)
+    if not target then return false, "No NPC found" end
+    -- approach
+    Utilities:walkTo(target, 120)
+    task.wait(0.2)
+    -- attempt attack / interact: try click tool repeatedly
+    for i=1,5 do
+        Utilities:clickTool()
         task.wait(0.2)
     end
-end)
-
--- =========================
--- GUI INTEGRATION (EXTEND EXISTING TABS)
--- =========================
-
-if RunService:IsClient() then
-    -- BLOX TAB EXTEND
-    if game.PlaceId == 2753915549 or game.PlaceId == 4442272183 or game.PlaceId == 7449423635 then
-        local Tab = Window:CreateTab("Blox Control", 4483362458)
-
-        Tab:CreateToggle({
-            Name = "Auto Farm (Client)",
-            CurrentValue = false,
-            Callback = function(v)
-                BloxAuto.AutoFarm = v
-            end
-        })
-
-        Tab:CreateToggle({
-            Name = "Auto Quest (Client)",
-            CurrentValue = false,
-            Callback = function(v)
-                BloxAuto.AutoQuest = v
-            end
-        })
-    end
-
-    -- CAR TAB EXTEND
-    local cars = getAllCars()
-    if #cars > 0 then
-        local Tab = Window:CreateTab("Car Control", 4483362458)
-
-        Tab:CreateDropdown({
-            Name = "Select Car",
-            Options = cars,
-            CurrentOption = cars[1],
-            Callback = function(v)
-                SelectedCar = v
-            end
-        })
-
-        Tab:CreateButton({
-            Name = "Buy Selected Car",
-            Callback = function()
-                if not SelectedCar then return end
-                local ok, msg = game.ReplicatedStorage.GMON_Remotes.Car_Buy:InvokeServer(SelectedCar)
-                if ok then
-                    StarterGui:SetCore("SendNotification",{Title="Car",Text="Purchased "..SelectedCar,Duration=3})
-                else
-                    StarterGui:SetCore("SendNotification",{Title="Car",Text=tostring(msg),Duration=3})
-                end
-            end
-        })
-    end
-
-    -- BUILD TAB EXTEND
-    if game.PlaceId == 537413528 then
-        local Tab = Window:CreateTab("Build Control", 4483362458)
-
-        Tab:CreateToggle({
-            Name = "Auto Move Forward",
-            CurrentValue = false,
-            Callback = function(v)
-                BuildAuto.AutoMove = v
-            end
-        })
-    end
+    return true
 end
 
--- =========================
--- END OF PART 2
--- =========================
--- NEXT: PART 3
--- Combat validation (server)
--- Weapon cooldown & range check
--- DataStore save/load
--- Rayfield polish (icons, sections)
--- Final safety cleanup
-
--- Ketik: 3
-
--- =========================
--- MAIN.LUA — PART 3 (FINAL)
--- Combat + Data + Polish
--- =========================
-
--- ===== SERVICES =====
-local RunService = game:GetService("RunService")
-local DataStoreService = game:GetService("DataStoreService")
-local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
-local Remotes = ReplicatedStorage:WaitForChild("GMON_Remotes")
-
--- =========================
--- SERVER: COMBAT VALIDATION
--- =========================
-if RunService:IsServer() then
-
-    local lastHit = {} -- cooldown tracker
-
-    -- DEV combat remote (optional extension)
-    local CombatRemote = Instance.new("RemoteEvent")
-    CombatRemote.Name = "Blox_Combat"
-    CombatRemote.Parent = Remotes
-
-    CombatRemote.OnServerEvent:Connect(function(player, targetModel)
-        if not targetModel
-            or not targetModel:IsDescendantOf(workspace)
-            or not targetModel:FindFirstChild("Humanoid")
-            or targetModel.Humanoid.Health <= 0
-        then
-            return
+function BloxModule:startAutoFarm(loopDelay)
+    if self.Enabled then return end
+    self.Enabled = true
+    spawn(function()
+        safeNotify("BloxModule", "Auto Farm started", 4)
+        while self.Enabled do
+            local ok, msg = pcall(function() return self:autoFarmStep() end)
+            if not ok then warn("Blox autoFarm step error:", msg) end
+            task.wait(loopDelay or 0.5)
         end
-
-        local char = player.Character
-        if not char or not char:FindFirstChild("HumanoidRootPart") then return end
-
-        local hrp = char.HumanoidRootPart
-        local thrp = targetModel:FindFirstChild("HumanoidRootPart")
-        if not thrp then return end
-
-        -- RANGE CHECK (anti abuse)
-        if (hrp.Position - thrp.Position).Magnitude > 12 then
-            return
-        end
-
-        -- COOLDOWN CHECK
-        local t = os.clock()
-        if lastHit[player] and t - lastHit[player] < 0.35 then
-            return
-        end
-        lastHit[player] = t
-
-        -- APPLY DAMAGE (DEV)
-        targetModel.Humanoid:TakeDamage(15)
-
-        -- QUEST PROGRESS
-        Remotes.Blox_AddExp:Fire(player, targetModel.Name)
+        safeNotify("BloxModule", "Auto Farm stopped", 3)
     end)
-
-    print("[GMON] Server combat validation ready.")
 end
 
--- =========================
--- SERVER: DATASTORE (SAVE)
--- =========================
-if RunService:IsServer() then
-    local PlayerData = DataStoreService:GetDataStore("GMON_DEV_DATA")
+function BloxModule:stopAutoFarm()
+    self.Enabled = false
+end
 
-    Players.PlayerAdded:Connect(function(player)
-        local key = "UID_" .. player.UserId
-        local data
+-- ===========================
+-- Module: Build A Boat For Treasure (simplified)
+-- ===========================
+local BABModule = {}
+BABModule.Enabled = false
+BABModule.Config = Config.BuildABoat
 
-        local success, err = pcall(function()
-            data = PlayerData:GetAsync(key)
+function BABModule:findTreasure()
+    -- search workspace for object name TREASURE_NAME
+    local root = nil
+    for _, obj in pairs(workspace:GetDescendants()) do
+        if obj.Name == self.Config.TREASURE_NAME then
+            if obj:IsA("BasePart") then return obj end
+            if obj:IsA("Model") then
+                local p = obj:FindFirstChildWhichIsA("BasePart")
+                if p then return p end
+            end
+        end
+    end
+    return nil
+end
+
+function BABModule:goClaimTreasure()
+    local tr = self:findTreasure()
+    if not tr then return false, "no treasure in workspace" end
+    -- teleport near treasure
+    local targetPos = tr.Position + Vector3.new(0, 5, 0)
+    tweenTo(HRP, CFrame.new(targetPos), 0.4)
+    -- small wait to ensure triggering
+    task.wait(0.3)
+    -- optionally: try to touch (just setting CFrame near the treasure usually claims)
+    return true
+end
+
+function BABModule:startAutoFarm(loopDelay)
+    if self.Enabled then return end
+    self.Enabled = true
+    spawn(function()
+        safeNotify("BABFT", "Auto Farm started", 4)
+        while self.Enabled do
+            local ok, msg = pcall(function() return self:goClaimTreasure() end)
+            if not ok then warn("BAB autoFarm error:", msg) end
+            task.wait(loopDelay or 0.6)
+        end
+        safeNotify("BABFT", "Auto Farm stopped", 3)
+    end)
+end
+
+function BABModule:stopAutoFarm()
+    self.Enabled = false
+end
+
+-- ===========================
+-- Module: Car Dealership Tycoon (generic)
+-- ===========================
+local CarModule = {}
+CarModule.Config = Config.CarDealership
+CarModule.CarList = {} -- runtime cache
+
+-- utility: scan cars under configured CAR_ROOT and build info list
+function CarModule:scanCars()
+    self.CarList = {}
+    local root = self.Config.CAR_ROOT or workspace
+    for _, obj in pairs(root:GetDescendants()) do
+        -- quick heuristics: Model with primary part and a Price value or attribute
+        if obj:IsA("Model") and obj.PrimaryPart then
+            local price = nil
+            -- check attribute
+            if obj:GetAttribute(self.Config.CAR_PRICE_ATTRIBUTE) then
+                price = obj:GetAttribute(self.Config.CAR_PRICE_ATTRIBUTE)
+            end
+            -- check child IntValue / NumberValue named Price
+            local pv = obj:FindFirstChild(self.Config.CAR_PRICE_ATTRIBUTE)
+            if pv and (pv:IsA("IntValue") or pv:IsA("NumberValue") or pv:IsA("StringValue")) then
+                price = tonumber(tostring(pv.Value)) or price
+            end
+            if price then
+                table.insert(self.CarList, {Model = obj, Price = price, Name = obj.Name})
+            end
+        end
+    end
+    table.sort(self.CarList, function(a,b) return (a.Price or 0) < (b.Price or 0) end)
+    return self.CarList
+end
+
+-- generic buy function (best effort)
+function CarModule:buyCar(carInfo)
+    if not carInfo then return false, "no car selected" end
+    -- Two approaches: if BUY_REMOTE_PATH provided, try to use it,
+    -- else attempt to touch the buy-trigger area near car model.
+    if self.Config.BUY_REMOTE_PATH then
+        -- BUY_REMOTE_PATH expected like: "game.ReplicatedStorage.BuyCar"
+        local suc, remote = pcall(function()
+            local env = load("return " .. self.Config.BUY_REMOTE_PATH)()
+            return env
         end)
-
-        if success and data then
-            local ls = player:WaitForChild("leaderstats")
-            ls.Level.Value = data.Level or 1
-            ls.Exp.Value = data.Exp or 0
-            ls.Money.Value = data.Money or 1000
+        if suc and remote and remote.FireServer then
+            pcall(function() remote:FireServer(carInfo.Model) end)
+            return true
         end
-    end)
-
-    Players.PlayerRemoving:Connect(function(player)
-        local ls = player:FindFirstChild("leaderstats")
-        if not ls then return end
-
-        local data = {
-            Level = ls.Level.Value,
-            Exp = ls.Exp.Value,
-            Money = ls.Money.Value
-        }
-
-        local key = "UID_" .. player.UserId
-        pcall(function()
-            PlayerData:SetAsync(key, data)
-        end)
-    end)
-
-    print("[GMON] DataStore save/load enabled (DEV).")
+    end
+    -- fallback: move to car and attempt interact (if there's a ClickDetector)
+    local clicks = {}
+    for _, v in pairs(carInfo.Model:GetDescendants()) do
+        if v:IsA("ClickDetector") then table.insert(clicks, v) end
+    end
+    if #clicks > 0 then
+        local cd = clicks[1]
+        -- simulate clicking: move to click position
+        if cd.Parent and cd.Parent:IsA("BasePart") then
+            Utilities:walkTo(cd.Parent, 120)
+            task.wait(0.3)
+            -- attempt to trigger detector via fire (works only if clickdetector bound server)
+            pcall(function() cd:FireClick(LocalPlayer) end)
+            return true
+        end
+    end
+    return false, "no remote or clickable found; set BUY_REMOTE_PATH in config"
 end
 
--- =========================
--- CLIENT: BLOX COMBAT LOOP
--- =========================
-if RunService:IsClient() then
-    local Players = game:GetService("Players")
-    local player = Players.LocalPlayer
-    local ClientUtil = ClientUtil -- from PART 2
+-- ===========================
+-- GUI: Features Tab & Controls
+-- ===========================
+local FeaturesTab = Window:CreateTab and Window:CreateTab("Features") or Window:CreateTab("Features")
 
-    local CombatRemote = Remotes:WaitForChild("Blox_Combat")
-
-    -- Hook combat into AutoFarm
-    task.spawn(function()
-        while true do
-            if BloxAuto and BloxAuto.AutoFarm then
-                local npc = ClientUtil:FindNearestNPC()
-                if npc and npc:FindFirstChild("HumanoidRootPart") then
-                    CombatRemote:FireServer(npc)
-                end
-            end
-            task.wait(0.35)
+-- Blox UI
+if GameType == "BloxFruit" then
+    FeaturesTab:CreateSection("Blox Fruits")
+    local afToggle, questToggle
+    afToggle = FeaturesTab:CreateToggle({
+        Name = "Auto Farm (Blox)",
+        CurrentValue = false,
+        Callback = function(v)
+            if v then BloxModule:startAutoFarm(0.6) else BloxModule:stopAutoFarm() end
         end
-    end)
-end
-
--- =========================
--- UI POLISH (RAYFIELD)
--- =========================
-if RunService:IsClient() and Rayfield then
-    Rayfield:Notify({
-        Title = "GMON Hub",
-        Content = "All modules loaded successfully",
-        Duration = 5,
-        Image = 4483362458
+    })
+    questToggle = FeaturesTab:CreateToggle({
+        Name = "Auto Quest (Stub)",
+        CurrentValue = false,
+        Callback = function(v)
+            -- implement quest logic if you know quest remotes
+            if v then safeNotify("Blox", "Auto Quest enabled (stub)") end
+        end
+    })
+    FeaturesTab:CreateButton({
+        Name = "Scan NPCs",
+        Callback = function()
+            local t = BloxModule:findNearestNPC(BloxModule.Config.NPC_NAMES)
+            if t then safeNotify("Blox", "Found NPC at "..t.Position.X..","..t.Position.Y,4) end
+        end
     })
 end
 
--- =========================
--- FINAL NOTES
--- =========================
--- ✔ Single file main.lua
--- ✔ GMON Loader
--- ✔ Player Info Tab
--- ✔ PlaceId Picker
--- ✔ Blox Fruit (Quest, Auto Farm, Combat DEV)
--- ✔ Car Dealership (Select, Buy, Validate)
--- ✔ Build A Boat (Bot / Auto Move)
--- ✔ Data Save / Load
--- ✔ Modular & extendable
--- ✔ PRIVATE / DEV SAFE
+-- Build a Boat UI
+if GameType == "BuildAboat" then
+    FeaturesTab:CreateSection("Build A Boat")
+    local babToggle
+    babToggle = FeaturesTab:CreateToggle({
+        Name = "Auto Farm Treasure",
+        CurrentValue = false,
+        Callback = function(v)
+            if v then BABModule:startAutoFarm(0.8) else BABModule:stopAutoFarm() end
+        end
+    })
+    FeaturesTab:CreateButton({
+        Name = "Find Treasure (Debug)",
+        Callback = function()
+            local t = BABModule:findTreasure()
+            if t then safeNotify("BABFT", "Treasure at: "..t.Position.X..","..t.Position.Z, 5)
+            else safeNotify("BABFT", "Treasure not found (check config)", 5) end
+        end
+    })
+end
 
-print("======================================")
-print(" GMON MAIN.LUA FULLY LOADED (DEV MODE) ")
-print("======================================")
+-- Car Dealership UI
+if GameType == "CarDealership" then
+    FeaturesTab:CreateSection("Car Dealership")
+    local scanBtn = FeaturesTab:CreateButton({
+        Name = "Scan Cars",
+        Callback = function()
+            local list = CarModule:scanCars()
+            if #list == 0 then safeNotify("Car", "No cars found. Adjust CAR_ROOT or Price attribute.", 6) return end
+            safeNotify("Car", "Found "..#list.." car(s). See console for details.", 5)
+            for i,ci in ipairs(list) do
+                print(("CAR [%d] %s - %s"):format(i, tostring(ci.Name), tostring(ci.Price)))
+            end
+        end
+    })
+    FeaturesTab:CreateButton({
+        Name = "Buy Cheapest Car",
+        Callback = function()
+            local list = CarModule:scanCars()
+            if #list == 0 then safeNotify("Car", "No cars found", 5); return end
+            local ok, err = CarModule:buyCar(list[1])
+            if ok then safeNotify("Car", "Buy attempt sent", 4) else safeNotify("Car", "Buy failed: "..tostring(err), 6) end
+        end
+    })
+end
+
+-- Settings Tab
+local SettingsTab = Window:CreateTab and Window:CreateTab("Settings") or Window:CreateTab("Settings")
+SettingsTab:CreateSection("General")
+SettingsTab:CreateButton({
+    Name = "Destroy UI",
+    Callback = function() 
+        if okRay and Rayfield and Rayfield:Destroy then 
+            pcall(function() Rayfield:Destroy() end) 
+        end 
+        safeNotify("GMON","UI destroyed",3)
+    end
+})
+SettingsTab:CreateButton({
+    Name = "Print Config (console)",
+    Callback = function()
+        print("CONFIG Dump:", HttpService:JSONEncode(Config))
+    end
+})
+
+-- ===========================
+-- Final: Auto init & safety reminders
+-- ===========================
+safeNotify("GMON", "Initialized - "..tostring(GameType), 5)
+print("GMON HUB initialized. Detected game:", GameType)
+print("Notes: Adjust Config at top to match the game instance (NPC names, remotes, attributes).")
+
+-- End of main.lua
