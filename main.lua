@@ -1,595 +1,818 @@
--- GMON_hub.lua
--- Adds: God Mode, Rejoin / ServerHop, Anti-AFK, Build-A-Boat Teleports, AutoBuild (generic)
--- Plug-and-play into your existing GMON main; this file can be loaded as a module or run standalone.
+-- main.lua
+-- G-MON Hub (Rebuild)
+-- Single-file, modular, readable.
+-- Modules: Blox Fruit, Car Dealership Tycoon, Build A Boat
+-- Features: AntiAFK, GodMode (persistent), Rejoin/ServerHop fallback, Build teleport presets, Auto-build (generic), GUI with Rayfield fallback.
 
 -- BOOT
 repeat task.wait() until game:IsLoaded()
 local Players = game:GetService("Players")
-local TeleportService = game:GetService("TeleportService")
+local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
 local UIS = game:GetService("UserInputService")
 local VirtualUser = game:GetService("VirtualUser")
+local TeleportService = game:GetService("TeleportService")
 local HttpService = game:GetService("HttpService")
-local Workspace = workspace
 local LP = Players.LocalPlayer
 
--- SAFETY helpers
+-- SAFE helpers
 local function safe_pcall(fn, ...)
-    if type(fn) ~= "function" then return false, "not a function" end
+    if type(fn) ~= "function" then return false end
     local ok, res = pcall(fn, ...)
-    if not ok then warn("[GMON] safe_pcall error:", res) end
+    if not ok then
+        warn("[GMON] safe_pcall error:", res)
+    end
     return ok, res
 end
 
-local function safe_wait(t) task.wait(tonumber(t) or 0.1) end
-
--- STATE
-local GMON = {}
-GMON.Flags = {}
-GMON.Modules = {}
-GMON.UI = {}
-GMON.Status = {}
-
--- ======================
--- AntiAFK
--- ======================
-do
-    local running = false
-    function GMON.Modules.StartAntiAFK()
-        if running then return end
-        running = true
-        GMON.Flags.AntiAFK = true
-        -- prefer VirtualUser method
-        local function onIdle()
-            pcall(function()
-                -- simulate mouse + move to avoid idling
-                VirtualUser:Button2Down(Vector2.new(0,0), workspace.CurrentCamera and workspace.CurrentCamera.CFrame or CFrame.new())
-                task.wait(0.5)
-                VirtualUser:Button2Up(Vector2.new(0,0), workspace.CurrentCamera and workspace.CurrentCamera.CFrame or CFrame.new())
-            end)
-        end
-        -- connect once
-        pcall(function()
-            LP.Idled:Connect(function()
-                if running then onIdle() end
-            end)
-        end)
-        -- periodic wiggle as backup
-        task.spawn(function()
-            while running do
-                pcall(function()
-                    if LP and LP.Character and LP.Character:FindFirstChild("HumanoidRootPart") then
-                        local hrp = LP.Character.HumanoidRootPart
-                        hrp.CFrame = hrp.CFrame * CFrame.new(0,0,0.001)
-                    end
-                end)
-                task.wait(20 + math.random() * 10)
-            end
-        end)
-        warn("[GMON] AntiAFK started")
-    end
-
-    function GMON.Modules.StopAntiAFK()
-        running = false
-        GMON.Flags.AntiAFK = false
-        warn("[GMON] AntiAFK stopped")
-    end
+local function safe_wait(t)
+    t = tonumber(t) or 0.1
+    if t < 0.01 then t = 0.01 end
+    if t > 5 then t = 5 end
+    task.wait(t)
 end
 
--- ======================
--- God Mode (client-side best-effort)
--- ======================
-do
-    local alive = false
-    local conHealthChanged = nil
-    local conDied = nil
-    local keepReset = true
+-- STATE
+local GMON = {
+    StartTime = os.time(),
+    Modules = {},
+    UI = {},
+    Flags = {},
+    Config = {
+        api_key = "", -- optional
+        place_map = { -- default place mapping (override as needed)
+            BLOX_FRUIT = { placeids = {2753915549} },
+            CAR_TYCOON = { placeids = {1554960397} },
+            BUILD_A_BOAT = { placeids = {537413528} }
+        }
+    }
+}
 
-    local function getHumanoid()
-        local c = LP.Character or LP.CharacterAdded and LP.CharacterAdded:Wait(3) or nil
-        if c then
-            local h = c:FindFirstChildOfClass("Humanoid")
-            return h, c
-        end
-        return nil, nil
-    end
+-- UTILITIES
+local Utils = {}
 
-    local function enableGod()
-        local h,c = getHumanoid()
-        if not h then return false, "no humanoid" end
-        -- try to set big health and prevent state changes
-        pcall(function()
-            h.MaxHealth = math.huge
-            h.Health = math.huge
-            -- disable ragdoll-like states
-            if h.SetStateEnabled then
-                local ok, _ = pcall(function()
-                    for _, st in ipairs({
-                        Enum.HumanoidStateType.FallingDown,
-                        Enum.HumanoidStateType.PlatformStanding,
-                        Enum.HumanoidStateType.Ragdoll,
-                        Enum.HumanoidStateType.GettingUp
-                    }) do
-                        pcall(function() h:SetStateEnabled(st, false) end)
-                    end
-                end)
-            end
-        end)
+function Utils.FormatTime(sec)
+    sec = math.max(0, math.floor(sec or 0))
+    local h = math.floor(sec/3600); local m = math.floor((sec%3600)/60); local s = sec%60
+    if h>0 then return string.format("%02dh:%02dm:%02ds", h,m,s) end
+    return string.format("%02dm:%02ds", m,s)
+end
 
-        -- watch for health being changed and reset
-        conHealthChanged = h.HealthChanged:Connect(function()
-            if not keepReset then return end
+function Utils.SafeChar()
+    local ok, c = pcall(function() return LP and LP.Character end)
+    if not ok or not c then return nil end
+    if c:FindFirstChild("HumanoidRootPart") and c:FindFirstChildOfClass("Humanoid") then return c end
+    return nil
+end
+
+function Utils.AntiAFK()
+    if not LP then return end
+    safe_pcall(function()
+        LP.Idled:Connect(function()
             pcall(function()
-                if h and h.Health and h.Health < (h.MaxHealth*0.9) then
-                    h.Health = h.MaxHealth
+                local cam = workspace.CurrentCamera
+                if cam and cam.CFrame then
+                    VirtualUser:Button2Down(Vector2.new(0,0), cam.CFrame)
+                    task.wait(1)
+                    VirtualUser:Button2Up(Vector2.new(0,0), cam.CFrame)
+                else
+                    VirtualUser:Button2Down(); task.wait(1); VirtualUser:Button2Up()
                 end
             end)
         end)
-        -- prevent death by respawning quickly
-        conDied = h.Died:Connect(function()
-            if keepReset then
-                -- attempt quick respawn
-                pcall(function()
-                    local hrp = c:FindFirstChild("HumanoidRootPart")
-                    if hrp then hrp.CFrame = hrp.CFrame end
-                end)
+    end)
+end
+
+-- Game detection
+function Utils.DetectGame()
+    local pid = game.PlaceId
+    for key,info in pairs(GMON.Config.place_map) do
+        if info.placeids then
+            for _,id in ipairs(info.placeids) do
+                if id == pid then return key end
             end
+        end
+    end
+    -- heuristic: search workspace for known folders
+    local lower = function(s) if not s then return "" end return string.lower(tostring(s)) end
+    for _,obj in ipairs(Workspace:GetChildren()) do
+        local n = lower(obj.Name)
+        if string.find(n,"enemy") or string.find(n,"mob") or string.find(n,"monster") or string.find(n,"quest") then return "BLOX_FRUIT" end
+        if string.find(n,"car") or string.find(n,"vehicle") or string.find(n,"dealership") or string.find(n,"garage") then return "CAR_TYCOON" end
+        if string.find(n,"boat") or string.find(n,"stage") or string.find(n,"treasure") or string.find(n,"chest") then return "BUILD_A_BOAT" end
+    end
+    return "UNKNOWN"
+end
+
+-- Attempt to load Rayfield (non-fatal)
+local Rayfield = nil
+do
+    local ok, res = pcall(function()
+        -- try common rayfield path used previously (if executor allows)
+        return loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
+    end)
+    if ok and res then Rayfield = res end
+end
+
+-- SIMPLE FALLBACK UI (if Rayfield not present)
+local function makeFallbackWindow(title)
+    local W = {}
+    W._root = Instance.new("ScreenGui")
+    W._root.Name = "GMonFallbackGUI"
+    W._root.ResetOnSpawn = false
+    safe_pcall(function() W._root.Parent = LP:WaitForChild("PlayerGui") end)
+    local frame = Instance.new("Frame", W._root)
+    frame.Size = UDim2.new(0, 420, 0, 520)
+    frame.Position = UDim2.new(0, 10, 0, 60)
+    frame.BackgroundColor3 = Color3.fromRGB(25,25,25)
+    frame.ClipsDescendants = true
+    local corner = Instance.new("UICorner", frame)
+    corner.CornerRadius = UDim.new(0,8)
+    local titleL = Instance.new("TextLabel", frame)
+    titleL.Size = UDim2.new(1, -8, 0, 30)
+    titleL.Position = UDim2.new(0,4,0,4)
+    titleL.Text = title
+    titleL.Font = Enum.Font.SourceSansBold
+    titleL.TextSize = 18
+    titleL.TextColor3 = Color3.fromRGB(220,220,220)
+    titleL.BackgroundTransparency = 1
+
+    local content = Instance.new("Frame", frame)
+    content.Position = UDim2.new(0,4,0,40)
+    content.Size = UDim2.new(1, -8, 1, -44)
+    content.BackgroundTransparency = 1
+
+    function W:CreateTab(name)
+        local Tab = {}
+        local y = #content:GetChildren() * 36
+        local label = Instance.new("TextLabel", content)
+        label.Position = UDim2.new(0,2,0,y)
+        label.Size = UDim2.new(1,-4,0,32)
+        label.Text = "[ "..name.." ]"
+        label.Font = Enum.Font.SourceSans
+        label.TextSize = 14
+        label.TextColor3 = Color3.fromRGB(200,200,200)
+        label.BackgroundTransparency = 1
+
+        function Tab:CreateLabel(txt) local L=Instance.new("TextLabel", content); L.Position=UDim2.new(0,6,0,y+36); L.Size=UDim2.new(1,-12,0,20); L.Text=txt; L.BackgroundTransparency=1; L.TextColor3=Color3.fromRGB(200,200,200); L.Font=Enum.Font.SourceSans; L.TextSize=13; y=y+26; return L end
+        function Tab:CreateButton(tbl) local b = Instance.new("TextButton", content); b.Position = UDim2.new(0,6,0,y+36); b.Size = UDim2.new(1,-12,0,26); b.Text = tbl.Name or "Button"; b.Font=Enum.Font.SourceSansBold; b.TextSize=14; b.BackgroundColor3=Color3.fromRGB(40,40,40); b.TextColor3=Color3.fromRGB(230,230,230); b.MouseButton1Click:Connect(function() safe_pcall(tbl.Callback) end); y=y+32; return b end
+        function Tab:CreateToggle(tbl) local frame = Instance.new("Frame", content); frame.Position = UDim2.new(0,6,0,y+36); frame.Size=UDim2.new(1,-12,0,26); frame.BackgroundTransparency=1; local label = Instance.new("TextLabel", frame); label.Size = UDim2.new(0.8,0,1,0); label.Text = tbl.Name; label.BackgroundTransparency=1; label.TextColor3=Color3.fromRGB(220,220,220); label.Font=Enum.Font.SourceSans; label.TextSize=14; local btn = Instance.new("TextButton", frame); btn.Size = UDim2.new(0.18,0,1,0); btn.Position = UDim2.new(0.82,0,0,0); btn.Text = tbl.CurrentValue and "ON" or "OFF"; btn.Font=Enum.Font.SourceSansBold; btn.TextSize=14; btn.BackgroundColor3 = tbl.CurrentValue and Color3.fromRGB(30,140,40) or Color3.fromRGB(100,100,100); btn.MouseButton1Click:Connect(function() local nv = not tbl.CurrentValue; tbl.CurrentValue = nv; btn.Text = nv and "ON" or "OFF"; btn.BackgroundColor3 = nv and Color3.fromRGB(30,140,40) or Color3.fromRGB(100,100,100); safe_pcall(tbl.Callback, nv) end); y=y+32; return frame end
+        function Tab:CreateSlider(tbl) -- simple slider (not interactive), assume Callback called with number
+            local label = Instance.new("TextLabel", content); label.Position = UDim2.new(0,6,0,y+36); label.Size = UDim2.new(1,-12,0,22); label.Text = string.format("%s: %s", tbl.Name, tostring(tbl.CurrentValue)); label.TextColor3=Color3.fromRGB(220,220,220); label.BackgroundTransparency=1; y=y+26
+            local btn = Instance.new("TextButton", content); btn.Position = UDim2.new(0,6,0,y+36); btn.Size = UDim2.new(1,-12,0,26); btn.Text = "Set Value"; btn.Font=Enum.Font.SourceSans; btn.TextSize=14; btn.MouseButton1Click:Connect(function()
+                local val = tonumber(game:GetService("StarterGui"):GetCore("SendNotification") and "0") -- placeholder (can't prompt)
+                -- fallback: just call callback with current value
+                safe_pcall(tbl.Callback, tbl.CurrentValue)
+            end)
+            y=y+32; return {label=label, button=btn}
+        end
+        return Tab
+    end
+
+    function W:Notify(params)
+        -- simple print + in-game notification via StarterGui (best-effort)
+        pcall(function()
+            game:GetService("StarterGui"):SetCore("SendNotification", {
+                Title = params.Title or "G-MON",
+                Text = params.Content or "",
+                Duration = params.Duration or 3
+            })
         end)
-        alive = true
-        GMON.Flags.GodMode = true
+        print("[G-MON Notify]", params.Title, params.Content)
+    end
+
+    return W
+end
+
+-- Build UI (Rayfield if available)
+local Window = nil
+if Rayfield and type(Rayfield.CreateWindow) == "function" then
+    Window = Rayfield:CreateWindow({
+        Name = "G-MON Hub",
+        LoadingTitle = "G-MON Hub",
+        LoadingSubtitle = "Ready",
+        ConfigurationSaving = { Enabled = false }
+    })
+else
+    Window = makeFallbackWindow("G-MON Hub")
+end
+GMON.UI.Window = Window
+
+-- STATUS WIDGET
+do
+    local status = {}
+    status.Gui = Instance.new("ScreenGui")
+    status.Gui.Name = "GMonStatus"
+    status.Gui.ResetOnSpawn = false
+    pcall(function() status.Gui.Parent = LP:WaitForChild("PlayerGui") end)
+    local frame = Instance.new("Frame", status.Gui)
+    frame.Size = UDim2.new(0,300,0,120)
+    frame.Position = UDim2.new(1,-310,0,20)
+    frame.BackgroundColor3 = Color3.fromRGB(24,24,24); frame.BackgroundTransparency = 0.08
+    frame.BorderSizePixel = 0
+    local corner = Instance.new("UICorner", frame); corner.CornerRadius = UDim.new(0,8)
+    local title = Instance.new("TextLabel", frame)
+    title.Size = UDim2.new(1,-12,0,26); title.Position = UDim2.new(0,6,0,6)
+    title.BackgroundTransparency = 1; title.Font = Enum.Font.SourceSansBold; title.TextSize = 15; title.TextColor3 = Color3.fromRGB(240,240,240)
+    title.Text = "G-MON Status"
+    local runtime = Instance.new("TextLabel", frame); runtime.Size=UDim2.new(1,-12,0,18); runtime.Position=UDim2.new(0,6,0,34); runtime.BackgroundTransparency=1; runtime.Font=Enum.Font.SourceSans; runtime.TextSize=13; runtime.TextColor3=Color3.new(0.8,0.8,0.8); runtime.Text="Runtime: 00:00"
+    local info_blox = Instance.new("TextLabel", frame); info_blox.Size=UDim2.new(1,-12,0,16); info_blox.Position=UDim2.new(0,6,0,54); info_blox.BackgroundTransparency=1; info_blox.Font=Enum.Font.SourceSans; info_blox.TextSize=13; info_blox.TextColor3=Color3.fromRGB(200,200,200)
+    info_blox.Text = "Blox: OFF"
+    local info_car = Instance.new("TextLabel", frame); info_car.Size=UDim2.new(1,-12,0,16); info_car.Position=UDim2.new(0,6,0,72); info_car.BackgroundTransparency=1; info_car.Font=Enum.Font.SourceSans; info_car.TextSize=13; info_car.TextColor3=Color3.fromRGB(200,200,200); info_car.Text="Car: OFF"
+    local info_boat = Instance.new("TextLabel", frame); info_boat.Size=UDim2.new(1,-12,0,16); info_boat.Position=UDim2.new(0,6,0,90); info_boat.BackgroundTransparency=1; info_boat.Font=Enum.Font.SourceSans; info_boat.TextSize=13; info_boat.TextColor3=Color3.fromRGB(200,200,200); info_boat.Text="Boat: OFF"
+
+    GMON.UI.Status = { Gui = status.Gui, Runtime = runtime, Blox = info_blox, Car = info_car, Boat = info_boat }
+    -- update loop
+    task.spawn(function()
+        while task.wait(1) do
+            pcall(function()
+                GMON.UI.Status.Runtime.Text = "Runtime: " .. Utils.FormatTime(os.time() - GMON.StartTime)
+                GMON.UI.Status.Blox.Text = "Blox: " .. (GMON.Flags.Blox and "ON" or "OFF")
+                GMON.UI.Status.Car.Text = "Car: " .. (GMON.Flags.Car and "ON" or "OFF")
+                GMON.UI.Status.Boat.Text = "Boat: " .. (GMON.Flags.Boat and "ON" or "OFF")
+            end)
+        end
+    end)
+end
+
+-- SYSTEM MODULE: AntiAFK, GodMode, Rejoin/ServerHop
+do
+    local M = {}
+    M.GodModeEnabled = false
+    M._godLoop = nil
+
+    function M.EnableAntiAFK()
+        Utils.AntiAFK()
+    end
+
+    function M.SetGodMode(enabled)
+        M.GodModeEnabled = enabled
+        if enabled then
+            if M._godLoop and task.cancel then task.cancel(M._godLoop) end
+            M._godLoop = task.spawn(function()
+                while M.GodModeEnabled do
+                    local character = Utils.SafeChar()
+                    if character then
+                        local hum = character:FindFirstChildOfClass("Humanoid")
+                        if hum then
+                            pcall(function()
+                                hum.MaxHealth = 1e8
+                                hum.Health = hum.MaxHealth
+                                -- disable ragdoll/knockback in a safe way
+                                hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
+                                hum:SetStateEnabled(Enum.HumanoidStateType.PlatformStanding, false)
+                            end)
+                        end
+                    end
+                    task.wait(1)
+                end
+            end)
+        else
+            M._godLoop = nil
+        end
+    end
+
+    function M.Rejoin()
+        pcall(function() TeleportService:Teleport(game.PlaceId, LP) end)
+    end
+
+    function M.ServerHop()
+        -- Best-effort: attempt to query public servers (requires HttpService & allowlist)
+        -- If HttpService is not enabled, fallback to Rejoin()
+        local success, err = pcall(function()
+            if not HttpService.HttpEnabled then error("Http not enabled") end
+            local url = ("https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Asc&limit=100"):format(game.PlaceId)
+            local resp = HttpService:GetAsync(url)
+            local data = HttpService:JSONDecode(resp)
+            if data and data.data then
+                local me = LP
+                for _,srv in ipairs(data.data) do
+                    if srv.playing and (srv.playing < (srv.maxPlayers or 0)) and srv.id then
+                        -- try teleport to this server
+                        TeleportService:TeleportToPlaceInstance(game.PlaceId, srv.id, LP)
+                        return
+                    end
+                end
+            end
+            -- fallback
+            M.Rejoin()
+        end)
+        if not success then
+            warn("[GMON] ServerHop failed:", err)
+            pcall(function() M.Rejoin() end)
+        end
+    end
+
+    GMON.System = M
+end
+
+-- MODULE: Blox Fruit (generic auto-farm)
+do
+    local M = {}
+    M.running = false
+    M.config = {
+        range = 12,
+        fast_attack = false,
+        long_range = false
+    }
+    M._task = nil
+
+    local function findEnemyFolder()
+        local hints = {"Enemies","Sea1Enemies","Sea2Enemies","Monsters","Mobs","NPCs"}
+        for _, name in ipairs(hints) do
+            local f = Workspace:FindFirstChild(name)
+            if f then return f end
+        end
+        -- fallback: return first folder with models and humanoids
+        for _, c in ipairs(Workspace:GetDescendants()) do
+            if c:IsA("Model") and c:FindFirstChildOfClass("Humanoid") then
+                return Workspace
+            end
+        end
+        return nil
+    end
+
+    local function nearestEnemy(hrp)
+        local folder = findEnemyFolder()
+        if not folder then return nil end
+        local best, bestDist = nil, math.huge
+        for _, mob in ipairs(folder:GetDescendants()) do
+            if mob:IsA("Model") and mob:FindFirstChild("HumanoidRootPart") and mob:FindFirstChildOfClass("Humanoid") then
+                local hum = mob:FindFirstChildOfClass("Humanoid")
+                if hum and hum.Health > 0 then
+                    local d = (mob.HumanoidRootPart.Position - hrp.Position).Magnitude
+                    if d < bestDist and d <= (M.config.range or 12) then bestDist, best = d, mob end
+                end
+            end
+        end
+        return best
+    end
+
+    local function attackLoop()
+        while M.running do
+            task.wait(0.12)
+            safe_pcall(function()
+                if not M.running then return end
+                local char = Utils.SafeChar()
+                if not char then return end
+                local hrp = char:FindFirstChild("HumanoidRootPart"); if not hrp then return end
+                local target = nearestEnemy(hrp)
+                if not target then
+                    -- optionally go to sea spawn / quest NPC etc.
+                    return
+                end
+                -- generic attack: teleport near and trigger damage attempt
+                pcall(function()
+                    hrp.CFrame = target.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
+                end)
+                if M.config.fast_attack then
+                    -- multiple hits
+                    for i=1,3 do
+                        pcall(function()
+                            if target and target:FindFirstChildOfClass("Humanoid") then
+                                target:FindFirstChildOfClass("Humanoid"):TakeDamage(20)
+                            end
+                        end)
+                        task.wait(0.06)
+                    end
+                else
+                    pcall(function()
+                        if target and target:FindFirstChildOfClass("Humanoid") then
+                            target:FindFirstChildOfClass("Humanoid"):TakeDamage(12)
+                        end
+                    end)
+                end
+            end)
+        end
+    end
+
+    function M.start()
+        if M.running then return end
+        M.running = true
+        GMON.Flags.Blox = true
+        M._task = task.spawn(attackLoop)
+    end
+
+    function M.stop()
+        M.running = false
+        GMON.Flags.Blox = false
+        M._task = nil
+    end
+
+    function M.ExposeConfig()
+        return {
+            { type="slider", name="Range", min=2, max=60, current=M.config.range, onChange=function(v) M.config.range = v end },
+            { type="toggle", name="Fast Attack", current=M.config.fast_attack, onChange=function(v) M.config.fast_attack = v end },
+            { type="toggle", name="Long Range", current=M.config.long_range, onChange=function(v) M.config.long_range = v end }
+        }
+    end
+
+    GMON.Modules.Blox = M
+end
+
+-- MODULE: Car Dealership Tycoon (auto drive & buy utility)
+do
+    local M = {}
+    M.running = false
+    M.speed = 80
+    M.chosen = nil
+    M._task = nil
+
+    local function isPlayerOwned(model)
+        if not model then return false end
+        if tostring(model.Name) == tostring(LP.Name) then return true end
+        -- try common owner attributes
+        local ok, owner = pcall(function()
+            local o = model:FindFirstChild("Owner") or model:FindFirstChild("OwnerName")
+            if o and o.Value then return tostring(o.Value) end
+            if model.GetAttribute then return model:GetAttribute("Owner") end
+            return nil
+        end)
+        if ok and owner and tostring(owner) == tostring(LP.Name) then return true end
+        -- user id
+        local ok2, uid = pcall(function()
+            local v = model:FindFirstChild("OwnerUserId") or model:FindFirstChild("UserId")
+            if v and v.Value then return tonumber(v.Value) end
+            if model.GetAttribute then return model:GetAttribute("OwnerUserId") end
+            return nil
+        end)
+        if ok2 and tonumber(uid) and tonumber(uid) == LP.UserId then return true end
+        return false
+    end
+
+    local function guessCarsRoot()
+        local hints = {"Cars", "Vehicles", "Dealership", "VehiclesFolder", "CarShop"}
+        for _,name in ipairs(hints) do
+            local f = Workspace:FindFirstChild(name)
+            if f then return f end
+        end
+        return Workspace
+    end
+
+    local function chooseOwnCar()
+        local root = guessCarsRoot()
+        local candidates = {}
+        for _,m in ipairs(root:GetDescendants()) do
+            if m:IsA("Model") and m.PrimaryPart then
+                if isPlayerOwned(m) then table.insert(candidates, m) end
+            end
+        end
+        if #candidates == 0 then
+            -- fallback pick any model with multiple parts
+            for _,m in ipairs(root:GetDescendants()) do
+                if m:IsA("Model") and m.PrimaryPart and #m:GetDescendants() > 5 then table.insert(candidates, m) end
+            end
+        end
+        if #candidates == 0 then return nil end
+        table.sort(candidates, function(a,b) return #a:GetDescendants() > #b:GetDescendants() end)
+        return candidates[1]
+    end
+
+    local function ensureLinearVelocityPart(part)
+        if not part then return nil end
+        local att = part:FindFirstChild("_GmonAttach")
+        if not att then
+            att = Instance.new("Attachment")
+            att.Name = "_GmonAttach"
+            att.Parent = part
+        end
+        local lv = part:FindFirstChild("_GmonLV")
+        if not lv then
+            lv = Instance.new("LinearVelocity")
+            lv.Name = "_GmonLV"
+            lv.Attachment0 = att
+            lv.RelativeTo = Enum.ActuatorRelativeTo.Attachment0
+            lv.MaxForce = math.huge
+            lv.Parent = part
+        end
+        return lv
+    end
+
+    local function driveLoop()
+        while M.running do
+            task.wait(0.2)
+            safe_pcall(function()
+                if not M.running then return end
+                local car = M.chosen
+                if (not car) or (not car.PrimaryPart) then
+                    car = chooseOwnCar()
+                    if not car then GMON.Flags.Car = false; return end
+                    M.chosen = car
+                    -- store starting pos
+                    if not car:FindFirstChild("_GmonStartPos") then
+                        local cv = Instance.new("CFrameValue")
+                        cv.Name = "_GmonStartPos"
+                        cv.Value = car.PrimaryPart.CFrame
+                        cv.Parent = car
+                    end
+                end
+                if car and car.PrimaryPart then
+                    local lv = ensureLinearVelocityPart(car.PrimaryPart)
+                    if lv then
+                        lv.VectorVelocity = car.PrimaryPart.CFrame.LookVector * (M.speed or 80)
+                    end
+                end
+            end)
+        end
+    end
+
+    function M.start()
+        if M.running then return end
+        M.running = true
+        GMON.Flags.Car = true
+        M._task = task.spawn(driveLoop)
+    end
+
+    function M.stop()
+        M.running = false
+        GMON.Flags.Car = false
+        if M.chosen and M.chosen.PrimaryPart then
+            local prim = M.chosen.PrimaryPart
+            pcall(function()
+                local lv = prim:FindFirstChild("_GmonLV")
+                if lv then lv:Destroy() end
+                local att = prim:FindFirstChild("_GmonAttach")
+                if att then att:Destroy() end
+                local tag = M.chosen:FindFirstChild("_GmonStartPos")
+                if tag and tag:IsA("CFrameValue") then
+                    pcall(function() M.chosen:SetPrimaryPartCFrame(tag.Value) end)
+                    pcall(function() tag:Destroy() end)
+                end
+            end)
+        end
+        M.chosen = nil
+    end
+
+    -- Generic Buy function (game-specific remote required)
+    function M.TryBuySelectedCar(selectedModel)
+        -- Example: trigger remote "BuyCar" with args (modelName)
+        -- You MUST adapt this based on your private game's remote names/payloads.
+        local success, err = pcall(function()
+            if not selectedModel then error("No car selected") end
+            -- Example: try to find remote
+            local rr = Workspace:FindFirstChild("BuyCar") or Workspace:FindFirstChild("RemoteBuyCar")
+            if rr and rr:IsA("RemoteEvent") then
+                rr:FireServer(selectedModel.Name)
+                return true
+            end
+            -- fallback: try to simulate click on part
+            if selectedModel.PrimaryPart then
+                local click = selectedModel.PrimaryPart:FindFirstChildOfClass("ClickDetector")
+                if click then
+                    -- nothing we can do locally to trigger click other than Signal (game may not accept)
+                    return true
+                end
+            end
+            error("No buy remote found. Please set correct remote name in script.")
+        end)
+        if not success then warn("[GMON Car Buy] error:", err) end
+        return success
+    end
+
+    function M.ExposeConfig()
+        return {
+            { type="slider", name="Car Speed", min=20, max=200, current=M.speed, onChange=function(v) M.speed = v end }
+        }
+    end
+
+    GMON.Modules.Car = M
+end
+
+-- MODULE: Build A Boat (Auto stages, Teleport presets, Auto build hook)
+do
+    local M = {}
+    M.running = false
+    M.delay = 1.2 -- delay between stage visits
+    M._task = nil
+    M.teleports = { -- default teleport presets (can be edited)
+        spawn = CFrame.new(0,5,0),
+        shop = CFrame.new(10,5,0),
+        build_area = CFrame.new(0,5,50)
+    }
+
+    -- Automatic stage collector: tries to walk through parts named 'Stage'/'Black' etc.
+    local function collectStageParts()
+        local out = {}
+        for _,v in ipairs(Workspace:GetDescendants()) do
+            if v:IsA("BasePart") then
+                local n = string.lower(v.Name or "")
+                if string.find(n,"stage") or string.find(n,"black") or string.find(n,"trigger") or string.find(n,"dark") then
+                    table.insert(out, v)
+                end
+            end
+        end
+        return out
+    end
+
+    local function autoStageLoop()
+        while M.running do
+            task.wait(0.2)
+            safe_pcall(function()
+                if not M.running then return end
+                local char = Utils.SafeChar()
+                if not char then return end
+                local hrp = char:FindFirstChild("HumanoidRootPart"); if not hrp then return end
+                local parts = collectStageParts()
+                if #parts == 0 then
+                    -- fallback search for parts containing "stage"
+                    for _,v in ipairs(Workspace:GetDescendants()) do
+                        if v:IsA("BasePart") and string.match(string.lower(v.Name or ""),"stage") then table.insert(parts, v) end
+                    end
+                end
+                -- order by distance
+                table.sort(parts, function(a,b)
+                    return (a.Position - hrp.Position).Magnitude < (b.Position - hrp.Position).Magnitude
+                end)
+                for _,p in ipairs(parts) do
+                    if not M.running then break end
+                    if p and p.Parent then
+                        pcall(function() hrp.CFrame = p.CFrame * CFrame.new(0,3,0) end)
+                        safe_wait(M.delay)
+                    end
+                end
+
+                -- search for treasure/chest
+                local candidate = nil
+                for _,v in ipairs(Workspace:GetDescendants()) do
+                    if v:IsA("BasePart") then
+                        local ln = string.lower(v.Name or "")
+                        if string.find(ln,"chest") or string.find(ln,"treasure") or string.find(ln,"gold") then candidate = v; break end
+                    elseif v:IsA("Model") and v.PrimaryPart then
+                        local ln = string.lower(v.Name or "")
+                        if string.find(ln,"chest") or string.find(ln,"treasure") or string.find(ln,"gold") then candidate = v.PrimaryPart; break end
+                    end
+                end
+                if candidate then pcall(function() hrp.CFrame = candidate.CFrame * CFrame.new(0,3,0) end) end
+            end)
+        end
+    end
+
+    function M.start()
+        if M.running then return end
+        M.running = true
+        GMON.Flags.Boat = true
+        M._task = task.spawn(autoStageLoop)
+    end
+
+    function M.stop()
+        M.running = false
+        GMON.Flags.Boat = false
+        M._task = nil
+    end
+
+    -- teleport to preset
+    function M.TeleportToPreset(name)
+        local preset = M.teleports[name]
+        if not preset then warn("Preset not found:", name) return end
+        local char = Utils.SafeChar()
+        if not char then return end
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            pcall(function() hrp.CFrame = preset end)
+        end
+    end
+
+    -- auto-build generic: This is game-specific. We provide a hook and a naive automator that tries to place items
+    -- You should set M.PlacePartFunction = function(partName, positionCFrame) ... end  -> returns true/false
+    M.PlacePartFunction = nil -- user-provided hook (adapt to your private game's remote)
+    function M.AutoBuildOnce(partNameList)
+        -- naive: iterate part names and call PlacePartFunction for relative positions
+        local char = Utils.SafeChar()
+        if not char then return false, "No character" end
+        if not M.PlacePartFunction or type(M.PlacePartFunction) ~= "function" then
+            return false, "No PlacePartFunction hook defined. Set GMON.Modules.Boat.PlacePartFunction to your remote invoker."
+        end
+        local basePos = (char.PrimaryPart and char.PrimaryPart.CFrame) or CFrame.new(0,5,0)
+        for i, pname in ipairs(partNameList or {}) do
+            local pos = basePos * CFrame.new(0, 0, 2 * i)
+            local ok, err = pcall(function()
+                local res = M.PlacePartFunction(pname, pos)
+                if res == false then error("Place failed for "..tostring(pname)) end
+            end)
+            if not ok then
+                warn("[GMON AutoBuild] failed placing", pname, err)
+                -- continue to next
+            end
+            safe_wait(0.15)
+        end
         return true
     end
 
-    local function disableGod()
-        keepReset = false
-        if conHealthChanged then pcall(function() conHealthChanged:Disconnect() end) end
-        if conDied then pcall(function() conDied:Disconnect() end) end
-        local h = (LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")) or nil
-        if h then
-            pcall(function()
-                h.MaxHealth = 100
-                if h.Health and h.Health > 0 and h.Health < 1 then h.Health = 1 end
-            end)
-        end
-        alive = false
-        GMON.Flags.GodMode = false
-    end
-
-    function GMON.Modules.EnableGodMode()
-        keepReset = true
-        local ok, err = pcall(enableGod)
-        if not ok then warn("[GMON] EnableGodMode failed:", err) end
-        return ok
-    end
-
-    function GMON.Modules.DisableGodMode()
-        disableGod()
-    end
-end
-
--- ======================
--- Rejoin & Server Hop
--- ======================
-do
-    local TS = TeleportService
-
-    -- simple rejoin (same place, same server)
-    function GMON.Modules.Rejoin()
-        pcall(function()
-            local placeId = game.PlaceId
-            -- Teleport to same place (Roblox will often send you to another server or same)
-            TS:Teleport(placeId, LP)
-        end)
-    end
-
-    -- serverhop: query public servers and teleport to a different jobId
-    function GMON.Modules.ServerHop(opts)
-        opts = opts or {}
-        local placeId = opts.placeId or game.PlaceId
-        local curJob = tostring(game.JobId)
-        local api = ("https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Asc&limit=100"):format(placeId)
-        local found = nil
-        local visited = {}
-        local cursor = nil
-        for iteration = 1, 6 do
-            local url = api .. (cursor and ("&cursor="..HttpService:UrlEncode(cursor)) or "")
-            local ok, body = pcall(function()
-                return HttpService:GetAsync(url, true)
-            end)
-            if not ok or not body then
-                break
-            end
-            local succ, decoded = pcall(function() return HttpService:JSONDecode(body) end)
-            if not succ or type(decoded) ~= "table" then break end
-            local data = decoded.data or {}
-            for _, server in ipairs(data) do
-                if server and server.id and server.playing and server.maxPlayers then
-                    if tostring(server.id) ~= tostring(curJob) and (server.playing < server.maxPlayers) then
-                        found = server
-                        break
-                    end
-                end
-            end
-            if found then break end
-            cursor = decoded.nextPageCursor
-            if not cursor then break end
-        end
-
-        if found then
-            pcall(function()
-                TS:TeleportToPlaceInstance(placeId, found.id, LP)
-            end)
-            return true, found.id
-        else
-            -- fallback: rejoin current server
-            pcall(function() TS:Teleport(game.PlaceId, LP) end)
-            return false, "no different server found; rejoined"
-        end
-    end
-end
-
--- ======================
--- Build A Boat teleports & stage detection
--- ======================
-do
-    local teleports = {
-        -- default example teleport positions (these are placeholders — tune for your map)
-        ["Start"] = CFrame.new(0, 10, 0),
-        ["Shipyard"] = CFrame.new(50, 10, 0),
-        ["Treasure"] = CFrame.new(-100, 5, 200),
-        ["TopStage"] = CFrame.new(0, 50, 500),
-    }
-
-    -- allow dynamic detection: find parts named Stage/Chest/Treasure
-    local function findNamedParts()
-        local res = {}
-        for _, v in ipairs(Workspace:GetDescendants()) do
-            if v:IsA("BasePart") then
-                local n = (v.Name or ""):lower()
-                if string.find(n, "stage") or string.find(n, "platform") or string.find(n, "treasure") or string.find(n, "chest") or string.find(n, "spawn") then
-                    table.insert(res, {name = v.Name, part = v})
-                end
-            elseif v:IsA("Model") and v.PrimaryPart then
-                local n = (v.Name or ""):lower()
-                if string.find(n, "stage") or string.find(n, "treasure") or string.find(n, "chest") then
-                    table.insert(res, {name = v.Name, part = v.PrimaryPart})
-                end
-            end
-        end
-        return res
-    end
-
-    function GMON.Modules.GetBoatTeleports()
-        local list = {}
-        -- include configured teleports
-        for k,v in pairs(teleports) do list[k] = v end
-        -- include discovered ones
-        local discovered = findNamedParts()
-        for _, d in ipairs(discovered) do
-            if d.part and d.part.Position then
-                list["DISC - ".. tostring(d.name).. ""] = CFrame.new(d.part.Position + Vector3.new(0,3,0))
-            end
-        end
-        return list
-    end
-
-    function GMON.Modules.TeleportToBoatLocation(name)
-        local tbl = GMON.Modules.GetBoatTeleports()
-        local cf = tbl[name]
-        if not cf then return false, "location not found" end
-        local char = LP.Character
-        if char and char:FindFirstChild("HumanoidRootPart") then
-            safe_pcall(function() char.HumanoidRootPart.CFrame = cf end)
-            return true
-        end
-        return false, "no character"
-    end
-
-    function GMON.Modules.AddBoatTeleport(name, cframe)
-        teleports[name] = cframe
-    end
-end
-
--- ======================
--- AutoBuild (generic best-effort)
--- - Two modes:
---   1) Remote-Event mode: finds "place" Remotes in ReplicatedStorage/ServerScriptService and fires them
---   2) Teleport-and-click mode: teleports to build area and attempts to call typical place Remotes
--- ======================
-do
-    local running = false
-    local auto_task = nil
-
-    -- heuristics: remote names often used by Build-type games
-    local remoteNameHints = {
-        "PlaceBlock","Place","PlacePart","Build","BuildBlock","ServerPlace","PlaceObject","Deploy",
-        "BuyBlock","RequestPlace","PlaceTool","PlaceFurniture","PlacePiece"
-    }
-
-    local function findCandidateRemotes()
-        local candidates = {}
-        local searchContainers = {
-            game:GetService("ReplicatedStorage"),
-            game:GetService("ServerStorage"),
-            game:GetService("StarterPlayer"),
-            Workspace
+    function M.ExposeConfig()
+        return {
+            { type="slider", name="Stage Delay (s)", min=0.2, max=6, current=M.delay, onChange=function(v) M.delay = v end }
         }
-        for _, container in ipairs(searchContainers) do
-            if container then
-                for _, obj in ipairs(container:GetDescendants()) do
-                    if (obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction")) and obj.Name and type(obj.Name) == "string" then
-                        local nm = obj.Name:lower()
-                        for _, hint in ipairs(remoteNameHints) do
-                            if string.find(nm, hint:lower()) then
-                                table.insert(candidates, obj)
-                                break
-                            end
-                        end
-                    end
-                end
-            end
-        end
-        -- also search for modules that hold remotes
-        return candidates
     end
 
-    local function try_fire_remote(remote)
-        if not remote then return false end
-        local ok, res = pcall(function()
-            if remote:IsA("RemoteFunction") then
-                -- invoke; some remote functions require args - best effort: try common args
-                local argsSet = {
-                    {}, { "Place", Vector3.new(0,0,0) }, { "place" }, {1}, {"build"}
-                }
-                for _, a in ipairs(argsSet) do
-                    pcall(function()
-                        remote:InvokeServer(unpack(a))
-                    end)
-                end
-            elseif remote:IsA("RemoteEvent") then
-                local argsSet = {
-                    {}, {"Place"}, {"place", Vector3.new(0,0,0)}, {1}
-                }
-                for _, a in ipairs(argsSet) do
-                    pcall(function()
-                        remote:FireServer(unpack(a))
-                    end)
-                end
-            end
-        end)
-        return ok
-    end
-
-    local function auto_build_loop(buildArgs)
-        -- buildArgs: {mode="auto"/"teleport", delay=0.3}
-        while running do
-            -- find remotes
-            local remotes = findCandidateRemotes()
-            if #remotes > 0 then
-                for _, r in ipairs(remotes) do
-                    if not running then break end
-                    safe_pcall(function() try_fire_remote(r) end)
-                    task.wait(buildArgs.delay or 0.4)
-                end
-            else
-                -- fallback: move to a build area and try again
-                -- attempt to find a part named "Build" or "BuildZone"
-                local buildPart = nil
-                for _, d in ipairs(Workspace:GetDescendants()) do
-                    if d:IsA("BasePart") then
-                        local n = (d.Name or ""):lower()
-                        if string.find(n, "build") or string.find(n, "workshop") or string.find(n, "craft") or string.find(n, "construction") then
-                            buildPart = d; break
-                        end
-                    end
-                end
-                if buildPart and LP.Character and LP.Character:FindFirstChild("HumanoidRootPart") then
-                    safe_pcall(function() LP.Character.HumanoidRootPart.CFrame = buildPart.CFrame + Vector3.new(0,3,0) end)
-                end
-            end
-            task.wait(buildArgs.delay or 0.6)
-        end
-    end
-
-    function GMON.Modules.StartAutoBuild(opts)
-        if running then return end
-        opts = opts or { mode = "auto", delay = 0.4 }
-        running = true
-        GMON.Flags.AutoBuild = true
-        auto_task = task.spawn(function() auto_build_loop(opts) end)
-        warn("[GMON] AutoBuild started (mode)", opts.mode)
-    end
-
-    function GMON.Modules.StopAutoBuild()
-        running = false
-        GMON.Flags.AutoBuild = false
-        auto_task = nil
-        warn("[GMON] AutoBuild stopped")
-    end
+    GMON.Modules.Boat = M
 end
 
--- ======================
--- UI (Rayfield fallback)
--- ======================
+-- BUILD UI TABS (Rayfield or fallback)
+local Tabs = {}
 do
-    local Ray
-    local ok, r = pcall(function()
-        return loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
-    end)
-    if ok and r then Ray = r else
-        Ray = nil
-    end
-    local Window = nil
-    local Tabs = {}
-
-    local function simpleFallbackWindow()
-        local win = {}
-        function win:CreateTab(name)
-            local tab = {}
-            function tab:CreateLabel(text) print("[GMON][UI]["..(name or "tab").."] Label:", text) end
-            function tab:CreateButton(tbl) print("[GMON][UI]["..(name or "tab").."] Button:", tbl.Name); if tbl.Callback then tbl.Callback() end end
-            function tab:CreateToggle(tbl) print("[GMON][UI]["..(name or "tab").."] Toggle:", tbl.Name) end
-            function tab:CreateSlider(tbl) print("[GMON][UI]["..(name or "tab").."] Slider:", tbl.Name) end
-            function tab:CreateParagraph(tbl) print("[GMON][UI]["..(name or "tab").."] Paragraph:", tbl.Title, tbl.Content) end
-            return tab
-        end
-        function win:CreateNotification() end
-        return win
-    end
-
-    if Ray then
-        Window = Ray:CreateWindow({
-            Name = "G-MON Hub v2",
-            LoadingTitle = "G-MON Hub",
-            LoadingSubtitle = "Ready",
-            ConfigurationSaving = { Enabled = false }
-        })
+    local win = Window
+    if win.CreateTab then
+        Tabs.Info = win:CreateTab("Info")
+        Tabs.TabBlox = win:CreateTab("Blox Fruit")
+        Tabs.TabCar = win:CreateTab("Car Tycoon")
+        Tabs.TabBoat = win:CreateTab("Build A Boat")
+        Tabs.System = win:CreateTab("System")
     else
-        Window = simpleFallbackWindow()
+        Tabs.Info = win:CreateTab("Info")
+        Tabs.TabBlox = win:CreateTab("Blox Fruit")
+        Tabs.TabCar = win:CreateTab("Car Tycoon")
+        Tabs.TabBoat = win:CreateTab("Build A Boat")
+        Tabs.System = win:CreateTab("System")
     end
-
-    Tabs.Info = Window:CreateTab("Info")
-    Tabs.Boat = Window:CreateTab("Build A Boat")
-    Tabs.Utility = Window:CreateTab("Utility")
 
     -- Info
-    Tabs.Info:CreateLabel("G-MON Hub - Build A Boat additions")
-    Tabs.Info:CreateParagraph({ Title = "Notice", Content = "AutoBuild generic: best-effort. GodMode client-side best-effort. ServerHop uses Roblox public servers API." })
+    safe_pcall(function()
+        if Tabs.Info.CreateLabel then Tabs.Info:CreateLabel("G-MON Hub - Rebuild (single-file). Use modules per-tab.") end
+        if Tabs.Info.CreateParagraph then Tabs.Info:CreateParagraph({Title="Detected", Content = Utils.DetectGame()}) end
+        if Tabs.Info.CreateButton then Tabs.Info:CreateButton({Name="Detect Now", Callback=function()
+            local g = Utils.DetectGame()
+            (Window.Notify and Window.Notify or makeFallbackWindow("G-MON").Notify)({Title="G-MON", Content="Detected: "..tostring(g), Duration=3})
+        end}) end
+    end)
 
-    -- Boat tab
-    do
-        local t = Tabs.Boat
-        t:CreateLabel("Teleports")
-        -- populate a dropdown-like UI if Ray exists, else simple print + buttons list
-        local locations = GMON.Modules.GetBoatTeleports()
-        -- if Rayfield, we can create dynamic dropdown; fallback: create button per location
-        if Ray and Window then
-            local locationNames = {}
-            for k,_v in pairs(locations) do table.insert(locationNames, k) end
-            -- Create dropdown-like by using a slider / toggles fallback (Rayfield specifics depend)
-            t:CreateParagraph({ Title = "Available Locations", Content = table.concat(locationNames, ", ") })
-            for _, name in ipairs(locationNames) do
-                t:CreateButton({ Name = "TP -> "..name, Callback = function() local ok, err = GMON.Modules.TeleportToBoatLocation(name); if not ok then warn("Teleport failed:", err) end end })
-            end
-            t:CreateButton({ Name = "Refresh Locations", Callback = function() -- no-op: UI will reflect next open
-                if Window and Window.Notify then Window:Notify({Title="G-MON", Content="Locations refreshed", Duration=2}) else warn("Locations refreshed") end
-            end })
-        else
-            -- fallback
-            local idx = 1
-            for name, _v in pairs(locations) do
-                local n = name
-                t:CreateButton({ Name = ("TP -> %s"):format(n), Callback = function() GMON.Modules.TeleportToBoatLocation(n) end })
-                idx = idx + 1
-            end
-            t:CreateParagraph({ Title = "Note", Content = "If teleports are missing, run Detect (in Info tab) or add via script." })
-        end
+    -- BLOX
+    safe_pcall(function()
+        local t = Tabs.TabBlox
+        if t.CreateLabel then t:CreateLabel("Blox Fruit Controls") end
+        if t.CreateToggle then t:CreateToggle({Name="Auto Farm (Blox)", CurrentValue=false, Callback=function(v) if v then GMON.Modules.Blox.start() else GMON.Modules.Blox.stop() end end}) end
+        if t.CreateToggle then t:CreateToggle({Name="Fast Attack", CurrentValue = GMON.Modules.Blox.config.fast_attack, Callback=function(v) GMON.Modules.Blox.config.fast_attack = v end}) end
+        if t.CreateSlider then t:CreateSlider({Name="Range", CurrentValue = GMON.Modules.Blox.config.range, Callback=function(v) GMON.Modules.Blox.config.range = v end}) end
+    end)
 
-        t:CreateLabel("AutoBuild")
-        t:CreateToggle({ Name = "AutoBuild (generic)", CurrentValue = false, Callback = function(v)
-            if v then GMON.Modules.StartAutoBuild({mode="auto", delay=0.4}) else GMON.Modules.StopAutoBuild() end
-        end })
-        t:CreateSlider({ Name = "AutoBuild Delay (s)", Range = {0.1, 2}, Increment = 0.05, CurrentValue = 0.4, Callback = function(v) -- set internal variable (best-effort)
-            -- we simply restart with new delay
-            if GMON.Flags.AutoBuild then
-                GMON.Modules.StopAutoBuild()
-                GMON.Modules.StartAutoBuild({mode="auto", delay = v})
-            end
-        end })
-    end
-
-    -- Utility tab
-    do
-        local t = Tabs.Utility
-        t:CreateLabel("God Mode")
-        t:CreateToggle({ Name = "God Mode (client-side)", CurrentValue = false, Callback = function(v)
-            if v then GMON.Modules.EnableGodMode() else GMON.Modules.DisableGodMode() end
-        end })
-
-        t:CreateLabel("Anti AFK")
-        t:CreateToggle({ Name = "Anti-AFK", CurrentValue = false, Callback = function(v)
-            if v then GMON.Modules.StartAntiAFK() else GMON.Modules.StopAntiAFK() end
-        end })
-
-        t:CreateLabel("Rejoin / Server-Hop")
-        t:CreateButton({ Name = "Rejoin (same place)", Callback = function() GMON.Modules.Rejoin() end })
-        t:CreateButton({ Name = "Server Hop (find another public server)", Callback = function()
-            local ok, sid = GMON.Modules.ServerHop()
-            if ok then
-                if Window and Window.Notify then Window:Notify({Title="G-MON", Content="Hopping to server "..tostring(sid), Duration=3}) end
+    -- CAR
+    safe_pcall(function()
+        local t = Tabs.TabCar
+        if t.CreateLabel then t:CreateLabel("Car Tycoon Controls") end
+        if t.CreateToggle then t:CreateToggle({Name="Car AutoDrive", CurrentValue=false, Callback=function(v) if v then GMON.Modules.Car.start() else GMON.Modules.Car.stop() end end}) end
+        if t.CreateSlider then t:CreateSlider({Name="Car Speed", CurrentValue=GMON.Modules.Car.speed, Callback=function(v) GMON.Modules.Car.speed = v end}) end
+        if t.CreateButton then t:CreateButton({Name="Choose Player Car", Callback=function()
+            local chosen = GMON.Modules.Car.choosePlayerFastestCar and GMON.Modules.Car.choosePlayerFastestCar() or GMON.Modules.Car.chosen
+            if chosen then
+                (Window.Notify and Window.Notify or makeFallbackWindow("G-MON").Notify)({Title="G-MON", Content="Chosen car: "..tostring(chosen.Name), Duration=3})
             else
-                if Window and Window.Notify then Window:Notify({Title="G-MON", Content="ServerHop fallback: rejoined", Duration=3}) end
+                (Window.Notify and Window.Notify or makeFallbackWindow("G-MON").Notify)({Title="G-MON", Content="No car found", Duration=3})
             end
-        end })
-    end
+        end}) end
+    end)
 
-    GMON.UI.Window = Window
-    GMON.UI.Tabs = Tabs
+    -- BOAT
+    safe_pcall(function()
+        local t = Tabs.TabBoat
+        if t.CreateLabel then t:CreateLabel("Build A Boat Controls") end
+        if t.CreateToggle then t:CreateToggle({Name="Auto Stages", CurrentValue=false, Callback=function(v) if v then GMON.Modules.Boat.start() else GMON.Modules.Boat.stop() end end}) end
+        if t.CreateSlider then t:CreateSlider({Name="Stage Delay (s)", CurrentValue=GMON.Modules.Boat.delay, Callback=function(v) GMON.Modules.Boat.delay = v end}) end
+        if t.CreateButton then t:CreateButton({Name="Teleport: Build Area", Callback=function() GMON.Modules.Boat.TeleportToPreset("build_area") end}) end
+        if t.CreateButton then t:CreateButton({Name="Teleport: Spawn", Callback=function() GMON.Modules.Boat.TeleportToPreset("spawn") end}) end
+        if t.CreateButton then t:CreateButton({Name="Auto Build - Demo", Callback=function()
+            -- sample usage: override M.PlacePartFunction in code to match your game's remote.
+            local success, msg = GMON.Modules.Boat.AutoBuildOnce({"Block","Wheel","Cannon"})
+            (Window.Notify and Window.Notify or makeFallbackWindow("G-MON").Notify)({Title="G-MON", Content=tostring(success) .. " " .. tostring(msg), Duration=3})
+        end}) end
+    end)
+
+    -- SYSTEM
+    safe_pcall(function()
+        local t = Tabs.System
+        if t.CreateLabel then t:CreateLabel("System") end
+        if t.CreateToggle then t:CreateToggle({Name="Anti AFK", CurrentValue=true, Callback=function(v) if v then GMON.System.EnableAntiAFK() end end}) end
+        if t.CreateToggle then t:CreateToggle({Name="God Mode", CurrentValue=false, Callback=function(v) GMON.System.SetGodMode(v) end}) end
+        if t.CreateButton then t:CreateButton({Name="Rejoin", Callback=function() GMON.System.Rejoin() end}) end
+        if t.CreateButton then t:CreateButton({Name="ServerHop", Callback=function() GMON.System.ServerHop() end}) end
+    end)
 end
 
--- ======================
--- Status small GUI (draggable)
--- ======================
-do
-    local function createStatus()
-        local pg = LP:WaitForChild("PlayerGui")
-        local sg = Instance.new("ScreenGui"); sg.Name = "GMonStatus"; sg.ResetOnSpawn = false; sg.Parent = pg
-        local frame = Instance.new("Frame"); frame.Size = UDim2.new(0,260,0,100); frame.Position = UDim2.new(1,-280,0,8);
-        frame.BackgroundTransparency = 0.12; frame.BackgroundColor3 = Color3.fromRGB(18,18,18); frame.Parent = sg
-        local corner = Instance.new("UICorner"); corner.CornerRadius = UDim.new(0,8); corner.Parent = frame
-        local title = Instance.new("TextLabel"); title.Size = UDim2.new(1,-8,0,20); title.Position = UDim2.new(0,8,0,6); title.BackgroundTransparency = 1;
-        title.Text = "G-MON (Boat additions)"; title.TextColor3 = Color3.new(1,1,1); title.Font = Enum.Font.SourceSansBold; title.TextSize = 14; title.Parent = frame
+-- INIT: detect and show a startup notify
+task.spawn(function()
+    local detected = Utils.DetectGame()
+    (Window.Notify and Window.Notify or makeFallbackWindow("G-MON").Notify)({Title="G-MON Hub", Content="Loaded. Detected: "..tostring(detected), Duration=4})
+    print("[G-MON] Loaded. Detected:", detected)
+end)
 
-        local txt = Instance.new("TextLabel"); txt.Size = UDim2.new(1,-16,0,64); txt.Position = UDim2.new(0,8,0,30); txt.BackgroundTransparency = 1;
-        txt.TextColor3 = Color3.fromRGB(200,200,200); txt.Text = "God: OFF\nAutoBuild: OFF\nAntiAFK: OFF"; txt.TextXAlignment = Enum.TextXAlignment.Left; txt.TextYAlignment = Enum.TextYAlignment.Top; txt.Font = Enum.Font.SourceSans; txt.TextSize = 13; txt.Parent = frame
-
-        -- update function
-        GMON.Status.Update = function()
-            local s = ("God: %s\nAutoBuild: %s\nAntiAFK: %s\nGame: %s"):format(
-                GMON.Flags.GodMode and "ON" or "OFF",
-                GMON.Flags.AutoBuild and "ON" or "OFF",
-                GMON.Flags.AntiAFK and "ON" or "OFF",
-                (GMON.DetectedGame or "Unknown")
-            )
-            pcall(function() txt.Text = s end)
-        end
-        -- small updater
-        task.spawn(function()
-            while true do
-                pcall(function() GMON.Status.Update() end)
-                task.wait(1)
-            end
-        end)
-    end
-    createStatus()
+-- Exports & helper for moderator editing
+local Main = {}
+function Main.StartAll()
+    safe_pcall(function()
+        GMON.Modules.Blox.start()
+        GMON.Modules.Car.start()
+        GMON.Modules.Boat.start()
+    end)
+end
+function Main.StopAll()
+    safe_pcall(function()
+        GMON.Modules.Blox.stop()
+        GMON.Modules.Car.stop()
+        GMON.Modules.Boat.stop()
+    end)
 end
 
--- ======================
--- Initialization: detect and expose
--- ======================
-do
-    -- detect simple by workspace hints
-    local function detectGame()
-        local p = game.PlaceId
-        if p == 537413528 then return "BUILD_A_BOAT" end
-        -- heuristics: names
-        for _, obj in ipairs(Workspace:GetChildren()) do
-            local n = (obj.Name or ""):lower()
-            if string.find(n, "boat") or string.find(n, "stage") then return "BUILD_A_BOAT" end
-            if string.find(n, "car") or string.find(n, "vehicle") or string.find(n, "dealer") then return "CAR_TYCOON" end
-            if string.find(n, "enemy") or string.find(n, "mob") or string.find(n, "monster") then return "BLOX_FRUIT" end
-        end
-        return "UNKNOWN"
-    end
+Main.GMON = GMON
+Main.Utils = Utils
+Main.Window = Window
 
-    GMON.DetectedGame = detectGame()
-    -- notify via UI
-    if GMON.UI and GMON.UI.Window and GMON.UI.Window.Notify then
-        GMON.UI.Window:Notify({Title="G-MON", Content=("Detected: %s"):format(GMON.DetectedGame), Duration=3})
-    else
-        print("[GMON] Detected:", GMON.DetectedGame)
-    end
-end
-
--- Return the module so main loader can call it
-return GMON
+-- RETURN API for loader compatibility
+return Main
