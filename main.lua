@@ -1,78 +1,55 @@
---[[
-  G-MON Hub - main_with_haruka.lua (Merged)
-  - G-MON core (Blox / Car / Boat modules) kept intact
-  - Added Haruka module (AutoFarm + Gold Tracker) as "Script Picker" features
-  - UI: extra "Scripts" tab to toggle Haruka features
-  - SAFE_CALL wrappers, status GUI, fallback Rayfield preserved
---]]
+-- main.lua
+-- G-MON Hub (Rebuild)
+-- Single-file, modular, readable.
+-- Modules: Blox Fruit, Car Dealership Tycoon, Build A Boat
+-- Features: AntiAFK, GodMode (persistent), Rejoin/ServerHop fallback, Build teleport presets, Auto-build (generic), GUI with Rayfield fallback.
 
--- BOOTSTRAP
+-- BOOT
 repeat task.wait() until game:IsLoaded()
 local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
 local UIS = game:GetService("UserInputService")
 local VirtualUser = game:GetService("VirtualUser")
-local Workspace = workspace
-local TextService = game:GetService("TextService")
+local TeleportService = game:GetService("TeleportService")
+local HttpService = game:GetService("HttpService")
 local LP = Players.LocalPlayer
 
 -- SAFE helpers
-local function SAFE_CALL(fn, ...)
+local function safe_pcall(fn, ...)
     if type(fn) ~= "function" then return false end
     local ok, res = pcall(fn, ...)
     if not ok then
-        warn("[G-MON] SAFE_CALL error:", res)
+        warn("[GMON] safe_pcall error:", res)
     end
     return ok, res
 end
 
-local function SAFE_WAIT(sec)
-    sec = tonumber(sec) or 0.1
-    if sec < 0.01 then sec = 0.01 end
-    if sec > 5 then sec = 5 end
-    task.wait(sec)
+local function safe_wait(t)
+    t = tonumber(t) or 0.1
+    if t < 0.01 then t = 0.01 end
+    if t > 5 then t = 5 end
+    task.wait(t)
 end
 
 -- STATE
-local STATE = {
-    GAME = "UNKNOWN",
+local GMON = {
     StartTime = os.time(),
     Modules = {},
-    Rayfield = nil,
-    Window = nil,
-    Tabs = {},
-    Status = nil,
+    UI = {},
     Flags = {},
-    LastAction = "Idle"
+    Config = {
+        api_key = "", -- optional
+        place_map = { -- default place mapping (override as needed)
+            BLOX_FRUIT = { placeids = {2753915549} },
+            CAR_TYCOON = { placeids = {1554960397} },
+            BUILD_A_BOAT = { placeids = {537413528} }
+        }
+    }
 }
 
--- UTILS & DETECTION
+-- UTILITIES
 local Utils = {}
-
-function Utils.SafeChar()
-    local ok, c = pcall(function() return LP and LP.Character end)
-    if not ok or not c then return nil end
-    if c:FindFirstChild("HumanoidRootPart") and c:FindFirstChild("Humanoid") then return c end
-    return nil
-end
-
-function Utils.AntiAFK()
-    if not LP then return end
-    SAFE_CALL(function()
-        LP.Idled:Connect(function()
-            pcall(function()
-                local cam = workspace.CurrentCamera
-                if cam and cam.CFrame then
-                    VirtualUser:Button2Down(Vector2.new(0,0), cam.CFrame)
-                    task.wait(1)
-                    VirtualUser:Button2Up(Vector2.new(0,0), cam.CFrame)
-                else
-                    pcall(function() VirtualUser:Button2Down(); task.wait(1); VirtualUser:Button2Up() end)
-                end
-            end)
-        end)
-    end)
-end
 
 function Utils.FormatTime(sec)
     sec = math.max(0, math.floor(sec or 0))
@@ -81,109 +58,329 @@ function Utils.FormatTime(sec)
     return string.format("%02dm:%02ds", m,s)
 end
 
-function Utils.FlexibleDetectByAliases()
-    local pid = game.PlaceId
-    if pid == 2753915549 then return "BLOX_FRUIT" end
-    if pid == 1554960397 then return "CAR_TYCOON" end
-    if pid == 537413528 then return "BUILD_A_BOAT" end
+function Utils.SafeChar()
+    local ok, c = pcall(function() return LP and LP.Character end)
+    if not ok or not c then return nil end
+    if c:FindFirstChild("HumanoidRootPart") and c:FindFirstChildOfClass("Humanoid") then return c end
+    return nil
+end
 
-    local aliasMap = {
-        BLOX_FRUIT = {"Enemies","Sea1Enemies","Sea2Enemies","Monsters","Mobs","Quests","NPCQuests"},
-        CAR_TYCOON = {"Cars","VehicleFolder","Vehicles","Dealership","Garage","CarShop","CarStages","CarsFolder"},
-        BUILD_A_BOAT = {"BoatStages","Stages","NormalStages","StageFolder","BoatStage","Chest","Treasure"}
-    }
-    for key, list in pairs(aliasMap) do
-        for _, name in ipairs(list) do
-            if Workspace:FindFirstChild(name) then return key end
+function Utils.AntiAFK()
+    if not LP then return end
+    safe_pcall(function()
+        LP.Idled:Connect(function()
+            pcall(function()
+                local cam = workspace.CurrentCamera
+                if cam and cam.CFrame then
+                    VirtualUser:Button2Down(Vector2.new(0,0), cam.CFrame)
+                    task.wait(1)
+                    VirtualUser:Button2Up(Vector2.new(0,0), cam.CFrame)
+                else
+                    VirtualUser:Button2Down(); task.wait(1); VirtualUser:Button2Up()
+                end
+            end)
+        end)
+    end)
+end
+
+-- Game detection
+function Utils.DetectGame()
+    local pid = game.PlaceId
+    for key,info in pairs(GMON.Config.place_map) do
+        if info.placeids then
+            for _,id in ipairs(info.placeids) do
+                if id == pid then return key end
+            end
         end
     end
-    for _, obj in ipairs(Workspace:GetChildren()) do
-        local n = string.lower(obj.Name or "")
-        if string.find(n, "enemy") or string.find(n, "mob") or string.find(n, "monster") then return "BLOX_FRUIT" end
-        if string.find(n, "car") or string.find(n, "vehicle") or string.find(n, "garage") then return "CAR_TYCOON" end
-        if string.find(n, "boat") or string.find(n, "stage") or string.find(n, "chest") then return "BUILD_A_BOAT" end
+    -- heuristic: search workspace for known folders
+    local lower = function(s) if not s then return "" end return string.lower(tostring(s)) end
+    for _,obj in ipairs(Workspace:GetChildren()) do
+        local n = lower(obj.Name)
+        if string.find(n,"enemy") or string.find(n,"mob") or string.find(n,"monster") or string.find(n,"quest") then return "BLOX_FRUIT" end
+        if string.find(n,"car") or string.find(n,"vehicle") or string.find(n,"dealership") or string.find(n,"garage") then return "CAR_TYCOON" end
+        if string.find(n,"boat") or string.find(n,"stage") or string.find(n,"treasure") or string.find(n,"chest") then return "BUILD_A_BOAT" end
     end
     return "UNKNOWN"
 end
 
-function Utils.ShortLabelForGame(g)
-    if g == "BLOX_FRUIT" then return "Blox" end
-    if g == "CAR_TYCOON" then return "Car" end
-    if g == "BUILD_A_BOAT" then return "Boat" end
-    return tostring(g or "Unknown")
+-- Attempt to load Rayfield (non-fatal)
+local Rayfield = nil
+do
+    local ok, res = pcall(function()
+        -- try common rayfield path used previously (if executor allows)
+        return loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
+    end)
+    if ok and res then Rayfield = res end
 end
 
-STATE.Modules.Utils = Utils
+-- SIMPLE FALLBACK UI (if Rayfield not present)
+local function makeFallbackWindow(title)
+    local W = {}
+    W._root = Instance.new("ScreenGui")
+    W._root.Name = "GMonFallbackGUI"
+    W._root.ResetOnSpawn = false
+    safe_pcall(function() W._root.Parent = LP:WaitForChild("PlayerGui") end)
+    local frame = Instance.new("Frame", W._root)
+    frame.Size = UDim2.new(0, 420, 0, 520)
+    frame.Position = UDim2.new(0, 10, 0, 60)
+    frame.BackgroundColor3 = Color3.fromRGB(25,25,25)
+    frame.ClipsDescendants = true
+    local corner = Instance.new("UICorner", frame)
+    corner.CornerRadius = UDim.new(0,8)
+    local titleL = Instance.new("TextLabel", frame)
+    titleL.Size = UDim2.new(1, -8, 0, 30)
+    titleL.Position = UDim2.new(0,4,0,4)
+    titleL.Text = title
+    titleL.Font = Enum.Font.SourceSansBold
+    titleL.TextSize = 18
+    titleL.TextColor3 = Color3.fromRGB(220,220,220)
+    titleL.BackgroundTransparency = 1
 
--- ===== MODULES (original G-MON kept) =====
--- [BLOX module, CAR module, BOAT module]
--- (copied exactly from your provided script; preserved as-is to avoid changing behavior)
--- For brevity in this merged snippet they are kept intact:
--- (BEGIN Blox module)
+    local content = Instance.new("Frame", frame)
+    content.Position = UDim2.new(0,4,0,40)
+    content.Size = UDim2.new(1, -8, 1, -44)
+    content.BackgroundTransparency = 1
+
+    function W:CreateTab(name)
+        local Tab = {}
+        local y = #content:GetChildren() * 36
+        local label = Instance.new("TextLabel", content)
+        label.Position = UDim2.new(0,2,0,y)
+        label.Size = UDim2.new(1,-4,0,32)
+        label.Text = "[ "..name.." ]"
+        label.Font = Enum.Font.SourceSans
+        label.TextSize = 14
+        label.TextColor3 = Color3.fromRGB(200,200,200)
+        label.BackgroundTransparency = 1
+
+        function Tab:CreateLabel(txt) local L=Instance.new("TextLabel", content); L.Position=UDim2.new(0,6,0,y+36); L.Size=UDim2.new(1,-12,0,20); L.Text=txt; L.BackgroundTransparency=1; L.TextColor3=Color3.fromRGB(200,200,200); L.Font=Enum.Font.SourceSans; L.TextSize=13; y=y+26; return L end
+        function Tab:CreateButton(tbl) local b = Instance.new("TextButton", content); b.Position = UDim2.new(0,6,0,y+36); b.Size = UDim2.new(1,-12,0,26); b.Text = tbl.Name or "Button"; b.Font=Enum.Font.SourceSansBold; b.TextSize=14; b.BackgroundColor3=Color3.fromRGB(40,40,40); b.TextColor3=Color3.fromRGB(230,230,230); b.MouseButton1Click:Connect(function() safe_pcall(tbl.Callback) end); y=y+32; return b end
+        function Tab:CreateToggle(tbl) local frame = Instance.new("Frame", content); frame.Position = UDim2.new(0,6,0,y+36); frame.Size=UDim2.new(1,-12,0,26); frame.BackgroundTransparency=1; local label = Instance.new("TextLabel", frame); label.Size = UDim2.new(0.8,0,1,0); label.Text = tbl.Name; label.BackgroundTransparency=1; label.TextColor3=Color3.fromRGB(220,220,220); label.Font=Enum.Font.SourceSans; label.TextSize=14; local btn = Instance.new("TextButton", frame); btn.Size = UDim2.new(0.18,0,1,0); btn.Position = UDim2.new(0.82,0,0,0); btn.Text = tbl.CurrentValue and "ON" or "OFF"; btn.Font=Enum.Font.SourceSansBold; btn.TextSize=14; btn.BackgroundColor3 = tbl.CurrentValue and Color3.fromRGB(30,140,40) or Color3.fromRGB(100,100,100); btn.MouseButton1Click:Connect(function() local nv = not tbl.CurrentValue; tbl.CurrentValue = nv; btn.Text = nv and "ON" or "OFF"; btn.BackgroundColor3 = nv and Color3.fromRGB(30,140,40) or Color3.fromRGB(100,100,100); safe_pcall(tbl.Callback, nv) end); y=y+32; return frame end
+        function Tab:CreateSlider(tbl) -- simple slider (not interactive), assume Callback called with number
+            local label = Instance.new("TextLabel", content); label.Position = UDim2.new(0,6,0,y+36); label.Size = UDim2.new(1,-12,0,22); label.Text = string.format("%s: %s", tbl.Name, tostring(tbl.CurrentValue)); label.TextColor3=Color3.fromRGB(220,220,220); label.BackgroundTransparency=1; y=y+26
+            local btn = Instance.new("TextButton", content); btn.Position = UDim2.new(0,6,0,y+36); btn.Size = UDim2.new(1,-12,0,26); btn.Text = "Set Value"; btn.Font=Enum.Font.SourceSans; btn.TextSize=14; btn.MouseButton1Click:Connect(function()
+                local val = tonumber(game:GetService("StarterGui"):GetCore("SendNotification") and "0") -- placeholder (can't prompt)
+                -- fallback: just call callback with current value
+                safe_pcall(tbl.Callback, tbl.CurrentValue)
+            end)
+            y=y+32; return {label=label, button=btn}
+        end
+        return Tab
+    end
+
+    function W:Notify(params)
+        -- simple print + in-game notification via StarterGui (best-effort)
+        pcall(function()
+            game:GetService("StarterGui"):SetCore("SendNotification", {
+                Title = params.Title or "G-MON",
+                Text = params.Content or "",
+                Duration = params.Duration or 3
+            })
+        end)
+        print("[G-MON Notify]", params.Title, params.Content)
+    end
+
+    return W
+end
+
+-- Build UI (Rayfield if available)
+local Window = nil
+if Rayfield and type(Rayfield.CreateWindow) == "function" then
+    Window = Rayfield:CreateWindow({
+        Name = "G-MON Hub",
+        LoadingTitle = "G-MON Hub",
+        LoadingSubtitle = "Ready",
+        ConfigurationSaving = { Enabled = false }
+    })
+else
+    Window = makeFallbackWindow("G-MON Hub")
+end
+GMON.UI.Window = Window
+
+-- STATUS WIDGET
+do
+    local status = {}
+    status.Gui = Instance.new("ScreenGui")
+    status.Gui.Name = "GMonStatus"
+    status.Gui.ResetOnSpawn = false
+    pcall(function() status.Gui.Parent = LP:WaitForChild("PlayerGui") end)
+    local frame = Instance.new("Frame", status.Gui)
+    frame.Size = UDim2.new(0,300,0,120)
+    frame.Position = UDim2.new(1,-310,0,20)
+    frame.BackgroundColor3 = Color3.fromRGB(24,24,24); frame.BackgroundTransparency = 0.08
+    frame.BorderSizePixel = 0
+    local corner = Instance.new("UICorner", frame); corner.CornerRadius = UDim.new(0,8)
+    local title = Instance.new("TextLabel", frame)
+    title.Size = UDim2.new(1,-12,0,26); title.Position = UDim2.new(0,6,0,6)
+    title.BackgroundTransparency = 1; title.Font = Enum.Font.SourceSansBold; title.TextSize = 15; title.TextColor3 = Color3.fromRGB(240,240,240)
+    title.Text = "G-MON Status"
+    local runtime = Instance.new("TextLabel", frame); runtime.Size=UDim2.new(1,-12,0,18); runtime.Position=UDim2.new(0,6,0,34); runtime.BackgroundTransparency=1; runtime.Font=Enum.Font.SourceSans; runtime.TextSize=13; runtime.TextColor3=Color3.new(0.8,0.8,0.8); runtime.Text="Runtime: 00:00"
+    local info_blox = Instance.new("TextLabel", frame); info_blox.Size=UDim2.new(1,-12,0,16); info_blox.Position=UDim2.new(0,6,0,54); info_blox.BackgroundTransparency=1; info_blox.Font=Enum.Font.SourceSans; info_blox.TextSize=13; info_blox.TextColor3=Color3.fromRGB(200,200,200)
+    info_blox.Text = "Blox: OFF"
+    local info_car = Instance.new("TextLabel", frame); info_car.Size=UDim2.new(1,-12,0,16); info_car.Position=UDim2.new(0,6,0,72); info_car.BackgroundTransparency=1; info_car.Font=Enum.Font.SourceSans; info_car.TextSize=13; info_car.TextColor3=Color3.fromRGB(200,200,200); info_car.Text="Car: OFF"
+    local info_boat = Instance.new("TextLabel", frame); info_boat.Size=UDim2.new(1,-12,0,16); info_boat.Position=UDim2.new(0,6,0,90); info_boat.BackgroundTransparency=1; info_boat.Font=Enum.Font.SourceSans; info_boat.TextSize=13; info_boat.TextColor3=Color3.fromRGB(200,200,200); info_boat.Text="Boat: OFF"
+
+    GMON.UI.Status = { Gui = status.Gui, Runtime = runtime, Blox = info_blox, Car = info_car, Boat = info_boat }
+    -- update loop
+    task.spawn(function()
+        while task.wait(1) do
+            pcall(function()
+                GMON.UI.Status.Runtime.Text = "Runtime: " .. Utils.FormatTime(os.time() - GMON.StartTime)
+                GMON.UI.Status.Blox.Text = "Blox: " .. (GMON.Flags.Blox and "ON" or "OFF")
+                GMON.UI.Status.Car.Text = "Car: " .. (GMON.Flags.Car and "ON" or "OFF")
+                GMON.UI.Status.Boat.Text = "Boat: " .. (GMON.Flags.Boat and "ON" or "OFF")
+            end)
+        end
+    end)
+end
+
+-- SYSTEM MODULE: AntiAFK, GodMode, Rejoin/ServerHop
 do
     local M = {}
-    M.config = { attack_delay = 0.35, range = 10, long_range = false, fast_attack = false }
+    M.GodModeEnabled = false
+    M._godLoop = nil
+
+    function M.EnableAntiAFK()
+        Utils.AntiAFK()
+    end
+
+    function M.SetGodMode(enabled)
+        M.GodModeEnabled = enabled
+        if enabled then
+            if M._godLoop and task.cancel then task.cancel(M._godLoop) end
+            M._godLoop = task.spawn(function()
+                while M.GodModeEnabled do
+                    local character = Utils.SafeChar()
+                    if character then
+                        local hum = character:FindFirstChildOfClass("Humanoid")
+                        if hum then
+                            pcall(function()
+                                hum.MaxHealth = 1e8
+                                hum.Health = hum.MaxHealth
+                                -- disable ragdoll/knockback in a safe way
+                                hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
+                                hum:SetStateEnabled(Enum.HumanoidStateType.PlatformStanding, false)
+                            end)
+                        end
+                    end
+                    task.wait(1)
+                end
+            end)
+        else
+            M._godLoop = nil
+        end
+    end
+
+    function M.Rejoin()
+        pcall(function() TeleportService:Teleport(game.PlaceId, LP) end)
+    end
+
+    function M.ServerHop()
+        -- Best-effort: attempt to query public servers (requires HttpService & allowlist)
+        -- If HttpService is not enabled, fallback to Rejoin()
+        local success, err = pcall(function()
+            if not HttpService.HttpEnabled then error("Http not enabled") end
+            local url = ("https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Asc&limit=100"):format(game.PlaceId)
+            local resp = HttpService:GetAsync(url)
+            local data = HttpService:JSONDecode(resp)
+            if data and data.data then
+                local me = LP
+                for _,srv in ipairs(data.data) do
+                    if srv.playing and (srv.playing < (srv.maxPlayers or 0)) and srv.id then
+                        -- try teleport to this server
+                        TeleportService:TeleportToPlaceInstance(game.PlaceId, srv.id, LP)
+                        return
+                    end
+                end
+            end
+            -- fallback
+            M.Rejoin()
+        end)
+        if not success then
+            warn("[GMON] ServerHop failed:", err)
+            pcall(function() M.Rejoin() end)
+        end
+    end
+
+    GMON.System = M
+end
+
+-- MODULE: Blox Fruit (generic auto-farm)
+do
+    local M = {}
     M.running = false
+    M.config = {
+        range = 12,
+        fast_attack = false,
+        long_range = false
+    }
     M._task = nil
 
     local function findEnemyFolder()
-        local hints = {"Enemies","Sea1Enemies","Sea2Enemies","Monsters","Mobs"}
+        local hints = {"Enemies","Sea1Enemies","Sea2Enemies","Monsters","Mobs","NPCs"}
         for _, name in ipairs(hints) do
             local f = Workspace:FindFirstChild(name)
             if f then return f end
         end
+        -- fallback: return first folder with models and humanoids
+        for _, c in ipairs(Workspace:GetDescendants()) do
+            if c:IsA("Model") and c:FindFirstChildOfClass("Humanoid") then
+                return Workspace
+            end
+        end
         return nil
     end
 
-    local function loop()
+    local function nearestEnemy(hrp)
+        local folder = findEnemyFolder()
+        if not folder then return nil end
+        local best, bestDist = nil, math.huge
+        for _, mob in ipairs(folder:GetDescendants()) do
+            if mob:IsA("Model") and mob:FindFirstChild("HumanoidRootPart") and mob:FindFirstChildOfClass("Humanoid") then
+                local hum = mob:FindFirstChildOfClass("Humanoid")
+                if hum and hum.Health > 0 then
+                    local d = (mob.HumanoidRootPart.Position - hrp.Position).Magnitude
+                    if d < bestDist and d <= (M.config.range or 12) then bestDist, best = d, mob end
+                end
+            end
+        end
+        return best
+    end
+
+    local function attackLoop()
         while M.running do
             task.wait(0.12)
-            SAFE_CALL(function()
-                if STATE.GAME ~= "BLOX_FRUIT" then return end
-                local char = Utils.SafeChar(); if not char then return end
+            safe_pcall(function()
+                if not M.running then return end
+                local char = Utils.SafeChar()
+                if not char then return end
                 local hrp = char:FindFirstChild("HumanoidRootPart"); if not hrp then return end
-                local folder = findEnemyFolder()
-                if not folder then return end
-
-                local nearest, bestDist = nil, math.huge
-                for _, mob in ipairs(folder:GetChildren()) do
-                    if mob:IsA("Model") and mob:FindFirstChild("HumanoidRootPart") and mob:FindFirstChild("Humanoid") then
-                        local hum = mob:FindFirstChild("Humanoid")
-                        if hum and hum.Health > 0 then
-                            local d = (mob.HumanoidRootPart.Position - hrp.Position).Magnitude
-                            if d < bestDist and d <= (M.config.range or 10) then bestDist, nearest = d, mob end
-                        end
-                    end
+                local target = nearestEnemy(hrp)
+                if not target then
+                    -- optionally go to sea spawn / quest NPC etc.
+                    return
                 end
-
-                if not nearest and M.config.long_range then
-                    for _, mob in ipairs(folder:GetChildren()) do
-                        if mob:IsA("Model") and mob:FindFirstChild("HumanoidRootPart") and mob:FindFirstChild("Humanoid") then
-                            local hum = mob:FindFirstChild("Humanoid")
-                            if hum and hum.Health > 0 then
-                                local d = (mob.HumanoidRootPart.Position - hrp.Position).Magnitude
-                                if d < bestDist then bestDist, nearest = d, mob end
+                -- generic attack: teleport near and trigger damage attempt
+                pcall(function()
+                    hrp.CFrame = target.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
+                end)
+                if M.config.fast_attack then
+                    -- multiple hits
+                    for i=1,3 do
+                        pcall(function()
+                            if target and target:FindFirstChildOfClass("Humanoid") then
+                                target:FindFirstChildOfClass("Humanoid"):TakeDamage(20)
                             end
-                        end
+                        end)
+                        task.wait(0.06)
                     end
-                end
-
-                if not nearest then return end
-
-                if M.config.long_range then
-                    local dmg = M.config.fast_attack and 35 or 20
-                    local hits = M.config.fast_attack and 3 or 1
-                    for i=1,hits do pcall(function() if nearest and nearest:FindFirstChild("Humanoid") then nearest.Humanoid:TakeDamage(dmg) end end) end
-                    STATE.LastAction = "LongHit -> "..tostring(nearest.Name or "mob")
                 else
-                    pcall(function() hrp.CFrame = nearest.HumanoidRootPart.CFrame * CFrame.new(0,0,3) end)
-                    if M.config.fast_attack then
-                        for i=1,3 do pcall(function() if nearest and nearest:FindFirstChild("Humanoid") then nearest.Humanoid:TakeDamage(30) end end) end
-                        STATE.LastAction = "FastMelee -> "..tostring(nearest.Name or "mob")
-                    else
-                        pcall(function() if nearest and nearest:FindFirstChild("Humanoid") then nearest.Humanoid:TakeDamage(18) end end)
-                        STATE.LastAction = "Melee -> "..tostring(nearest.Name or "mob")
-                    end
+                    pcall(function()
+                        if target and target:FindFirstChildOfClass("Humanoid") then
+                            target:FindFirstChildOfClass("Humanoid"):TakeDamage(12)
+                        end
+                    end)
                 end
             end)
         end
@@ -192,116 +389,128 @@ do
     function M.start()
         if M.running then return end
         M.running = true
-        STATE.Flags.Blox = true
-        M._task = task.spawn(loop)
+        GMON.Flags.Blox = true
+        M._task = task.spawn(attackLoop)
     end
 
     function M.stop()
         M.running = false
-        STATE.Flags.Blox = false
+        GMON.Flags.Blox = false
         M._task = nil
     end
 
     function M.ExposeConfig()
         return {
-            { type="slider", name="Range (studs)", min=1, max=50, current=M.config.range, onChange=function(v) M.config.range = v end },
-            { type="slider", name="Attack Delay (ms)", min=50, max=1000, current=math.floor(M.config.attack_delay*1000), onChange=function(v) M.config.attack_delay = v/1000 end },
+            { type="slider", name="Range", min=2, max=60, current=M.config.range, onChange=function(v) M.config.range = v end },
             { type="toggle", name="Fast Attack", current=M.config.fast_attack, onChange=function(v) M.config.fast_attack = v end },
-            { type="toggle", name="Long Range Hit", current=M.config.long_range, onChange=function(v) M.config.long_range = v end }
+            { type="toggle", name="Long Range", current=M.config.long_range, onChange=function(v) M.config.long_range = v end }
         }
     end
 
-    STATE.Modules.Blox = M
+    GMON.Modules.Blox = M
 end
--- (END Blox module)
 
--- (BEGIN Car module)
+-- MODULE: Car Dealership Tycoon (auto drive & buy utility)
 do
     local M = {}
     M.running = false
+    M.speed = 80
     M.chosen = nil
-    M.speed = 60
     M._task = nil
 
-    local function isOwnedByPlayer(m)
-        if not m or not m:IsA("Model") then return false end
-        if tostring(m.Name) == tostring(LP.Name) then return true end
-        local ok, ownerVal = pcall(function()
-            local o = m:FindFirstChild("Owner") or m:FindFirstChild("OwnerName")
-            if o then return tostring(o.Value) end
-            if m.GetAttribute then return m:GetAttribute("Owner") end
+    local function isPlayerOwned(model)
+        if not model then return false end
+        if tostring(model.Name) == tostring(LP.Name) then return true end
+        -- try common owner attributes
+        local ok, owner = pcall(function()
+            local o = model:FindFirstChild("Owner") or model:FindFirstChild("OwnerName")
+            if o and o.Value then return tostring(o.Value) end
+            if model.GetAttribute then return model:GetAttribute("Owner") end
             return nil
         end)
-        if ok and ownerVal and tostring(ownerVal) == tostring(LP.Name) then return true end
-        local ok2, idVal = pcall(function()
-            local v = m:FindFirstChild("OwnerUserId") or m:FindFirstChild("UserId")
-            if v then return tonumber(v.Value) end
-            if m.GetAttribute then return m:GetAttribute("OwnerUserId") end
+        if ok and owner and tostring(owner) == tostring(LP.Name) then return true end
+        -- user id
+        local ok2, uid = pcall(function()
+            local v = model:FindFirstChild("OwnerUserId") or model:FindFirstChild("UserId")
+            if v and v.Value then return tonumber(v.Value) end
+            if model.GetAttribute then return model:GetAttribute("OwnerUserId") end
             return nil
         end)
-        if ok2 and tonumber(idVal) and tonumber(idVal) == LP.UserId then return true end
+        if ok2 and tonumber(uid) and tonumber(uid) == LP.UserId then return true end
         return false
     end
 
-    function M.choosePlayerFastestCar()
-        local carsRoot = Workspace:FindFirstChild("Cars") or Workspace
+    local function guessCarsRoot()
+        local hints = {"Cars", "Vehicles", "Dealership", "VehiclesFolder", "CarShop"}
+        for _,name in ipairs(hints) do
+            local f = Workspace:FindFirstChild(name)
+            if f then return f end
+        end
+        return Workspace
+    end
+
+    local function chooseOwnCar()
+        local root = guessCarsRoot()
         local candidates = {}
-        for _, m in ipairs(carsRoot:GetDescendants()) do
+        for _,m in ipairs(root:GetDescendants()) do
             if m:IsA("Model") and m.PrimaryPart then
-                if isOwnedByPlayer(m) then table.insert(candidates, m) end
+                if isPlayerOwned(m) then table.insert(candidates, m) end
             end
         end
         if #candidates == 0 then
-            for _, m in ipairs(Workspace:GetChildren()) do
+            -- fallback pick any model with multiple parts
+            for _,m in ipairs(root:GetDescendants()) do
                 if m:IsA("Model") and m.PrimaryPart and #m:GetDescendants() > 5 then table.insert(candidates, m) end
             end
         end
         if #candidates == 0 then return nil end
-        local best, bestVal = nil, -math.huge
-        for _, car in ipairs(candidates) do
-            local val = #car:GetDescendants()
-            if val > bestVal then bestVal, best = val, car end
-        end
-        return best
+        table.sort(candidates, function(a,b) return #a:GetDescendants() > #b:GetDescendants() end)
+        return candidates[1]
     end
 
-    local function ensureLinearVelocity(prim)
-        if not prim then return nil end
-        local att = prim:FindFirstChild("_GmonAttach")
-        if not att then att = Instance.new("Attachment"); att.Name = "_GmonAttach"; att.Parent = prim end
-        local lv = prim:FindFirstChild("_GmonLV")
+    local function ensureLinearVelocityPart(part)
+        if not part then return nil end
+        local att = part:FindFirstChild("_GmonAttach")
+        if not att then
+            att = Instance.new("Attachment")
+            att.Name = "_GmonAttach"
+            att.Parent = part
+        end
+        local lv = part:FindFirstChild("_GmonLV")
         if not lv then
             lv = Instance.new("LinearVelocity")
             lv.Name = "_GmonLV"
             lv.Attachment0 = att
-            lv.MaxForce = math.huge
             lv.RelativeTo = Enum.ActuatorRelativeTo.Attachment0
-            lv.Parent = prim
+            lv.MaxForce = math.huge
+            lv.Parent = part
         end
-        return lv, att
+        return lv
     end
 
-    local function loop()
+    local function driveLoop()
         while M.running do
             task.wait(0.2)
-            SAFE_CALL(function()
-                if STATE.GAME ~= "CAR_TYCOON" then return end
-                if not M.chosen or not M.chosen.PrimaryPart then
-                    local car = M.choosePlayerFastestCar()
-                    if not car or not car.PrimaryPart then STATE.Flags.Car = false; return end
+            safe_pcall(function()
+                if not M.running then return end
+                local car = M.chosen
+                if (not car) or (not car.PrimaryPart) then
+                    car = chooseOwnCar()
+                    if not car then GMON.Flags.Car = false; return end
                     M.chosen = car
+                    -- store starting pos
                     if not car:FindFirstChild("_GmonStartPos") then
-                        local cv = Instance.new("CFrameValue"); cv.Name = "_GmonStartPos"; cv.Value = car.PrimaryPart.CFrame; cv.Parent = car
+                        local cv = Instance.new("CFrameValue")
+                        cv.Name = "_GmonStartPos"
+                        cv.Value = car.PrimaryPart.CFrame
+                        cv.Parent = car
                     end
-                    pcall(function()
-                        local orig = car.PrimaryPart.CFrame
-                        car:SetPrimaryPartCFrame(CFrame.new(orig.Position.X, orig.Position.Y - 500, orig.Position.Z))
-                    end)
                 end
-                if M.chosen and M.chosen.PrimaryPart then
-                    local prim = M.chosen.PrimaryPart
-                    local lv = ensureLinearVelocity(prim)
-                    if lv then lv.VectorVelocity = prim.CFrame.LookVector * (M.speed or 60) end
+                if car and car.PrimaryPart then
+                    local lv = ensureLinearVelocityPart(car.PrimaryPart)
+                    if lv then
+                        lv.VectorVelocity = car.PrimaryPart.CFrame.LookVector * (M.speed or 80)
+                    end
                 end
             end)
         end
@@ -310,27 +519,54 @@ do
     function M.start()
         if M.running then return end
         M.running = true
-        STATE.Flags.Car = true
-        M._task = task.spawn(loop)
+        GMON.Flags.Car = true
+        M._task = task.spawn(driveLoop)
     end
 
     function M.stop()
         M.running = false
-        STATE.Flags.Car = false
-        if M.chosen then
-            SAFE_CALL(function()
-                if M.chosen.PrimaryPart then
-                    local prim = M.chosen.PrimaryPart
-                    local lv = prim:FindFirstChild("_GmonLV"); if lv then pcall(function() lv:Destroy() end) end
-                    local att = prim:FindFirstChild("_GmonAttach"); if att then pcall(function() att:Destroy() end) end
-                end
+        GMON.Flags.Car = false
+        if M.chosen and M.chosen.PrimaryPart then
+            local prim = M.chosen.PrimaryPart
+            pcall(function()
+                local lv = prim:FindFirstChild("_GmonLV")
+                if lv then lv:Destroy() end
+                local att = prim:FindFirstChild("_GmonAttach")
+                if att then att:Destroy() end
                 local tag = M.chosen:FindFirstChild("_GmonStartPos")
-                if tag and tag:IsA("CFrameValue") and M.chosen.PrimaryPart then pcall(function() M.chosen:SetPrimaryPartCFrame(tag.Value) end); pcall(function() tag:Destroy() end) end
-                local fv = M.chosen:FindFirstChild("_GmonFloorRef"); if fv and fv.Value and fv.Value.Parent then pcall(function() fv.Value:Destroy() end) end
-                if M.chosen.GetAttribute and M.chosen:GetAttribute("GmonFloor") then pcall(function() M.chosen:SetAttribute("GmonFloor", nil) end) end
+                if tag and tag:IsA("CFrameValue") then
+                    pcall(function() M.chosen:SetPrimaryPartCFrame(tag.Value) end)
+                    pcall(function() tag:Destroy() end)
+                end
             end)
         end
         M.chosen = nil
+    end
+
+    -- Generic Buy function (game-specific remote required)
+    function M.TryBuySelectedCar(selectedModel)
+        -- Example: trigger remote "BuyCar" with args (modelName)
+        -- You MUST adapt this based on your private game's remote names/payloads.
+        local success, err = pcall(function()
+            if not selectedModel then error("No car selected") end
+            -- Example: try to find remote
+            local rr = Workspace:FindFirstChild("BuyCar") or Workspace:FindFirstChild("RemoteBuyCar")
+            if rr and rr:IsA("RemoteEvent") then
+                rr:FireServer(selectedModel.Name)
+                return true
+            end
+            -- fallback: try to simulate click on part
+            if selectedModel.PrimaryPart then
+                local click = selectedModel.PrimaryPart:FindFirstChildOfClass("ClickDetector")
+                if click then
+                    -- nothing we can do locally to trigger click other than Signal (game may not accept)
+                    return true
+                end
+            end
+            error("No buy remote found. Please set correct remote name in script.")
+        end)
+        if not success then warn("[GMON Car Buy] error:", err) end
+        return success
     end
 
     function M.ExposeConfig()
@@ -339,71 +575,71 @@ do
         }
     end
 
-    STATE.Modules.Car = M
+    GMON.Modules.Car = M
 end
--- (END Car module)
 
--- (BEGIN Boat module)
+-- MODULE: Build A Boat (Auto stages, Teleport presets, Auto build hook)
 do
     local M = {}
     M.running = false
-    M.delay = 1.5
+    M.delay = 1.2 -- delay between stage visits
     M._task = nil
+    M.teleports = { -- default teleport presets (can be edited)
+        spawn = CFrame.new(0,5,0),
+        shop = CFrame.new(10,5,0),
+        build_area = CFrame.new(0,5,50)
+    }
 
-    local function collectStages(root)
+    -- Automatic stage collector: tries to walk through parts named 'Stage'/'Black' etc.
+    local function collectStageParts()
         local out = {}
-        if not root then return out end
-        for _, obj in ipairs(root:GetDescendants()) do
-            if obj:IsA("BasePart") then
-                local lname = string.lower(obj.Name or "")
-                local ok, col = pcall(function() return obj.Color end)
-                local isDark = false
-                if ok and col then if (col.R + col.G + col.B) / 3 < 0.2 then isDark = true end end
-                if isDark or string.find(lname, "stage") or string.find(lname, "black") or string.find(lname, "dark") or string.find(lname, "trigger") then
-                    table.insert(out, obj)
+        for _,v in ipairs(Workspace:GetDescendants()) do
+            if v:IsA("BasePart") then
+                local n = string.lower(v.Name or "")
+                if string.find(n,"stage") or string.find(n,"black") or string.find(n,"trigger") or string.find(n,"dark") then
+                    table.insert(out, v)
                 end
             end
         end
         return out
     end
 
-    local function loop()
+    local function autoStageLoop()
         while M.running do
             task.wait(0.2)
-            SAFE_CALL(function()
-                if STATE.GAME ~= "BUILD_A_BOAT" then return end
-                local char = Utils.SafeChar(); if not char then return end
+            safe_pcall(function()
+                if not M.running then return end
+                local char = Utils.SafeChar()
+                if not char then return end
                 local hrp = char:FindFirstChild("HumanoidRootPart"); if not hrp then return end
-
-                local roots = {}
-                for _, n in ipairs({"BoatStages","Stages","NormalStages","StageFolder","BoatStage"}) do local r = Workspace:FindFirstChild(n); if r then table.insert(roots, r) end end
-                if #roots == 0 then table.insert(roots, Workspace) end
-
-                local stages = {}
-                for _, r in ipairs(roots) do local s = collectStages(r); for _, p in ipairs(s) do table.insert(stages, p) end end
-                if #stages == 0 then for _, obj in ipairs(Workspace:GetDescendants()) do if obj:IsA("BasePart") and string.find(string.lower(obj.Name or ""), "stage") then table.insert(stages, obj) end end end
-                if #stages == 0 then STATE.Flags.Boat = false; M.running = false; return end
-
-                local seen, uniq = {}, {}
-                for _, p in ipairs(stages) do
-                    if p and p.Position then
-                        local key = string.format("%.2f_%.2f_%.2f", p.Position.X, p.Position.Y, p.Position.Z)
-                        if not seen[key] then seen[key] = true; table.insert(uniq, p) end
+                local parts = collectStageParts()
+                if #parts == 0 then
+                    -- fallback search for parts containing "stage"
+                    for _,v in ipairs(Workspace:GetDescendants()) do
+                        if v:IsA("BasePart") and string.match(string.lower(v.Name or ""),"stage") then table.insert(parts, v) end
                     end
                 end
-                stages = uniq
-                table.sort(stages, function(a,b) return (a.Position - hrp.Position).Magnitude < (b.Position - hrp.Position).Magnitude end)
-
-                for _, part in ipairs(stages) do
+                -- order by distance
+                table.sort(parts, function(a,b)
+                    return (a.Position - hrp.Position).Magnitude < (b.Position - hrp.Position).Magnitude
+                end)
+                for _,p in ipairs(parts) do
                     if not M.running then break end
-                    if part and part.Parent then pcall(function() hrp.CFrame = part.CFrame * CFrame.new(0,3,0) end) end
-                    SAFE_WAIT(M.delay or 1.5)
+                    if p and p.Parent then
+                        pcall(function() hrp.CFrame = p.CFrame * CFrame.new(0,3,0) end)
+                        safe_wait(M.delay)
+                    end
                 end
 
+                -- search for treasure/chest
                 local candidate = nil
-                for _, v in ipairs(Workspace:GetDescendants()) do
-                    if v:IsA("BasePart") then local ln = string.lower(v.Name or ""); if string.find(ln, "chest") or string.find(ln, "treasure") or string.find(ln, "golden") then candidate = v; break end
-                    elseif v:IsA("Model") and v.PrimaryPart then local ln = string.lower(v.Name or ""); if string.find(ln, "chest") or string.find(ln, "treasure") or string.find(ln, "golden") then candidate = v.PrimaryPart; break end
+                for _,v in ipairs(Workspace:GetDescendants()) do
+                    if v:IsA("BasePart") then
+                        local ln = string.lower(v.Name or "")
+                        if string.find(ln,"chest") or string.find(ln,"treasure") or string.find(ln,"gold") then candidate = v; break end
+                    elseif v:IsA("Model") and v.PrimaryPart then
+                        local ln = string.lower(v.Name or "")
+                        if string.find(ln,"chest") or string.find(ln,"treasure") or string.find(ln,"gold") then candidate = v.PrimaryPart; break end
                     end
                 end
                 if candidate then pcall(function() hrp.CFrame = candidate.CFrame * CFrame.new(0,3,0) end) end
@@ -414,550 +650,169 @@ do
     function M.start()
         if M.running then return end
         M.running = true
-        STATE.Flags.Boat = true
-        M._task = task.spawn(loop)
+        GMON.Flags.Boat = true
+        M._task = task.spawn(autoStageLoop)
     end
 
     function M.stop()
         M.running = false
-        STATE.Flags.Boat = false
+        GMON.Flags.Boat = false
         M._task = nil
     end
 
-    function M.ExposeConfig()
-        return {
-            { type="slider", name="Stage Delay (s)", min=0.5, max=6, current=M.delay, onChange=function(v) M.delay = v end }
-        }
+    -- teleport to preset
+    function M.TeleportToPreset(name)
+        local preset = M.teleports[name]
+        if not preset then warn("Preset not found:", name) return end
+        local char = Utils.SafeChar()
+        if not char then return end
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            pcall(function() hrp.CFrame = preset end)
+        end
     end
 
-    STATE.Modules.Boat = M
-end
--- (END Boat module)
-
--- ===== HARUKA module (added) =====
-do
-    local M = {}
-    M.autoRunning = false
-    M.goldRunning = false
-    M._autoTask = nil
-    M._goldGui = nil
-
-    -- AutoFarm behavior lifted/adapted from previous clean Haruka
-    local function haruka_auto_loop(character)
-        while M.autoRunning do
-            if not character or not character.Parent then
-                wait(1)
-                character = game.Players.LocalPlayer.Character
-                if not character then continue end
+    -- auto-build generic: This is game-specific. We provide a hook and a naive automator that tries to place items
+    -- You should set M.PlacePartFunction = function(partName, positionCFrame) ... end  -> returns true/false
+    M.PlacePartFunction = nil -- user-provided hook (adapt to your private game's remote)
+    function M.AutoBuildOnce(partNameList)
+        -- naive: iterate part names and call PlacePartFunction for relative positions
+        local char = Utils.SafeChar()
+        if not char then return false, "No character" end
+        if not M.PlacePartFunction or type(M.PlacePartFunction) ~= "function" then
+            return false, "No PlacePartFunction hook defined. Set GMON.Modules.Boat.PlacePartFunction to your remote invoker."
+        end
+        local basePos = (char.PrimaryPart and char.PrimaryPart.CFrame) or CFrame.new(0,5,0)
+        for i, pname in ipairs(partNameList or {}) do
+            local pos = basePos * CFrame.new(0, 0, 2 * i)
+            local ok, err = pcall(function()
+                local res = M.PlacePartFunction(pname, pos)
+                if res == false then error("Place failed for "..tostring(pname)) end
+            end)
+            if not ok then
+                warn("[GMON AutoBuild] failed placing", pname, err)
+                -- continue to next
             end
-
-            wait(1.24)
-            local hrp = character:FindFirstChild("HumanoidRootPart")
-            if not hrp then wait(1) continue end
-
-            -- lightweight velocity object
-            local velObj = Instance.new("BodyVelocity", hrp)
-            velObj.Velocity = Vector3.new(0, -0.1, 0)
-            -- path & movements (kept same coordinates as Haruka)
-            pcall(function() hrp.CFrame = CFrame.new(-135.900,72,623.750) end)
-
-            while hrp and hrp.CFrame and hrp.CFrame.Z < 8600.75 and M.autoRunning do
-                for i=1,50 do
-                    if not M.autoRunning then break end
-                    if hrp then pcall(function() hrp.CFrame = hrp.CFrame + Vector3.new(0,0,0.3) end) end
-                end
-                wait()
-            end
-
-            if velObj then pcall(function() velObj:Destroy() end) end
-
-            if M.autoRunning then
-                pcall(function() hrp.CFrame = CFrame.new(-150.900,72,2000.750) end); wait(0.2)
-                pcall(function() hrp.CFrame = CFrame.new(-150.900,72,2500.750) end); wait(0.5)
-                pcall(function() hrp.CFrame = CFrame.new(-55.8801956,-361.116333,9488.1377) end); wait(0.5)
-                pcall(function() hrp.CFrame = CFrame.new(-55.8801956,-361.116333,9495.1377) end); wait(1)
-                pcall(function() hrp.CFrame = CFrame.new(-205.900,20,1700.750) end); wait(2.3)
-                pcall(function() hrp.CFrame = CFrame.new(-55.8801956,-361.116333,9488.1377) end); wait(0.6)
-                pcall(function() hrp.CFrame = CFrame.new(-55.8801956,-361.116333,9495.1377) end); wait(1.4)
-                pcall(function() hrp.CFrame = CFrame.new(-55.8801956,-361.116333,9488.1377) end)
-            end
+            safe_wait(0.15)
         end
-    end
-
-    function M.startAutoFarm()
-        if M.autoRunning then return end
-        M.autoRunning = true
-        STATE.Flags.HarukaAuto = true
-        if game.Players.LocalPlayer.Character then
-            M._autoTask = task.spawn(function() haruka_auto_loop(game.Players.LocalPlayer.Character) end)
-        end
-        game.Players.LocalPlayer.CharacterAdded:Connect(function(char)
-            wait(2)
-            if M.autoRunning then task.spawn(function() haruka_auto_loop(char) end) end
-        end)
-    end
-
-    function M.stopAutoFarm()
-        M.autoRunning = false
-        STATE.Flags.HarukaAuto = false
-        M._autoTask = nil
-    end
-
-    -- Gold Tracker (UI). A minimal, compatible version of Haruka Gold Tracker
-    local function create_gold_gui()
-        local player = game.Players.LocalPlayer
-        if not player then return nil end
-        local pg = player:FindFirstChild("PlayerGui") or player:WaitForChild("PlayerGui")
-        local GoldGui = Instance.new("ScreenGui")
-        GoldGui.Name = "HarukaGoldTracker"
-        GoldGui.ResetOnSpawn = false
-        GoldGui.Parent = pg
-
-        local Frame = Instance.new("Frame")
-        Frame.Size = UDim2.new(0, 280, 0, 160)
-        Frame.Position = UDim2.new(0, 10, 0, 10)
-        Frame.BackgroundColor3 = Color3.fromRGB(0,0,0)
-        Frame.BackgroundTransparency = 0.1
-        Frame.BorderSizePixel = 0
-        Frame.Parent = GoldGui
-
-        local Corner = Instance.new("UICorner"); Corner.CornerRadius = UDim.new(0,10); Corner.Parent = Frame
-        local Stroke = Instance.new("UIStroke"); Stroke.Color = Color3.fromRGB(50,50,50); Stroke.Thickness = 2; Stroke.Parent = Frame
-
-        local labels = {}
-        local texts = {"Начальный баланс:", "Текущий баланс:", "Заработано:", "Время работы:"}
-        for i, t in ipairs(texts) do
-            local holder = Instance.new("Frame"); holder.Size = UDim2.new(1,-20,0,30); holder.Position = UDim2.new(0,10,0,15+(i-1)*35); holder.BackgroundTransparency = 1; holder.Parent = Frame
-            local left = Instance.new("TextLabel"); left.Size = UDim2.new(0.6,0,1,0); left.Text = t; left.TextColor3 = Color3.fromRGB(180,180,180); left.BackgroundTransparency = 1; left.TextSize = 14; left.Font = Enum.Font.Gotham; left.TextXAlignment = Enum.TextXAlignment.Left; left.Parent = holder
-            local right = Instance.new("TextLabel"); right.Size = UDim2.new(0.4,0,1,0); right.Position = UDim2.new(0.6,0,0,0); right.Text = "0"; right.TextColor3 = Color3.fromRGB(255,255,255); right.BackgroundTransparency = 1; right.TextSize = 14; right.Font = Enum.Font.GothamBold; right.TextXAlignment = Enum.TextXAlignment.Right; right.Parent = holder
-            labels[i] = right
-        end
-
-        return {Gui = GoldGui, Labels = labels, StartTime = os.time()}
-    end
-
-    local function try_find_amount_label(root)
-        if not root then return nil end
-        -- find TextLabel that looks numeric
-        local function findRec(n)
-            local out = {}
-            if n:IsA("TextLabel") then table.insert(out, n) end
-            for _,c in ipairs(n:GetChildren()) do
-                for _,v in ipairs(findRec(c)) do table.insert(out, v) end
-            end
-            return out
-        end
-        local candidates = findRec(root)
-        for _, lbl in ipairs(candidates) do
-            local s = lbl.Text:gsub("%%D","")
-            local num = s:gsub("%s",""):gsub(",","")
-            if num ~= "" and tonumber(num) then return lbl end
-            -- try stripping non-digits
-            local digits = num:match("(%d+)")
-            if digits and tonumber(digits) then return lbl end
-        end
-        return nil
-    end
-
-    local function gold_loop(stateObj)
-        if not stateObj then return end
-        local player = game.Players.LocalPlayer
-        local root = player:FindFirstChild("PlayerGui")
-        local Mroot = nil
-        -- try detect stored UI first
-        SAFE_CALL(function()
-            if player and player:FindFirstChild("PlayerGui") then Mroot = player.PlayerGui end
-        end)
-        local startLabel = nil
-        local baseAmount = 0
-        stateObj.Labels[1].Text = "0" -- initial
-        stateObj.Labels[2].Text = "0"
-        stateObj.Labels[3].Text = "0"
-        stateObj.Labels[4].Text = "0:00"
-        while M.goldRunning do
-            -- attempt to find the in-game label with the amount
-            if Mroot then
-                local found = nil
-                if Mroot:FindFirstChild("GoldGui") and Mroot.GoldGui:FindFirstChild("Frame") then
-                    -- some game-specific path
-                    local ok, frame = pcall(function() return Mroot.GoldGui.Frame end)
-                    if ok and frame then found = try_find_amount_label(frame) end
-                end
-                if not found then
-                    -- fallback: brute search for numeric TextLabel
-                    for _, child in ipairs(Mroot:GetDescendants()) do
-                        if child:IsA("TextLabel") then
-                            local txt = child.Text:gsub("%%D",""):gsub("%s","")
-                            if txt ~= "" then
-                                local num = txt:match("(%d+)")
-                                if num and tonumber(num) then found = child; break end
-                            end
-                        end
-                    end
-                end
-                if found and (not startLabel) then startLabel = found; baseAmount = tonumber((found.Text:gsub("[^%d]",""))) or 0 end
-                if found then
-                    local cur = tonumber((found.Text:gsub("[^%d]",""))) or 0
-                    stateObj.Labels[2].Text = tostring(cur)
-                    if cur > baseAmount then
-                        local earned = tonumber(stateObj.Labels[3].Text) or 0
-                        earned = earned + (cur - baseAmount)
-                        stateObj.Labels[3].Text = tostring(earned)
-                        baseAmount = cur
-                    elseif cur < baseAmount then
-                        baseAmount = cur
-                    end
-                end
-            end
-            local elapsed = os.time() - stateObj.StartTime
-            local mm = math.floor(elapsed/60); local ss = elapsed%60
-            stateObj.Labels[4].Text = string.format("%02d:%02d", mm, ss)
-            wait(1)
-        end
-    end
-
-    function M.startGoldTracker()
-        if M.goldRunning then return end
-        M.goldRunning = true
-        STATE.Flags.HarukaGold = true
-        local obj = create_gold_gui()
-        if obj then
-            M._goldGui = obj
-            task.spawn(function() gold_loop(obj) end)
-        end
-    end
-
-    function M.stopGoldTracker()
-        M.goldRunning = false
-        STATE.Flags.HarukaGold = false
-        if M._goldGui and M._goldGui.Gui and M._goldGui.Gui.Parent then
-            pcall(function() M._goldGui.Gui:Destroy() end)
-        end
-        M._goldGui = nil
+        return true
     end
 
     function M.ExposeConfig()
         return {
-            { type="toggle", name="Haruka AutoFarm", current=false, onChange=function(v) if v then M.startAutoFarm() else M.stopAutoFarm() end end },
-            { type="toggle", name="Haruka Gold Tracker", current=false, onChange=function(v) if v then M.startGoldTracker() else M.stopGoldTracker() end end }
+            { type="slider", name="Stage Delay (s)", min=0.2, max=6, current=M.delay, onChange=function(v) M.delay = v end }
         }
     end
 
-    STATE.Modules.Haruka = M
+    GMON.Modules.Boat = M
 end
 
--- RAYFIELD LOAD (safe fallback)
+-- BUILD UI TABS (Rayfield or fallback)
+local Tabs = {}
 do
-    local ok, Ray = pcall(function()
-        return loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
-    end)
-    if ok and Ray then
-        STATE.Rayfield = Ray
+    local win = Window
+    if win.CreateTab then
+        Tabs.Info = win:CreateTab("Info")
+        Tabs.TabBlox = win:CreateTab("Blox Fruit")
+        Tabs.TabCar = win:CreateTab("Car Tycoon")
+        Tabs.TabBoat = win:CreateTab("Build A Boat")
+        Tabs.System = win:CreateTab("System")
     else
-        warn("[G-MON] Rayfield load failed; using fallback UI.")
-        local Fallback = {}
-        function Fallback:CreateWindow() -- returns object with CreateTab
-            local win = {}
-            function win:CreateTab(name)
-                local tab = {}
-                function tab:CreateLabel() end
-                function tab:CreateParagraph() end
-                function tab:CreateButton(tbl) end
-                function tab:CreateToggle(tbl) end
-                function tab:CreateSlider(tbl) end
-                return tab
+        Tabs.Info = win:CreateTab("Info")
+        Tabs.TabBlox = win:CreateTab("Blox Fruit")
+        Tabs.TabCar = win:CreateTab("Car Tycoon")
+        Tabs.TabBoat = win:CreateTab("Build A Boat")
+        Tabs.System = win:CreateTab("System")
+    end
+
+    -- Info
+    safe_pcall(function()
+        if Tabs.Info.CreateLabel then Tabs.Info:CreateLabel("G-MON Hub - Rebuild (single-file). Use modules per-tab.") end
+        if Tabs.Info.CreateParagraph then Tabs.Info:CreateParagraph({Title="Detected", Content = Utils.DetectGame()}) end
+        if Tabs.Info.CreateButton then Tabs.Info:CreateButton({Name="Detect Now", Callback=function()
+            local g = Utils.DetectGame()
+            (Window.Notify and Window.Notify or makeFallbackWindow("G-MON").Notify)({Title="G-MON", Content="Detected: "..tostring(g), Duration=3})
+        end}) end
+    end)
+
+    -- BLOX
+    safe_pcall(function()
+        local t = Tabs.TabBlox
+        if t.CreateLabel then t:CreateLabel("Blox Fruit Controls") end
+        if t.CreateToggle then t:CreateToggle({Name="Auto Farm (Blox)", CurrentValue=false, Callback=function(v) if v then GMON.Modules.Blox.start() else GMON.Modules.Blox.stop() end end}) end
+        if t.CreateToggle then t:CreateToggle({Name="Fast Attack", CurrentValue = GMON.Modules.Blox.config.fast_attack, Callback=function(v) GMON.Modules.Blox.config.fast_attack = v end}) end
+        if t.CreateSlider then t:CreateSlider({Name="Range", CurrentValue = GMON.Modules.Blox.config.range, Callback=function(v) GMON.Modules.Blox.config.range = v end}) end
+    end)
+
+    -- CAR
+    safe_pcall(function()
+        local t = Tabs.TabCar
+        if t.CreateLabel then t:CreateLabel("Car Tycoon Controls") end
+        if t.CreateToggle then t:CreateToggle({Name="Car AutoDrive", CurrentValue=false, Callback=function(v) if v then GMON.Modules.Car.start() else GMON.Modules.Car.stop() end end}) end
+        if t.CreateSlider then t:CreateSlider({Name="Car Speed", CurrentValue=GMON.Modules.Car.speed, Callback=function(v) GMON.Modules.Car.speed = v end}) end
+        if t.CreateButton then t:CreateButton({Name="Choose Player Car", Callback=function()
+            local chosen = GMON.Modules.Car.choosePlayerFastestCar and GMON.Modules.Car.choosePlayerFastestCar() or GMON.Modules.Car.chosen
+            if chosen then
+                (Window.Notify and Window.Notify or makeFallbackWindow("G-MON").Notify)({Title="G-MON", Content="Chosen car: "..tostring(chosen.Name), Duration=3})
+            else
+                (Window.Notify and Window.Notify or makeFallbackWindow("G-MON").Notify)({Title="G-MON", Content="No car found", Duration=3})
             end
-            function win:CreateNotification() end
-            return win
-        end
-        function Fallback:Notify() end
-        STATE.Rayfield = Fallback
-    end
-end
+        end}) end
+    end)
 
--- STATUS GUI (draggable) - unchanged
-do
-    local Status = {}
-    function Status.Create()
-        SAFE_CALL(function()
-            local pg = LP:WaitForChild("PlayerGui")
-            local sg = Instance.new("ScreenGui")
-            sg.Name = "GMonStatusGui"
-            sg.ResetOnSpawn = false
-            sg.Parent = pg
+    -- BOAT
+    safe_pcall(function()
+        local t = Tabs.TabBoat
+        if t.CreateLabel then t:CreateLabel("Build A Boat Controls") end
+        if t.CreateToggle then t:CreateToggle({Name="Auto Stages", CurrentValue=false, Callback=function(v) if v then GMON.Modules.Boat.start() else GMON.Modules.Boat.stop() end end}) end
+        if t.CreateSlider then t:CreateSlider({Name="Stage Delay (s)", CurrentValue=GMON.Modules.Boat.delay, Callback=function(v) GMON.Modules.Boat.delay = v end}) end
+        if t.CreateButton then t:CreateButton({Name="Teleport: Build Area", Callback=function() GMON.Modules.Boat.TeleportToPreset("build_area") end}) end
+        if t.CreateButton then t:CreateButton({Name="Teleport: Spawn", Callback=function() GMON.Modules.Boat.TeleportToPreset("spawn") end}) end
+        if t.CreateButton then t:CreateButton({Name="Auto Build - Demo", Callback=function()
+            -- sample usage: override M.PlacePartFunction in code to match your game's remote.
+            local success, msg = GMON.Modules.Boat.AutoBuildOnce({"Block","Wheel","Cannon"})
+            (Window.Notify and Window.Notify or makeFallbackWindow("G-MON").Notify)({Title="G-MON", Content=tostring(success) .. " " .. tostring(msg), Duration=3})
+        end}) end
+    end)
 
-            local frame = Instance.new("Frame")
-            frame.Name = "StatusFrame"
-            frame.Size = UDim2.new(0, 320, 0, 170)
-            frame.Position = UDim2.new(1, -330, 0, 10)
-            frame.BackgroundTransparency = 0.12
-            frame.BackgroundColor3 = Color3.fromRGB(18,18,18)
-            frame.BorderSizePixel = 0
-            frame.Parent = sg
-
-            local corner = Instance.new("UICorner"); corner.CornerRadius = UDim.new(0,8); corner.Parent = frame
-
-            local title = Instance.new("TextLabel")
-            title.Parent = frame
-            title.Size = UDim2.new(1, -16, 0, 24)
-            title.Position = UDim2.new(0,8,0,6)
-            title.BackgroundTransparency = 1
-            title.Text = "G-MON Status"
-            title.TextColor3 = Color3.fromRGB(255,255,255)
-            title.TextXAlignment = Enum.TextXAlignment.Left
-            title.Font = Enum.Font.SourceSansBold
-            title.TextSize = 16
-
-            local sub = Instance.new("TextLabel")
-            sub.Parent = frame
-            sub.Size = UDim2.new(1, -16, 0, 18)
-            sub.Position = UDim2.new(0,8,0,30)
-            sub.BackgroundTransparency = 1
-            sub.Text = Utils.ShortLabelForGame(STATE.GAME)
-            sub.TextColor3 = Color3.fromRGB(200,200,200)
-            sub.TextXAlignment = Enum.TextXAlignment.Left
-            sub.Font = Enum.Font.SourceSans
-            sub.TextSize = 12
-
-            local function makeLine(y)
-                local holder = Instance.new("Frame"); holder.Parent = frame
-                holder.Size = UDim2.new(1, -16, 0, 20); holder.Position = UDim2.new(0,8,0,y); holder.BackgroundTransparency = 1
-                local dot = Instance.new("Frame"); dot.Parent = holder
-                dot.Size = UDim2.new(0, 12, 0, 12); dot.Position = UDim2.new(0, 0, 0, 4); dot.BackgroundColor3 = Color3.fromRGB(200,0,0)
-                local lbl = Instance.new("TextLabel"); lbl.Parent = holder
-                lbl.Size = UDim2.new(1, -18, 1, 0); lbl.Position = UDim2.new(0, 18, 0, 0)
-                lbl.BackgroundTransparency = 1; lbl.Text = ""; lbl.TextColor3 = Color3.fromRGB(230,230,230)
-                lbl.Font = Enum.Font.SourceSans; lbl.TextSize = 12; lbl.TextXAlignment = Enum.TextXAlignment.Left
-                return {dot = dot, lbl = lbl}
-            end
-
-            local lines = {}
-            lines.runtime = makeLine(52)
-            lines.bf = makeLine(74)
-            lines.car = makeLine(96)
-            lines.boat = makeLine(118)
-            lines.last = makeLine(140)
-
-            lines.runtime.lbl.Text = "Runtime: 00h:00m:00s"
-            lines.bf.lbl.Text = "Blox: OFF"
-            lines.car.lbl.Text = "Car: OFF"
-            lines.boat.lbl.Text = "Boat: OFF"
-            lines.last.lbl.Text = "Last: Idle"
-
-            STATE.Status = { frame = frame, lines = lines }
-
-            -- draggable
-            local dragging, dragInput, startMousePos, startFramePos = false, nil, Vector2.new(0,0), Vector2.new(0,0)
-            local function getMouse() return UIS:GetMouseLocation() end
-            frame.InputBegan:Connect(function(input)
-                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                    dragging = true; dragInput = input; startMousePos = getMouse(); startFramePos = Vector2.new(frame.AbsolutePosition.X, frame.AbsolutePosition.Y)
-                    input.Changed:Connect(function()
-                        if input.UserInputState == Enum.UserInputState.End then dragging = false; dragInput = nil end
-                    end)
-                end
-            end)
-            frame.InputChanged:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then dragInput = input end end)
-            UIS.InputChanged:Connect(function(input)
-                if not dragging then return end
-                if dragInput and input ~= dragInput and input.UserInputType ~= Enum.UserInputType.MouseMovement then return end
-                local mousePos = getMouse(); local delta = mousePos - startMousePos; local newAbs = startFramePos + delta
-                local cam = workspace.CurrentCamera; local vp = (cam and cam.ViewportSize) or Vector2.new(800,600)
-                local fw = frame.AbsoluteSize.X; local fh = frame.AbsoluteSize.Y
-                newAbs = Vector2.new(math.clamp(newAbs.X, 0, math.max(0, vp.X - fw)), math.clamp(newAbs.Y, 0, math.max(0, vp.Y - fh)))
-                frame.Position = UDim2.new(0, newAbs.X, 0, newAbs.Y)
-            end)
-        end)
-    end
-
-    function Status.UpdateRuntime()
-        SAFE_CALL(function() if STATE.Status and STATE.Status.lines and STATE.Status.lines.runtime then STATE.Status.lines.runtime.lbl.Text = "Runtime: "..Utils.FormatTime(os.time() - STATE.StartTime) end end)
-    end
-
-    function Status.SetIndicator(name, on, text)
-        SAFE_CALL(function()
-            if not STATE.Status or not STATE.Status.lines or not STATE.Status.lines[name] then return end
-            local ln = STATE.Status.lines[name]
-            if on then ln.dot.BackgroundColor3 = Color3.fromRGB(0,200,0) else ln.dot.BackgroundColor3 = Color3.fromRGB(200,0,0) end
-            if text then ln.lbl.Text = text end
-        end)
-    end
-
-    STATE.Status = STATE.Status or {}
-    STATE.Status.Create = Status.Create
-    STATE.Status.UpdateRuntime = Status.UpdateRuntime
-    STATE.Status.SetIndicator = Status.SetIndicator
-end
-
--- create status GUI
-SAFE_CALL(function() if STATE.Status and STATE.Status.Create then STATE.Status.Create() end end)
-
--- UI BUILDING: create separate tabs per game (only once), plus Scripts (Haruka)
-local function buildUI()
-    SAFE_CALL(function()
-        STATE.Window = (STATE.Rayfield and STATE.Rayfield.CreateWindow) and STATE.Rayfield:CreateWindow({
-            Name = "G-MON Hub",
-            LoadingTitle = "G-MON Hub",
-            LoadingSubtitle = "Ready",
-            ConfigurationSaving = { Enabled = false }
-        }) or nil
-
-        local Tabs = {}
-        if STATE.Window then
-            Tabs.Info = STATE.Window:CreateTab("Info")
-            Tabs.TabBlox = STATE.Window:CreateTab("Blox Fruit")
-            Tabs.TabCar = STATE.Window:CreateTab("Car Tycoon")
-            Tabs.TabBoat = STATE.Window:CreateTab("Build A Boat")
-            Tabs.Move = STATE.Window:CreateTab("Movement")
-            Tabs.Debug = STATE.Window:CreateTab("Debug")
-            Tabs.Scripts = STATE.Window:CreateTab("Scripts") -- Haruka / picker tab
-        else
-            local function makeTab()
-                return { CreateLabel = function() end, CreateParagraph = function() end, CreateButton = function() end, CreateToggle = function() end, CreateSlider = function() end }
-            end
-            Tabs.Info = makeTab(); Tabs.TabBlox = makeTab(); Tabs.TabCar = makeTab(); Tabs.TabBoat = makeTab(); Tabs.Move = makeTab(); Tabs.Debug = makeTab(); Tabs.Scripts = makeTab()
-        end
-        STATE.Tabs = Tabs
-
-        -- Info tab
-        SAFE_CALL(function()
-            Tabs.Info:CreateLabel("G-MON Hub - client-only. Use only in private/testing places.")
-            Tabs.Info:CreateParagraph({ Title = "Detected", Content = Utils.ShortLabelForGame(STATE.GAME) })
-            Tabs.Info:CreateButton({ Name = "Detect Now", Callback = function()
-                SAFE_CALL(function()
-                    local det = Utils.FlexibleDetectByAliases()
-                    if det and det ~= "UNKNOWN" then
-                        STATE.GAME = det
-                        if STATE.Rayfield and STATE.Rayfield.Notify then STATE.Rayfield:Notify({Title="G-MON", Content="Detected: "..Utils.ShortLabelForGame(det), Duration=3}) end
-                    else
-                        if STATE.Rayfield and STATE.Rayfield.Notify then STATE.Rayfield:Notify({Title="G-MON", Content="Detected: Unknown", Duration=3}) end
-                    end
-                    STATE.Status.SetIndicator("bf", STATE.GAME=="BLOX_FRUIT", (STATE.GAME=="BLOX_FRUIT") and "Blox: Available" or "Blox: N/A")
-                    STATE.Status.SetIndicator("car", STATE.GAME=="CAR_TYCOON", (STATE.GAME=="CAR_TYCOON") and "Car: Available" or "Car: N/A")
-                    STATE.Status.SetIndicator("boat", STATE.GAME=="BUILD_A_BOAT", (STATE.GAME=="BUILD_A_BOAT") and "Boat: Available" or "Boat: N/A")
-                    if STATE.Rayfield and STATE.Rayfield.Notify then STATE.Rayfield:Notify({Title="G-MON", Content="UI ready — use tabs", Duration=3}) end
-                end)
-            end })
-            Tabs.Info:CreateButton({ Name = "Force Blox", Callback = function() STATE.GAME = "BLOX_FRUIT"; STATE.Status.SetIndicator("bf", true, "Blox: Forced"); if STATE.Rayfield and STATE.Rayfield.Notify then STATE.Rayfield:Notify({Title="G-MON", Content="Forced: Blox", Duration=2}) end end })
-            Tabs.Info:CreateButton({ Name = "Force Car", Callback = function() STATE.GAME = "CAR_TYCOON"; STATE.Status.SetIndicator("car", true, "Car: Forced"); if STATE.Rayfield and STATE.Rayfield.Notify then STATE.Rayfield:Notify({Title="G-MON", Content="Forced: Car", Duration=2}) end end })
-            Tabs.Info:CreateButton({ Name = "Force Boat", Callback = function() STATE.GAME = "BUILD_A_BOAT"; STATE.Status.SetIndicator("boat", true, "Boat: Forced"); if STATE.Rayfield and STATE.Rayfield.Notify then STATE.Rayfield:Notify({Title="G-MON", Content="Forced: Boat", Duration=2}) end end })
-            Tabs.Info:CreateParagraph({ Title = "Note", Content = "Each game has its own tab. Use Force/Detect to update status. Features are separated to avoid duplicates." })
-        end)
-
-        -- BLOX tab (features inside its own tab)
-        SAFE_CALL(function()
-            local t = Tabs.TabBlox
-            t:CreateLabel("Blox Fruit Controls")
-            t:CreateToggle({ Name = "Auto Farm (Blox)", CurrentValue = false, Callback = function(v) if v then SAFE_CALL(STATE.Modules.Blox.start) else SAFE_CALL(STATE.Modules.Blox.stop) end end })
-            t:CreateToggle({ Name = "Fast Attack", CurrentValue = STATE.Modules.Blox.config.fast_attack, Callback = function(v) STATE.Modules.Blox.config.fast_attack = v end })
-            t:CreateToggle({ Name = "Long Range Hit", CurrentValue = STATE.Modules.Blox.config.long_range, Callback = function(v) STATE.Modules.Blox.config.long_range = v end })
-            t:CreateSlider({ Name = "Range Farming (studs)", Range = {1,50}, Increment = 1, CurrentValue = STATE.Modules.Blox.config.range or 10, Callback = function(v) STATE.Modules.Blox.config.range = v end })
-            t:CreateSlider({ Name = "Attack Delay (ms)", Range = {50,1000}, Increment = 25, CurrentValue = math.floor((STATE.Modules.Blox.config.attack_delay or 0.35)*1000), Callback = function(v) STATE.Modules.Blox.config.attack_delay = v/1000 end })
-        end)
-
-        -- CAR tab
-        SAFE_CALL(function()
-            local t = Tabs.TabCar
-            t:CreateLabel("Car Tycoon Controls")
-            t:CreateToggle({ Name = "Car AutoDrive", CurrentValue = false, Callback = function(v) if v then SAFE_CALL(STATE.Modules.Car.start) else SAFE_CALL(STATE.Modules.Car.stop) end end })
-            t:CreateSlider({ Name = "Car Speed", Range = {20,200}, Increment = 5, CurrentValue = STATE.Modules.Car.speed or 60, Callback = function(v) STATE.Modules.Car.speed = v end })
-        end)
-
-        -- BOAT tab
-        SAFE_CALL(function()
-            local t = Tabs.TabBoat
-            t:CreateLabel("Build A Boat Controls")
-            t:CreateToggle({ Name = "Boat Auto Stages", CurrentValue = false, Callback = function(v) if v then SAFE_CALL(STATE.Modules.Boat.start) else SAFE_CALL(STATE.Modules.Boat.stop) end end })
-            t:CreateSlider({ Name = "Stage Delay (s)", Range = {0.5,6}, Increment = 0.5, CurrentValue = STATE.Modules.Boat.delay or 1.5, Callback = function(v) STATE.Modules.Boat.delay = v end })
-        end)
-
-        -- Movement tab (fly) - unchanged
-        SAFE_CALL(function()
-            local t = Tabs.Move
-            local flyEnabled = false; local flySpeed = 60; local flyY = 0
-            t:CreateLabel("Movement")
-            t:CreateToggle({ Name = "Fly", Callback = function(v) flyEnabled = v end })
-            t:CreateSlider({ Name = "Fly Speed", Range = {20,150}, Increment = 5, CurrentValue = flySpeed, Callback = function(v) flySpeed = v end })
-            t:CreateSlider({ Name = "Fly Y", Range = {-60,60}, Increment = 1, CurrentValue = flyY, Callback = function(v) flyY = v end })
-            RunService.RenderStepped:Connect(function()
-                if not flyEnabled then return end
-                pcall(function()
-                    local c = Utils.SafeChar(); if not c then return end
-                    local cam = workspace.CurrentCamera; if not cam then return end
-                    local dir = Vector3.new(0,0,0)
-                    if UIS:IsKeyDown(Enum.KeyCode.W) then dir = dir + cam.CFrame.LookVector end
-                    if UIS:IsKeyDown(Enum.KeyCode.S) then dir = dir - cam.CFrame.LookVector end
-                    if UIS:IsKeyDown(Enum.KeyCode.A) then dir = dir - cam.CFrame.RightVector end
-                    if UIS:IsKeyDown(Enum.KeyCode.D) then dir = dir + cam.CFrame.RightVector end
-                    local vel = Vector3.new(dir.X * flySpeed, flyY, dir.Z * flySpeed)
-                    pcall(function() c.HumanoidRootPart.Velocity = vel end)
-                end)
-            end)
-        end)
-
-        -- Debug tab
-        SAFE_CALL(function()
-            local t = Tabs.Debug
-            t:CreateLabel("Debug / Utility")
-            t:CreateButton({ Name = "Force Start All Modules", Callback = function() SAFE_CALL(STATE.Modules.Blox.start); SAFE_CALL(STATE.Modules.Car.start); SAFE_CALL(STATE.Modules.Boat.start) end })
-            t:CreateButton({ Name = "Stop All Modules", Callback = function() SAFE_CALL(STATE.Modules.Blox.stop); SAFE_CALL(STATE.Modules.Car.stop); SAFE_CALL(STATE.Modules.Boat.stop) end })
-        end)
-
-        -- Scripts tab (Haruka picker)
-        SAFE_CALL(function()
-            local t = Tabs.Scripts
-            t:CreateLabel("Script Picker / Haruka Features")
-            t:CreateParagraph({ Title = "Haruka (integrated)", Content = "Lightweight Auto Farm and Gold Tracker (from Haruka Hub). Toggle below to run." })
-            t:CreateToggle({ Name = "Haruka Auto Farm", CurrentValue = false, Callback = function(v) if v then SAFE_CALL(STATE.Modules.Haruka.startAutoFarm) else SAFE_CALL(STATE.Modules.Haruka.stopAutoFarm) end end })
-            t:CreateToggle({ Name = "Haruka Gold Tracker", CurrentValue = false, Callback = function(v) if v then SAFE_CALL(STATE.Modules.Haruka.startGoldTracker) else SAFE_CALL(STATE.Modules.Haruka.stopGoldTracker) end end })
-            t:CreateButton({ Name = "Stop Haruka All", Callback = function() SAFE_CALL(STATE.Modules.Haruka.stopAutoFarm); SAFE_CALL(STATE.Modules.Haruka.stopGoldTracker) end })
-            t:CreateParagraph({ Title = "Note", Content = "Haruka features can be used across games where applicable. Do not run conflicting auto-modules simultaneously." })
-        end)
+    -- SYSTEM
+    safe_pcall(function()
+        local t = Tabs.System
+        if t.CreateLabel then t:CreateLabel("System") end
+        if t.CreateToggle then t:CreateToggle({Name="Anti AFK", CurrentValue=true, Callback=function(v) if v then GMON.System.EnableAntiAFK() end end}) end
+        if t.CreateToggle then t:CreateToggle({Name="God Mode", CurrentValue=false, Callback=function(v) GMON.System.SetGodMode(v) end}) end
+        if t.CreateButton then t:CreateButton({Name="Rejoin", Callback=function() GMON.System.Rejoin() end}) end
+        if t.CreateButton then t:CreateButton({Name="ServerHop", Callback=function() GMON.System.ServerHop() end}) end
     end)
 end
 
--- Apply Game (set status indicators and notify)
-local function ApplyGame(gameKey)
-    STATE.GAME = gameKey or Utils.FlexibleDetectByAliases()
-    SAFE_CALL(function()
-        STATE.Status.SetIndicator("bf", STATE.GAME=="BLOX_FRUIT", (STATE.GAME=="BLOX_FRUIT") and "Blox: Available" or "Blox: N/A")
-        STATE.Status.SetIndicator("car", STATE.GAME=="CAR_TYCOON", (STATE.GAME=="CAR_TYCOON") and "Car: Available" or "Car: N/A")
-        STATE.Status.SetIndicator("boat", STATE.GAME=="BUILD_A_BOAT", (STATE.GAME=="BUILD_A_BOAT") and "Boat: Available" or "Boat: N/A")
-        if STATE.Rayfield and STATE.Rayfield.Notify then STATE.Rayfield:Notify({Title="G-MON", Content="Detected: "..Utils.ShortLabelForGame(STATE.GAME), Duration=3}) end
-    end)
-end
-
--- STATUS UPDATER
+-- INIT: detect and show a startup notify
 task.spawn(function()
-    while true do
-        SAFE_WAIT(1)
-        SAFE_CALL(function()
-            if STATE.Status and STATE.Status.UpdateRuntime then STATE.Status.UpdateRuntime() end
-            if STATE.Status and STATE.Status.SetIndicator then
-                STATE.Status.SetIndicator("last", false, "Last: "..(STATE.LastAction or "Idle"))
-            end
-        end)
-    end
+    local detected = Utils.DetectGame()
+    (Window.Notify and Window.Notify or makeFallbackWindow("G-MON").Notify)({Title="G-MON Hub", Content="Loaded. Detected: "..tostring(detected), Duration=4})
+    print("[G-MON] Loaded. Detected:", detected)
 end)
 
--- INITIALIZATION (lazy) - do not auto-start modules, user toggles them
+-- Exports & helper for moderator editing
 local Main = {}
-
-function Main.Start()
-    SAFE_CALL(function()
-        -- build UI once (includes Scripts tab)
-        buildUI()
-        -- detect & apply game
-        local det = Utils.FlexibleDetectByAliases()
-        STATE.GAME = det
-        ApplyGame(STATE.GAME)
-        Utils.AntiAFK()
-        -- notify ready
-        if STATE.Rayfield and STATE.Rayfield.Notify then STATE.Rayfield:Notify({Title="G-MON Hub", Content="Loaded — use tabs to control modules (Scripts tab contains Haruka features)", Duration=5}) end
-        print("[G-MON] main.lua started. Detected game:", STATE.GAME)
+function Main.StartAll()
+    safe_pcall(function()
+        GMON.Modules.Blox.start()
+        GMON.Modules.Car.start()
+        GMON.Modules.Boat.start()
     end)
-    return true
+end
+function Main.StopAll()
+    safe_pcall(function()
+        GMON.Modules.Blox.stop()
+        GMON.Modules.Car.stop()
+        GMON.Modules.Boat.stop()
+    end)
 end
 
--- Return Main table for loader compatibility
+Main.GMON = GMON
+Main.Utils = Utils
+Main.Window = Window
+
+-- RETURN API for loader compatibility
 return Main
