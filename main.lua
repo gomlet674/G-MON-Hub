@@ -384,6 +384,7 @@ local function ApplyGame(gameKey) STATE.GAME = gameKey or Utils.FlexibleDetectBy
 task.spawn(function() while true do SAFE_WAIT(1) SAFE_CALL(function() if STATE.Status and STATE.Status.UpdateRuntime then STATE.Status.UpdateRuntime() end if STATE.Status and STATE.Status.SetIndicator then STATE.Status.SetIndicator("last", false, "Last: "..(STATE.LastAction or "Idle")) end end) end end)
 
 -- INITIALIZATION (lazy) - do not auto-start modules, user toggles them
+
 local Main = {}
 
 function Main.Start() SAFE_CALL(function() 
@@ -391,7 +392,11 @@ function Main.Start() SAFE_CALL(function()
 -- build UI once (includes Scripts tab) buildUI() 
 -- detect & apply game 
 
-local det = Utils.FlexibleDetectByAliases() STATE.GAME = det ApplyGame(STATE.GAME) Utils.AntiAFK() -- notify ready if STATE.Rayfield and STATE.Rayfield.Notify then STATE.Rayfield:Notify({Title="G-MON Hub", Content="Loaded — use tabs to control modules (Scripts tab contains Haruka features)", Duration=5}) end print("[G-MON] main.lua started. Detected game:", STATE.GAME) end) return true end
+local det = Utils.FlexibleDetectByAliases() STATE.GAME = det ApplyGame(STATE.GAME) Utils.AntiAFK() 
+
+-- notify ready
+
+if STATE.Rayfield and STATE.Rayfield.Notify then STATE.Rayfield:Notify({Title="G-MON Hub", Content="Loaded — use tabs to control modules (Scripts tab contains Haruka features)", Duration=5}) end print("[G-MON] main.lua started. Detected game:", STATE.GAME) end) return true end
 
 -- Return Main table for loader compatibility 
 
