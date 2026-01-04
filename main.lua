@@ -1,14 +1,18 @@
 -- GMON Hub - Merged (Blox Fruit, Car Dealership, Build A Boat) -- Combined and cleaned by Gemini Assistant -- Features: tabs for Blox Fruit, Car Dealership, Build A Boat, Info, Main, Settings -- Includes: Anti-AFK, Anti-Kick (safe), Rejoin Server, Save/Load UI config, Rayfield/Fallback UI
 
--- BOOTSTRAP repeat task.wait() until game:IsLoaded() local Players = game:GetService("Players") local RunService = game:GetService("RunService") local UIS = game:GetService("UserInputService") local VirtualUser = game:GetService("VirtualUser") local Workspace = workspace local ReplicatedStorage = game:GetService("ReplicatedStorage") local TeleportService = game:GetService("TeleportService") local MarketplaceService = game:GetService("MarketplaceService") local HttpService = game:GetService("HttpService") local LP = Players.LocalPlayer
+-- BOOTSTRAP
+ repeat task.wait() until game:IsLoaded() local Players = game:GetService("Players") local RunService = game:GetService("RunService") local UIS = game:GetService("UserInputService") local VirtualUser = game:GetService("VirtualUser") local Workspace = workspace local ReplicatedStorage = game:GetService("ReplicatedStorage") local TeleportService = game:GetService("TeleportService") local MarketplaceService = game:GetService("MarketplaceService") local HttpService = game:GetService("HttpService") local LP = Players.LocalPlayer
 
--- SAFE helpers local function SAFE_CALL(fn, ...) if type(fn) ~= "function" then return false end local ok, res = pcall(fn, ...) if not ok then warn("[G-MON] SAFE_CALL error:", res) end return ok, res end
+-- SAFE helpers 
+local function SAFE_CALL(fn, ...) if type(fn) ~= "function" then return false end local ok, res = pcall(fn, ...) if not ok then warn("[G-MON] SAFE_CALL error:", res) end return ok, res end
 
 local function SAFE_WAIT(sec) sec = tonumber(sec) or 0.1 if sec < 0.01 then sec = 0.01 end if sec > 5 then sec = 5 end task.wait(sec) end
 
--- STATE local STATE = { GAME = "UNKNOWN", StartTime = os.time(), Modules = {}, Rayfield = nil, Window = nil, Tabs = {}, Status = nil, Flags = {}, LastAction = "Idle", ConfigFile = "gmon_hub_config.json", }
+-- STATE 
+local STATE = { GAME = "UNKNOWN", StartTime = os.time(), Modules = {}, Rayfield = nil, Window = nil, Tabs = {}, Status = nil, Flags = {}, LastAction = "Idle", ConfigFile = "gmon_hub_config.json", }
 
--- UTILS local Utils = {} function Utils.SafeChar() local ok, c = pcall(function() return LP and LP.Character end) if not ok or not c then return nil end if c:FindFirstChild("HumanoidRootPart") and c:FindFirstChild("Humanoid") then return c end return nil end
+-- UTILS
+local Utils = {} function Utils.SafeChar() local ok, c = pcall(function() return LP and LP.Character end) if not ok or not c then return nil end if c:FindFirstChild("HumanoidRootPart") and c:FindFirstChild("Humanoid") then return c end return nil end
 
 function Utils.AntiAFK() if not LP then return end SAFE_CALL(function() LP.Idled:Connect(function() pcall(function() local cam = workspace.CurrentCamera if cam and cam.CFrame then VirtualUser:Button2Down(Vector2.new(0,0), cam.CFrame) task.wait(1) VirtualUser:Button2Up(Vector2.new(0,0), cam.CFrame) else pcall(function() VirtualUser:Button2Down(); task.wait(1); VirtualUser:Button2Up() end) end end) end) end) end
 
@@ -44,7 +48,8 @@ STATE.Modules.Utils = Utils
 
 load_rayfield()
 
--- STATUS GUI (simple, draggable) do local Status = {} function Status.Create() SAFE_CALL(function() local pg = LP:WaitForChild("PlayerGui") local sg = Instance.new("ScreenGui") sg.Name = "GMonStatusGui" sg.ResetOnSpawn = false sg.Parent = pg
+-- STATUS GUI (simple, draggable) 
+do local Status = {} function Status.Create() SAFE_CALL(function() local pg = LP:WaitForChild("PlayerGui") local sg = Instance.new("ScreenGui") sg.Name = "GMonStatusGui" sg.ResetOnSpawn = false sg.Parent = pg
 
 local frame = Instance.new("Frame")
         frame.Name = "StatusFrame"
@@ -150,9 +155,11 @@ STATE.Status.SetIndicator = Status.SetIndicator
 
 end
 
--- create status GUI SAFE_CALL(function() if STATE.Status and STATE.Status.Create then STATE.Status.Create() end end)
+-- create status GUI 
+SAFE_CALL(function() if STATE.Status and STATE.Status.Create then STATE.Status.Create() end end)
 
--- ---------- MODULE: BLOX FRUIT (adapted) ---------- do local M = {} M.config = { attack_delay = 0.35, range = 10, long_range = false, fast_attack = false } M.running = false M._task = nil
+-- ---------- MODULE: BLOX FRUIT (adapted) ---------- 
+do local M = {} M.config = { attack_delay = 0.35, range = 10, long_range = false, fast_attack = false } M.running = false M._task = nil
 
 local function findEnemyFolder()
     local hints = {"Enemies","Sea1Enemies","Sea2Enemies","Monsters","Mobs"}
@@ -243,7 +250,8 @@ STATE.Modules.Blox = M
 
 end
 
--- ---------- MODULE: CAR (includes Dealership features) ---------- do local M = {} M.running = false M.chosen = nil M.speed = 60 M._task = nil M.autoLimited = false M.selectedCar = ""
+-- ---------- MODULE: CAR (includes Dealership features) ---------- 
+do local M = {} M.running = false M.chosen = nil M.speed = 60 M._task = nil M.autoLimited = false M.selectedCar = ""
 
 local function isOwnedByPlayer(m)
     if not m or not m:IsA("Model") then return false end
@@ -423,7 +431,8 @@ STATE.Modules.Car = M
 
 end
 
--- ---------- MODULE: BOAT (Build A Boat) ---------- do local M = {} M.running = false M.delay = 1.5 M._task = nil
+-- ---------- MODULE: BOAT (Build A Boat) ---------- 
+do local M = {} M.running = false M.delay = 1.5 M._task = nil
 
 local function collectStages(root)
     local out = {}
@@ -509,7 +518,8 @@ STATE.Modules.Boat = M
 
 end
 
--- ---------- HARUKA (Scripts picker lightweight) ---------- do local M = {} M.autoRunning = false M.goldRunning = false M._autoTask = nil
+-- ---------- HARUKA (Scripts picker lightweight) ---------- 
+do local M = {} M.autoRunning = false M.goldRunning = false M._autoTask = nil
 
 local function haruka_auto_loop(character)
     while M.autoRunning do
@@ -562,7 +572,8 @@ STATE.Modules.Haruka = M
 
 end
 
--- ---------- UI BUILD ---------- local function buildUI() SAFE_CALL(function() local Ray = STATE.Rayfield STATE.Window = (Ray and Ray.CreateWindow) and Ray:CreateWindow({ Name = "G-MON Hub", LoadingTitle = "G-MON Hub", LoadingSubtitle = "Ready", ConfigurationSaving = { Enabled = false } }) or nil
+-- ---------- UI BUILD ---------- 
+local function buildUI() SAFE_CALL(function() local Ray = STATE.Rayfield STATE.Window = (Ray and Ray.CreateWindow) and Ray:CreateWindow({ Name = "G-MON Hub", LoadingTitle = "G-MON Hub", LoadingSubtitle = "Ready", ConfigurationSaving = { Enabled = false } }) or nil
 
 local Tabs = {}
     if STATE.Window then
@@ -716,13 +727,16 @@ end)
 
 end
 
--- Apply Game (set status indicators) local function ApplyGame(gameKey) STATE.GAME = gameKey or Utils.FlexibleDetectByAliases() SAFE_CALL(function() STATE.Status.SetIndicator("bf", STATE.GAME=="BLOX_FRUIT", (STATE.GAME=="BLOX_FRUIT") and "Blox: Available" or "Blox: N/A") STATE.Status.SetIndicator("car", STATE.GAME=="CAR_TYCOON", (STATE.GAME=="CAR_TYCOON") and "Car: Available" or "Car: N/A") STATE.Status.SetIndicator("boat", STATE.GAME=="BUILD_A_BOAT", (STATE.GAME=="BUILD_A_BOAT") and "Boat: Available" or "Boat: N/A") if STATE.Rayfield and STATE.Rayfield.Notify then STATE.Rayfield:Notify({Title="G-MON", Content="Detected: "..Utils.ShortLabelForGame(STATE.GAME), Duration=3}) end end) end
+-- Apply Game (set status indicators) 
+local function ApplyGame(gameKey) STATE.GAME = gameKey or Utils.FlexibleDetectByAliases() SAFE_CALL(function() STATE.Status.SetIndicator("bf", STATE.GAME=="BLOX_FRUIT", (STATE.GAME=="BLOX_FRUIT") and "Blox: Available" or "Blox: N/A") STATE.Status.SetIndicator("car", STATE.GAME=="CAR_TYCOON", (STATE.GAME=="CAR_TYCOON") and "Car: Available" or "Car: N/A") STATE.Status.SetIndicator("boat", STATE.GAME=="BUILD_A_BOAT", (STATE.GAME=="BUILD_A_BOAT") and "Boat: Available" or "Boat: N/A") if STATE.Rayfield and STATE.Rayfield.Notify then STATE.Rayfield:Notify({Title="G-MON", Content="Detected: "..Utils.ShortLabelForGame(STATE.GAME), Duration=3}) end end) end
 
--- STATUS UPDATER task.spawn(function() while true do SAFE_WAIT(1) SAFE_CALL(function() if STATE.Status and STATE.Status.UpdateRuntime then STATE.Status.UpdateRuntime() end if STATE.Status and STATE.Status.SetIndicator then STATE.Status.SetIndicator("last", false, "Last: "..(STATE.LastAction or "Idle")) end end) end end)
+-- STATUS UPDATER 
+task.spawn(function() while true do SAFE_WAIT(1) SAFE_CALL(function() if STATE.Status and STATE.Status.UpdateRuntime then STATE.Status.UpdateRuntime() end if STATE.Status and STATE.Status.SetIndicator then STATE.Status.SetIndicator("last", false, "Last: "..(STATE.LastAction or "Idle")) end end) end end)
 
 -- Anti-AFK Utils.AntiAFK()
 
--- Initialization local Main = {} function Main.Start() SAFE_CALL(function() buildUI() local det = Utils.FlexibleDetectByAliases() STATE.GAME = det ApplyGame(STATE.GAME) if STATE.Rayfield and STATE.Rayfield.Notify then STATE.Rayfield:Notify({Title="G-MON Hub", Content="Loaded — use tabs to control modules", Duration=5}) end print("[G-MON] main.lua started. Detected game:", STATE.GAME) end) return true end
+-- Initialization 
+local Main = {} function Main.Start() SAFE_CALL(function() buildUI() local det = Utils.FlexibleDetectByAliases() STATE.GAME = det ApplyGame(STATE.GAME) if STATE.Rayfield and STATE.Rayfield.Notify then STATE.Rayfield:Notify({Title="G-MON Hub", Content="Loaded — use tabs to control modules", Duration=5}) end print("[G-MON] main.lua started. Detected game:", STATE.GAME) end) return true end
 
 -- run Main.Start()
 
