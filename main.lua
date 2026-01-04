@@ -44,7 +44,8 @@ function Utils.ShortLabelForGame(g) if g == "BLOX_FRUIT" then return "Blox" end 
 
 STATE.Modules.Utils = Utils
 
--- RAYFIELD LOAD (safe fallback to simple UI) local function load_rayfield() local ok, Ray = pcall(function() return loadstring(game:HttpGet("https://sirius.menu/rayfield"))() end) if ok and Ray then STATE.Rayfield = Ray return Ray else warn("[G-MON] Rayfield load failed; using fallback UI.") local Fallback = {} function Fallback:CreateWindow(opts) local win = {} function win:CreateTab(name) local tab = {} function tab:CreateLabel() end function tab:CreateParagraph() end function tab:CreateButton(tbl) end function tab:CreateToggle(tbl) end function tab:CreateSlider(tbl) end function tab:CreateDropdown(tbl) end return tab end function win:CreateNotification() end return win end function Fallback:Notify() end STATE.Rayfield = Fallback return Fallback end end
+-- RAYFIELD LOAD (safe fallback to simple UI) 
+local function load_rayfield() local ok, Ray = pcall(function() return loadstring(game:HttpGet("https://sirius.menu/rayfield"))() end) if ok and Ray then STATE.Rayfield = Ray return Ray else warn("[G-MON] Rayfield load failed; using fallback UI.") local Fallback = {} function Fallback:CreateWindow(opts) local win = {} function win:CreateTab(name) local tab = {} function tab:CreateLabel() end function tab:CreateParagraph() end function tab:CreateButton(tbl) end function tab:CreateToggle(tbl) end function tab:CreateSlider(tbl) end function tab:CreateDropdown(tbl) end return tab end function win:CreateNotification() end return win end function Fallback:Notify() end STATE.Rayfield = Fallback return Fallback end end
 
 load_rayfield()
 
