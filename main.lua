@@ -119,205 +119,72 @@ STATE.Modules.Utils = Utils
 -- [BLOX module, CAR module, BOAT module]
 -- (copied exactly from your provided script; preserved as-is to avoid changing behavior)
 -- For brevity in this merged snippet they are kept intact:
-
--- (BEGIN Blox module) -- REPLACE WITH THIS BLOCK
+-- (BEGIN Blox module)
 do
     local M = {}
-    -- kept field names so existing UI doesn't break
-    M.config = { attack_delay = 0.35, range = 35, long_range = false, fast_attack = false, target_name = nil }
+    M.config = { attack_delay = 0.35, range = 10, long_range = false, fast_attack = false }
     M.running = false
     M._task = nil
-    M._moveLock = false
 
-    local ReplicatedStorage = game:GetService("ReplicatedStorage")
-    local RunService = game:GetService("RunService")
-
-    -- Find sensible enemy folder
     local function findEnemyFolder()
-        local hints = {"Enemies","Sea1Enemies","Sea2Enemies","Monsters","Mobs","NPCs","MobFolder"}
+        local hints = {"Enemies","Sea1Enemies","Sea2Enemies","Monsters","Mobs"}
         for _, name in ipairs(hints) do
             local f = Workspace:FindFirstChild(name)
             if f then return f end
         end
-        -- fallback: try common descendants that look like mobs
-        for _, v in ipairs(Workspace:GetChildren()) do
-            local n = tostring(v.Name):lower()
-            if string.find(n, "enemy") or string.find(n, "mob") or string.find(n, "monster") or string.find(n, "sea") then
-                return v
-            end
-        end
-        return Workspace
+        return nil
     end
 
-    -- Find nearest enemy; if config.target_name given, prefer that
-    local function findNearestEnemy(range, longRange)
-        local char = Utils.SafeChar(); if not char then return nil end
-        local hrp = char:FindFirstChild("HumanoidRootPart"); if not hrp then return nil end
-        local folder = findEnemyFolder()
-        local nearest, bestDist = nil, math.huge
-
-        for _, mob in ipairs(folder:GetChildren()) do
-            if not mob:IsA("Model") then goto cont end
-            local mhrp = mob:FindFirstChild("HumanoidRootPart") or mob.PrimaryPart
-            local hum = mob:FindFirstChild("Humanoid")
-            if not (mhrp and hum) then goto cont end
-            if hum.Health <= 0 then goto cont end
-
-            local d = (mhrp.Position - hrp.Position).Magnitude
-            -- if target_name set, prefer exact matches
-            if M.config.target_name and M.config.target_name ~= "" and M.config.target_name ~= "None" then
-                if tostring(mob.Name):lower():find(tostring(M.config.target_name):lower()) then
-                    if d < bestDist then bestDist, nearest = d, mob end
-                end
-            else
-                if d < bestDist and d <= (range or M.config.range or 35) then bestDist, nearest = d, mob end
-            end
-            ::cont::
-        end
-
-        -- if not found and longRange, broaden search
-        if (not nearest) and longRange then
-            for _, mob in ipairs(folder:GetChildren()) do
-                if not mob:IsA("Model") then goto cont2 end
-                local mhrp = mob:FindFirstChild("HumanoidRootPart") or mob.PrimaryPart
-                local hum = mob:FindFirstChild("Humanoid")
-                if not (mhrp and hum) then goto cont2 end
-                if hum.Health <= 0 then goto cont2 end
-                local d = (mhrp.Position - hrp.Position).Magnitude
-                if d < bestDist then bestDist, nearest = d, mob end
-                ::cont2::
-            end
-        end
-
-        return nearest
-    end
-
-    -- Smooth move without TweenService to avoid adding new globals:
-    -- small lerp loop; single-move-lock to avoid stacking
-    local function moveToCFrameSafely(targetCFrame, maxTime)
-        if not targetCFrame or not Utils.SafeChar() then return end
-        if M._moveLock then return end
-        M._moveLock = true
-        local char = Utils.SafeChar()
-        local hrp = char and char:FindFirstChild("HumanoidRootPart")
-        if not hrp then M._moveLock = false; return end
-        local start = tick()
-        maxTime = maxTime or 3
-        pcall(function()
-            while hrp and targetCFrame and (hrp.Position - targetCFrame.Position).Magnitude > 3 and (tick() - start) < maxTime and M.running do
-                -- lerp towards target; non-blocking small steps
-                local cur = hrp.CFrame
-                local nextCf = cur:Lerp(targetCFrame, 0.35)
-                pcall(function() hrp.CFrame = nextCf end)
-                SAFE_WAIT(0.06)
-            end
-            -- final snap if close enough
-            if hrp and targetCFrame and (hrp.Position - targetCFrame.Position).Magnitude <= 6 then
-                pcall(function() hrp.CFrame = targetCFrame end)
-            end
-        end)
-        M._moveLock = false
-    end
-
-    -- Equip weapon heuristics (melee / sword / fruit)
-    local function equipBestWeapon(preferred)
-        if not LP then return end
-        local char = LP.Character
-        local backpack = LP:FindFirstChild("Backpack")
-        if not char or not backpack then return end
-
-        preferred = preferred or "Melee"
-        if preferred == "Melee" then return end
-
-        local function scanContainer(cont)
-            for _, item in ipairs(cont:GetChildren()) do
-                if item:IsA("Tool") then
-                    local iname = tostring(item.Name):lower()
-                    local tip = tostring(item.ToolTip or ""):lower()
-                    if preferred == "Sword" and (iname:find("sword") or tip:find("sword")) then return item end
-                    if (preferred == "Blox Fruit" or preferred == "Fruit") and (iname:find("fruit") or tip:find("fruit") or iname:find("blox") ) then return item end
-                end
-            end
-            return nil
-        end
-
-        local tool = scanContainer(char) or scanContainer(backpack)
-        if tool and tool.Parent then
-            pcall(function() char.Humanoid:EquipTool(tool) end)
-        end
-    end
-
-    -- Attempt attack: try safe remote patterns then fallback to local TakeDamage
-    local function attemptAttackOn(target)
-        if not target or not target.Parent then return end
-        local usedRemote = false
-        -- try common remote patterns safely
-        pcall(function()
-            if ReplicatedStorage and ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_") then
-                local rem = ReplicatedStorage.Remotes.CommF_
-                pcall(function() rem:InvokeServer("Attack") end)
-                pcall(function() rem:InvokeServer("Melee") end)
-                pcall(function() rem:InvokeServer("Hit", target) end)
-                usedRemote = true
-            end
-        end)
-        if not usedRemote then
-            -- local fallback (non-destructive; small damage loops)
-            pcall(function()
-                local hum = target:FindFirstChild("Humanoid")
-                if hum and hum.Health > 0 then
-                    if M.config.fast_attack then
-                        for i=1,3 do
-                            if target and target:FindFirstChild("Humanoid") then
-                                target.Humanoid:TakeDamage(20)
-                                SAFE_WAIT(0.02)
-                            end
-                        end
-                    else
-                        target.Humanoid:TakeDamage(18)
-                    end
-                end
-            end)
-        end
-    end
-
-    -- Core loop
     local function loop()
         while M.running do
-            SAFE_WAIT(0.18) -- stable tick
+            task.wait(0.12)
             SAFE_CALL(function()
                 if STATE.GAME ~= "BLOX_FRUIT" then return end
                 local char = Utils.SafeChar(); if not char then return end
                 local hrp = char:FindFirstChild("HumanoidRootPart"); if not hrp then return end
+                local folder = findEnemyFolder()
+                if not folder then return end
 
-                local target = findNearestEnemy(M.config.range, M.config.long_range)
-                if not target then
-                    STATE.LastAction = "Idle"
-                    goto continue
-                end
-
-                -- compute hover cframe a little above the mob (safe offset)
-                local mhrp = target:FindFirstChild("HumanoidRootPart") or target.PrimaryPart
-                if mhrp then
-                    local desired = mhrp.CFrame * CFrame.new(0, (M.config.range or 35), 0)
-                    moveToCFrameSafely(desired, 2.2)
-                end
-
-                -- equip heuristics: leave as Melee by default (UI can change this by modifying state)
-                -- (If you have a separate UI variable for preferred weapon, set it to M.config.preferred_weapon)
-                equipBestWeapon(M.config.preferred_weapon or "Melee")
-
-                -- ensure within attack distance, then attack
-                if mhrp and (hrp.Position - mhrp.Position).Magnitude < (M.config.range + 12) then
-                    attemptAttackOn(target)
-                    if M.config.fast_attack then
-                        STATE.LastAction = "FastHit -> "..tostring(target.Name or "mob")
-                    else
-                        STATE.LastAction = "Hit -> "..tostring(target.Name or "mob")
+                local nearest, bestDist = nil, math.huge
+                for _, mob in ipairs(folder:GetChildren()) do
+                    if mob:IsA("Model") and mob:FindFirstChild("HumanoidRootPart") and mob:FindFirstChild("Humanoid") then
+                        local hum = mob:FindFirstChild("Humanoid")
+                        if hum and hum.Health > 0 then
+                            local d = (mob.HumanoidRootPart.Position - hrp.Position).Magnitude
+                            if d < bestDist and d <= (M.config.range or 10) then bestDist, nearest = d, mob end
+                        end
                     end
                 end
 
-                ::continue::
+                if not nearest and M.config.long_range then
+                    for _, mob in ipairs(folder:GetChildren()) do
+                        if mob:IsA("Model") and mob:FindFirstChild("HumanoidRootPart") and mob:FindFirstChild("Humanoid") then
+                            local hum = mob:FindFirstChild("Humanoid")
+                            if hum and hum.Health > 0 then
+                                local d = (mob.HumanoidRootPart.Position - hrp.Position).Magnitude
+                                if d < bestDist then bestDist, nearest = d, mob end
+                            end
+                        end
+                    end
+                end
+
+                if not nearest then return end
+
+                if M.config.long_range then
+                    local dmg = M.config.fast_attack and 35 or 20
+                    local hits = M.config.fast_attack and 3 or 1
+                    for i=1,hits do pcall(function() if nearest and nearest:FindFirstChild("Humanoid") then nearest.Humanoid:TakeDamage(dmg) end end) end
+                    STATE.LastAction = "LongHit -> "..tostring(nearest.Name or "mob")
+                else
+                    pcall(function() hrp.CFrame = nearest.HumanoidRootPart.CFrame * CFrame.new(0,0,3) end)
+                    if M.config.fast_attack then
+                        for i=1,3 do pcall(function() if nearest and nearest:FindFirstChild("Humanoid") then nearest.Humanoid:TakeDamage(30) end end) end
+                        STATE.LastAction = "FastMelee -> "..tostring(nearest.Name or "mob")
+                    else
+                        pcall(function() if nearest and nearest:FindFirstChild("Humanoid") then nearest.Humanoid:TakeDamage(18) end end)
+                        STATE.LastAction = "Melee -> "..tostring(nearest.Name or "mob")
+                    end
+                end
             end)
         end
     end
@@ -326,24 +193,18 @@ do
         if M.running then return end
         M.running = true
         STATE.Flags.Blox = true
-        if not M._task then M._task = task.spawn(loop) end
+        M._task = task.spawn(loop)
     end
 
     function M.stop()
         M.running = false
         STATE.Flags.Blox = false
-        if M._task then
-            -- allow loop to exit naturally
-            M._task = nil
-        end
-        -- ensure move lock cleared
-        M._moveLock = false
-        STATE.LastAction = "Idle"
+        M._task = nil
     end
 
     function M.ExposeConfig()
         return {
-            { type="slider", name="Range (studs)", min=1, max=80, current=M.config.range, onChange=function(v) M.config.range = v end },
+            { type="slider", name="Range (studs)", min=1, max=50, current=M.config.range, onChange=function(v) M.config.range = v end },
             { type="slider", name="Attack Delay (ms)", min=50, max=1000, current=math.floor(M.config.attack_delay*1000), onChange=function(v) M.config.attack_delay = v/1000 end },
             { type="toggle", name="Fast Attack", current=M.config.fast_attack, onChange=function(v) M.config.fast_attack = v end },
             { type="toggle", name="Long Range Hit", current=M.config.long_range, onChange=function(v) M.config.long_range = v end }
