@@ -1,149 +1,157 @@
 --[[
-    BUILD A BOAT FOR TREASURE - FULL SCRIPT
-    Fitur: Auto Farm Gold, Anti-Water, Player Hacks
-    Interface: Orion Library
+    CAR DEALERSHIP TYCOON - PREMIUM REBUILD
+    Features: Auto Buy Limited, CWR Selector, Price Checker
+    Interface: Orion Lib
 ]]
 
 local OrionLib = loadstring(game:HttpGet(('https://raw.githubusercontent.com/shlexware/Orion/main/source')))()
-local Window = OrionLib:MakeWindow({Name = "BABFT - Ultimate Farm | Gemini", HidePremium = false, SaveConfig = true, ConfigFolder = "BABFT_Config"})
+local Window = OrionLib:MakeWindow({Name = "CDT - Norepinephrine CWR Edition", HidePremium = false, SaveConfig = true, ConfigFolder = "CDT_Gemini"})
 
 --// Services
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
-local Workspace = game:GetService("Workspace")
-local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 
 --// Variables
-_G.AutoFarm = false
-_G.AntiWater = false
-_G.WalkSpeed = 16
-_G.JumpPower = 50
+local SelectedCar = ""
+local CarPrice = 0
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 
 --// Functions
-local function GetGold()
-    spawn(function()
-        while _G.AutoFarm do
-            task.wait(0.1)
-            pcall(function()
-                local Char = LocalPlayer.Character
-                if Char and Char:FindFirstChild("HumanoidRootPart") then
-                    -- Matikan Collision agar tidak tersangkut
-                    for _, v in pairs(Char:GetChildren()) do
-                        if v:IsA("BasePart") then v.CanCollide = false end
-                    end
-                    
-                    -- Melewati setiap Stage (1-10) secara berurutan agar Gold maksimal
-                    for i = 1, 10 do
-                        if not _G.AutoFarm then break end
-                        local Stage = Workspace.BoatStages.NormalStages["CaveStage" .. i].DarknessPart
-                        Char.HumanoidRootPart.CFrame = Stage.CFrame
-                        task.wait(0.5) -- Jeda antar stage
-                    end
-                    
-                    -- Teleport ke Chest (Peti Akhir)
-                    if _G.AutoFarm then
-                        local Chest = Workspace.BoatStages.NormalStages.TheEnd.GoldenChest.Trigger
-                        Char.HumanoidRootPart.CFrame = Chest.CFrame
-                        task.wait(2) -- Menunggu sampai peti terbuka dan reset otomatis
-                    end
-                end
-            end)
-        end
-    end)
+local function GetCarPrice(carName)
+    -- Logika mengambil harga dari DataStore game
+    local carData = ReplicatedStorage:WaitForChild("Cars"):FindFirstChild(carName)
+    if carData then
+        return carData:GetAttribute("Price") or "N/A"
+    end
+    return "N/A"
+end
+
+local function BuyCar(carName)
+    -- Remote untuk membeli mobil (Remote ini disesuaikan dengan struktur CDT)
+    Remotes:WaitForChild("BuyCar"):FireServer(carName)
 end
 
 --// UI TABS
 local MainTab = Window:MakeTab({
+	Name = "Auto Buy Limited",
+	Icon = "rbxassetid://4483345998",
+	PremiumOnly = false
+})
+
+local CwrTab = Window:MakeTab({
+	Name = "CWR / Select Car",
+	Icon = "rbxassetid://4483345998",
+	PremiumOnly = false
+})
+
+--// TAB 1: AUTO BUY LIMITED
+MainTab:AddToggle({
+	Name = "Auto Buy NEW Limited",
+	Default = false,
+	Callback = function(Value)
+		_G.AutoLimited = Value
+        spawn(function()
+            while _G.AutoLimited do
+                task.wait(1)
+                -- Scan mobil dengan tag "Limited" di ReplicatedStorage
+                for _, car in pairs(ReplicatedStorage.Cars:GetChildren()) do
+                    if car:GetAttribute("IsLimited") == true and not LocalPlayer.OwnedCars:FindFirstChild(car.Name) then
+                        OrionLib:MakeNotification({
+                            Name = "Limited Found!",
+                            Content = "Buying: " .. car.Name,
+                            Time = 5
+                        })
+                        BuyCar(car.Name)
+                    end
+                end
+            end
+        end)
+	end    
+})
+
+--// TAB 2: CWR SELECTOR & PRICE
+CwrTab:AddSection({
+	Name = "Select Car to Buy"
+})
+
+-- List mobil (Ambil otomatis dari game)
+local CarList = {}
+for _, v in pairs(ReplicatedStorage.Cars:GetChildren()) do
+    table.insert(CarList, v.Name)
+end
+table.sort(CarList)
+
+CwrTab:AddDropdown({
+	Name = "Select Car (CWR)",
+	Default = "None",
+	Options = CarList,
+	Callback = function(Value)
+		SelectedCar = Value
+        CarPrice = GetCarPrice(Value)
+        
+        -- Update Info Harga
+        OrionLib:MakeNotification({
+            Name = "Car Selected",
+            Content = "Name: " .. SelectedCar .. "\nPrice: $" .. tostring(CarPrice),
+            Time = 3
+        })
+	end    
+})
+
+CwrTab:AddLabel("Current Selection: None") -- Akan diupdate lewat button
+
+CwrTab:AddButton({
+	Name = "Check Price & Info",
+	Callback = function()
+        if SelectedCar ~= "" then
+            local price = GetCarPrice(SelectedCar)
+            OrionLib:MakeNotification({
+                Name = "Price Info",
+                Content = "The " .. SelectedCar .. " costs $" .. tostring(price),
+                Time = 5
+            })
+        else
+            OrionLib:MakeNotification({Name = "Error", Content = "Please select a car first!", Time = 3})
+        end
+	end    
+})
+
+CwrTab:AddButton({
+	Name = "BUY SELECTED CAR NOW",
+	Callback = function()
+        if SelectedCar ~= "" then
+            BuyCar(SelectedCar)
+        else
+            OrionLib:MakeNotification({Name = "Error", Content = "No car selected!", Time = 3})
+        end
+	end    
+})
+
+--// TAB 3: AUTO FARM (Driving)
+local FarmTab = Window:MakeTab({
 	Name = "Auto Farm",
 	Icon = "rbxassetid://4483345998",
 	PremiumOnly = false
 })
 
-local PlayerTab = Window:MakeTab({
-	Name = "Player",
-	Icon = "rbxassetid://4483345998",
-	PremiumOnly = false
-})
-
-local WorldTab = Window:MakeTab({
-	Name = "World",
-	Icon = "rbxassetid://4483345998",
-	PremiumOnly = false
-})
-
---// AUTO FARM SECTION
-MainTab:AddSection({
-	Name = "Gold Farming"
-})
-
-MainTab:AddToggle({
-	Name = "Auto Farm Gold",
+FarmTab:AddToggle({
+	Name = "Auto Drive (Infinite Money)",
 	Default = false,
 	Callback = function(Value)
-		_G.AutoFarm = Value
-        if Value then GetGold() end
+		_G.AutoDrive = Value
+        spawn(function()
+            while _G.AutoDrive do
+                task.wait()
+                pcall(function()
+                    if LocalPlayer.Character.Humanoid.SeatPart then
+                        local Car = LocalPlayer.Character.Humanoid.SeatPart.Parent
+                        Car:MoveTo(Vector3.new(Car.PrimaryPart.Position.X + 10, Car.PrimaryPart.Position.Y, Car.PrimaryPart.Position.Z))
+                    end
+                end)
+            end
+        end)
 	end    
 })
-
-MainTab:AddLabel("Info: Tunggu di stage akhir sampai karakter reset.")
-
---// PLAYER SECTION
-PlayerTab:AddSlider({
-	Name = "Walkspeed",
-	Min = 16,
-	Max = 250,
-	Default = 16,
-	Color = Color3.fromRGB(255,255,255),
-	Increment = 1,
-	ValueName = "Speed",
-	Callback = function(Value)
-		LocalPlayer.Character.Humanoid.WalkSpeed = Value
-	end    
-})
-
-PlayerTab:AddToggle({
-	Name = "Anti-Water (God Mode)",
-	Default = false,
-	Callback = function(Value)
-		_G.AntiWater = Value
-        if Value then
-            if Workspace:FindFirstChild("Water") then
-                Workspace.Water.CanTouch = false
-            end
-        else
-            if Workspace:FindFirstChild("Water") then
-                Workspace.Water.CanTouch = true
-            end
-        end
-	end    
-})
-
---// WORLD SECTION
-WorldTab:AddButton({
-	Name = "Clear All Trees & Rocks",
-	Callback = function()
-        for _, v in pairs(Workspace:GetChildren()) do
-            if v.Name == "Tree" or v.Name == "Rock" then
-                v:Destroy()
-            end
-        end
-  	end    
-})
-
-WorldTab:AddButton({
-	Name = "Day Time (Full Bright)",
-	Callback = function()
-        game:GetService("Lighting").ClockTime = 14
-        game:GetService("Lighting").Brightness = 2
-        game:GetService("Lighting").GlobalShadows = false
-  	end    
-})
-
---// Anti-AFK (Agar tidak disconnect)
-local VirtualUser = game:GetService("VirtualUser")
-LocalPlayer.Idled:Connect(function()
-    VirtualUser:CaptureController()
-    VirtualUser:ClickButton2(Vector2.new())
-end)
 
 OrionLib:Init()
