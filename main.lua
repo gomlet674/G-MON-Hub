@@ -1,6 +1,6 @@
 -- ==========================================================
--- VALTRIX CHEVION - SURVIVE THE APOCALYPSE SCRIPT (V2)
--- Support: Delta, Arceus X, Fluxus, Codex, dll.
+-- VALTRIX CHEVION - SURVIVE THE APOCALYPSE (V3 - STABLE)
+-- 100% Executor Support (Delta, Arceus, Fluxus, Codex, Mac/PC)
 -- ==========================================================
 
 local Players = game:GetService("Players")
@@ -11,11 +11,20 @@ local Workspace = game:GetService("Workspace")
 local Camera = Workspace.CurrentCamera
 
 local LocalPlayer = Players.LocalPlayer
-local guiParent = (pcall(function() return gethui() end) and gethui()) or CoreGui
+
+-- [1] SAFE GUI PARENTING (Mencegah Error di Executor Mobile)
+local guiParent
+local success, result = pcall(function() return gethui() end)
+if success and result then
+    guiParent = result
+else
+    local success2, result2 = pcall(function() return CoreGui end)
+    guiParent = success2 and result2 or LocalPlayer:WaitForChild("PlayerGui")
+end
 
 -- Cleanup UI Lama
-if guiParent:FindFirstChild("ValtrixChevionUI") then
-    guiParent.ValtrixChevionUI:Destroy()
+for _, gui in pairs(guiParent:GetChildren()) do
+    if gui.Name == "ValtrixChevionUI" then gui:Destroy() end
 end
 
 -- Variables Global
@@ -23,16 +32,13 @@ local Toggles = {
     AutoFarmGen = false, AutoFarmItem = false, AutoFarmAirdrop = false, AutoKillZombie = false,
     ESPItem = false, ESPZombie = false, ESPPlayer = false, AutoRevive = false
 }
-local Values = {
-    Speed = 16, -- Diperbaiki: Default normal
-    Jump = 50,  -- Diperbaiki: Default normal
-    ItemFarmCount = 0 -- Untuk simulasi ransel penuh
-}
+local Values = { Speed = 16, Jump = 50, FarmCount = 0 }
 local Connections = {}
 local ActiveESP = {}
+local IsScriptRunning = true
 
 local ValidItems = {"fuel", "scrap", "battery", "bandage", "medkit", "gun", "airdrop"}
-local MeleeWeapons = {"knife", "axe", "hammer", "bat", "fire axe", "machete", "katana"}
+local MeleeWeapons = {"knife", "axe", "hammer", "bat", "fire axe", "machete", "katana", "sword"}
 
 -- ==========================================================
 -- UI CREATION
@@ -40,28 +46,28 @@ local MeleeWeapons = {"knife", "axe", "hammer", "bat", "fire axe", "machete", "k
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "ValtrixChevionUI"
 ScreenGui.ResetOnSpawn = false
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.Parent = guiParent
 
-local ToggleBtn = Instance.new("ImageButton")
+local ToggleBtn = Instance.new("ImageButton", ScreenGui)
 ToggleBtn.Name = "AnimeToggle"
 ToggleBtn.Size = UDim2.new(0, 50, 0, 50)
 ToggleBtn.Position = UDim2.new(0.1, 0, 0.1, 0)
 ToggleBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 ToggleBtn.Image = "rbxassetid://7373335525" 
-ToggleBtn.Parent = ScreenGui
 Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(1, 0)
 local ToggleStroke = Instance.new("UIStroke", ToggleBtn)
 ToggleStroke.Color = Color3.fromRGB(0, 255, 255)
 ToggleStroke.Thickness = 2
 ToggleBtn.Draggable = true
+ToggleBtn.Active = true
 
-local MainFrame = Instance.new("Frame")
+local MainFrame = Instance.new("Frame", ScreenGui)
 MainFrame.Name = "MainFrame"
 MainFrame.Size = UDim2.new(0, 550, 0, 380)
 MainFrame.Position = UDim2.new(0.5, -275, 0.5, -190)
 MainFrame.BackgroundColor3 = Color3.fromRGB(20, 25, 35)
 MainFrame.BorderSizePixel = 0
-MainFrame.Parent = ScreenGui
 MainFrame.Active = true
 MainFrame.Draggable = true
 Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 8)
@@ -76,33 +82,28 @@ RGBGradient.Color = ColorSequence.new({
     ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 0, 0))
 })
 table.insert(Connections, RunService.RenderStepped:Connect(function()
-    RGBGradient.Rotation = (RGBGradient.Rotation + 1) % 360
+    if IsScriptRunning then RGBGradient.Rotation = (RGBGradient.Rotation + 1) % 360 end
 end))
 
--- Header & Player Profile
 local Header = Instance.new("Frame", MainFrame)
 Header.Size = UDim2.new(1, 0, 0, 60)
 Header.BackgroundTransparency = 1
 
-local Title1 = Instance.new("TextLabel", Header)
-Title1.Size = UDim2.new(0, 100, 1, 0)
-Title1.Position = UDim2.new(0, 20, 0, 0)
-Title1.BackgroundTransparency = 1
-Title1.Text = "Valtrix"
-Title1.TextColor3 = Color3.fromRGB(255, 80, 80)
-Title1.Font = Enum.Font.GothamBold
-Title1.TextSize = 28
-Title1.TextXAlignment = Enum.TextXAlignment.Left
+local function CreateText(parent, text, color, pos, size, align)
+    local lbl = Instance.new("TextLabel", parent)
+    lbl.Size = size
+    lbl.Position = pos
+    lbl.BackgroundTransparency = 1
+    lbl.Text = text
+    lbl.TextColor3 = color
+    lbl.Font = Enum.Font.GothamBold
+    lbl.TextSize = 24
+    lbl.TextXAlignment = align
+    return lbl
+end
 
-local Title2 = Instance.new("TextLabel", Header)
-Title2.Size = UDim2.new(0, 150, 1, 0)
-Title2.Position = UDim2.new(0, 120, 0, 0)
-Title2.BackgroundTransparency = 1
-Title2.Text = "Chevion"
-Title2.TextColor3 = Color3.fromRGB(80, 200, 255)
-Title2.Font = Enum.Font.GothamBold
-Title2.TextSize = 28
-Title2.TextXAlignment = Enum.TextXAlignment.Left
+CreateText(Header, "Valtrix", Color3.fromRGB(255, 80, 80), UDim2.new(0, 20, 0, 0), UDim2.new(0, 90, 1, 0), Enum.TextXAlignment.Left)
+CreateText(Header, "Chevion", Color3.fromRGB(80, 200, 255), UDim2.new(0, 110, 0, 0), UDim2.new(0, 120, 1, 0), Enum.TextXAlignment.Left)
 
 local PlayerName = Instance.new("TextLabel", Header)
 PlayerName.Size = UDim2.new(0, 150, 1, 0)
@@ -121,8 +122,10 @@ Avatar.BackgroundColor3 = Color3.fromRGB(40, 45, 55)
 Instance.new("UICorner", Avatar).CornerRadius = UDim.new(1, 0)
 
 task.spawn(function()
-    local content, isReady = Players:GetUserThumbnailAsync(LocalPlayer.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size420x420)
-    if isReady then Avatar.Image = content end
+    pcall(function()
+        local content = Players:GetUserThumbnailAsync(LocalPlayer.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size420x420)
+        Avatar.Image = content
+    end)
 end)
 
 local Line = Instance.new("Frame", MainFrame)
@@ -137,6 +140,9 @@ TabBar.Size = UDim2.new(1, 0, 0, 35)
 TabBar.Position = UDim2.new(0, 0, 0, 61)
 TabBar.BackgroundColor3 = Color3.fromRGB(25, 30, 40)
 TabBar.BorderSizePixel = 0
+local MainLayout = Instance.new("UIListLayout", TabBar)
+MainLayout.FillDirection = Enum.FillDirection.Horizontal
+MainLayout.SortOrder = Enum.SortOrder.LayoutOrder
 
 local TabContainer = Instance.new("Frame", MainFrame)
 TabContainer.Size = UDim2.new(1, -20, 1, -106)
@@ -158,7 +164,7 @@ local function CreateTab(name, isFirst)
     Page.Size = UDim2.new(1, 0, 1, 0)
     Page.BackgroundTransparency = 1
     Page.BorderSizePixel = 0
-    Page.ScrollBarThickness = 4
+    Page.ScrollBarThickness = 3
     Page.Visible = isFirst
 
     local Layout = Instance.new("UIListLayout", Page)
@@ -176,10 +182,6 @@ local function CreateTab(name, isFirst)
     end)
     return Page
 end
-
-local MainLayout = Instance.new("UIListLayout", TabBar)
-MainLayout.FillDirection = Enum.FillDirection.Horizontal
-MainLayout.SortOrder = Enum.SortOrder.LayoutOrder
 
 local PageMain = CreateTab("Main", true)
 local PageVisual = CreateTab("Visual", false)
@@ -231,7 +233,7 @@ local function CreateToggle(parent, text, flag)
     end)
 end
 
-local function CreateInputWithButtons(parent, text, flag, placeholder)
+local function CreateInput(parent, text, flag, placeholder)
     local Frame = Instance.new("Frame", parent)
     Frame.Size = UDim2.new(1, 0, 0, 40)
     Frame.BackgroundColor3 = Color3.fromRGB(30, 35, 45)
@@ -289,19 +291,6 @@ local function CreateInputWithButtons(parent, text, flag, placeholder)
     end)
 end
 
-local function CreateButton(parent, text, color, callback)
-    local Btn = Instance.new("TextButton", parent)
-    Btn.Size = UDim2.new(1, 0, 0, 36)
-    Btn.BackgroundColor3 = color
-    Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    Btn.Font = Enum.Font.GothamBold
-    Btn.TextSize = 13
-    Btn.Text = text
-    Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 6)
-    Btn.MouseButton1Click:Connect(callback)
-    return Btn
-end
-
 local function CreatePlayerActionUI(parent)
     local Frame = Instance.new("Frame", parent)
     Frame.Size = UDim2.new(1, 0, 0, 40)
@@ -317,7 +306,6 @@ local function CreatePlayerActionUI(parent)
     InputBox.Font = Enum.Font.Gotham
     InputBox.TextSize = 13
     Instance.new("UICorner", InputBox).CornerRadius = UDim.new(0, 4)
-    Instance.new("UIStroke", InputBox).Color = Color3.fromRGB(60, 65, 75)
 
     local SpecBtn = Instance.new("TextButton", Frame)
     SpecBtn.Size = UDim2.new(0, 80, 0, 26)
@@ -341,66 +329,76 @@ local function CreatePlayerActionUI(parent)
 
     local isSpectating = false
     SpecBtn.MouseButton1Click:Connect(function()
-        if isSpectating then
-            Camera.CameraSubject = LocalPlayer.Character.Humanoid
-            SpecBtn.Text = "Spectate"
-            isSpectating = false
-        else
-            for _, p in pairs(Players:GetPlayers()) do
-                if string.lower(string.sub(p.Name, 1, #InputBox.Text)) == string.lower(InputBox.Text) then
-                    Camera.CameraSubject = p.Character.Humanoid
-                    SpecBtn.Text = "Unspectate"
-                    isSpectating = true
-                    break
+        pcall(function()
+            if isSpectating then
+                Camera.CameraSubject = LocalPlayer.Character.Humanoid
+                SpecBtn.Text = "Spectate"
+                isSpectating = false
+            else
+                for _, p in pairs(Players:GetPlayers()) do
+                    if string.lower(string.sub(p.Name, 1, #InputBox.Text)) == string.lower(InputBox.Text) and p.Character then
+                        Camera.CameraSubject = p.Character.Humanoid
+                        SpecBtn.Text = "Unspectate"
+                        isSpectating = true
+                        break
+                    end
                 end
             end
-        end
+        end)
     end)
 
     TPBtn.MouseButton1Click:Connect(function()
-        for _, p in pairs(Players:GetPlayers()) do
-            if string.lower(string.sub(p.Name, 1, #InputBox.Text)) == string.lower(InputBox.Text) and p.Character then
-                LocalPlayer.Character.HumanoidRootPart.CFrame = p.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 2)
-                break
+        pcall(function()
+            for _, p in pairs(Players:GetPlayers()) do
+                if string.lower(string.sub(p.Name, 1, #InputBox.Text)) == string.lower(InputBox.Text) and p.Character then
+                    LocalPlayer.Character.HumanoidRootPart.CFrame = p.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 2)
+                    break
+                end
             end
-        end
+        end)
     end)
 end
 
--- ==========================================================
--- ADDING CONTROLS
--- ==========================================================
--- Main
+-- Toggles
 CreateToggle(PageMain, "Auto Farm Generator (Fuel)", "AutoFarmGen")
-CreateToggle(PageMain, "Auto Farm Item (Ke Crafting)", "AutoFarmItem")
+CreateToggle(PageMain, "Auto Farm Item (Crafting)", "AutoFarmItem")
 CreateToggle(PageMain, "Auto Farm Airdrop", "AutoFarmAirdrop")
 CreateToggle(PageMain, "Auto Kill Zombie", "AutoKillZombie")
 
--- Visual
 CreateToggle(PageVisual, "ESP Item (Box & Jarak)", "ESPItem")
 CreateToggle(PageVisual, "ESP Zombie (Health & Jarak)", "ESPZombie")
 CreateToggle(PageVisual, "ESP Player (Health & Jarak)", "ESPPlayer")
 
--- Player
 CreateToggle(PagePlayer, "Auto Revive All Player", "AutoRevive")
 CreatePlayerActionUI(PagePlayer)
 
--- Speed
-CreateInputWithButtons(PageSpeed, "Speed", "Speed", 100)
-CreateInputWithButtons(PageSpeed, "Jump", "Jump", 50)
+CreateInput(PageSpeed, "Speed", "Speed", 16)
+CreateInput(PageSpeed, "Jump", "Jump", 50)
 
--- Misc
-CreateButton(PageMisc, "Unload Script", Color3.fromRGB(150, 40, 40), function()
-    for _, conn in pairs(Connections) do if conn then conn:Disconnect() end end
+-- Unload Button
+local UnloadBtn = Instance.new("TextButton", PageMisc)
+UnloadBtn.Size = UDim2.new(1, 0, 0, 36)
+UnloadBtn.BackgroundColor3 = Color3.fromRGB(150, 40, 40)
+UnloadBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+UnloadBtn.Font = Enum.Font.GothamBold
+UnloadBtn.TextSize = 13
+UnloadBtn.Text = "Unload Script"
+Instance.new("UICorner", UnloadBtn).CornerRadius = UDim.new(0, 6)
+
+UnloadBtn.MouseButton1Click:Connect(function()
+    IsScriptRunning = false
+    for _, conn in pairs(Connections) do pcall(function() conn:Disconnect() end) end
     for _, esp in pairs(ActiveESP) do
-        if esp.Highlight then esp.Highlight:Destroy() end
-        if esp.BillBoard then esp.BillBoard:Destroy() end
-        if esp.Box then esp.Box:Destroy() end
+        pcall(function()
+            if esp.BillBoard then esp.BillBoard:Destroy() end
+            if esp.Highlight then esp.Highlight:Destroy() end
+            if esp.Box then esp.Box:Destroy() end
+        end)
     end
     ScreenGui:Destroy()
 end)
 
--- Toggle Menu
+-- Menu Toggle Logic
 local uiVisible = true
 ToggleBtn.MouseButton1Click:Connect(function()
     uiVisible = not uiVisible
@@ -413,268 +411,237 @@ end)
 
 local function EquipItem(itemName)
     local char = LocalPlayer.Character
-    if not char then return end
-    local backpack = LocalPlayer:FindFirstChild("Backpack")
-    -- Cari di backpack
-    if backpack then
-        for _, item in pairs(backpack:GetChildren()) do
-            if string.find(string.lower(item.Name), itemName) then
-                char.Humanoid:EquipTool(item)
-                return item
+    if not char then return nil end
+    
+    local foundTool = nil
+    pcall(function()
+        local backpack = LocalPlayer:FindFirstChild("Backpack")
+        if backpack then
+            for _, item in pairs(backpack:GetChildren()) do
+                if item:IsA("Tool") and string.find(string.lower(item.Name), itemName) then
+                    char.Humanoid:EquipTool(item)
+                    foundTool = item
+                    return
+                end
             end
         end
-    end
-    -- Cari jika sudah dipegang
-    for _, item in pairs(char:GetChildren()) do
-        if item:IsA("Tool") and string.find(string.lower(item.Name), itemName) then
-            return item
+        for _, item in pairs(char:GetChildren()) do
+            if item:IsA("Tool") and string.find(string.lower(item.Name), itemName) then
+                foundTool = item
+                return
+            end
         end
-    end
-    return nil
+    end)
+    return foundTool
 end
 
-local function CreateEnhancedESP(targetPart, model, textName, color, isItem)
-    if not targetPart then return end
+local function CreateESP(targetPart, model, textName, color, isItem)
+    if not targetPart or not model then return end
     
-    local espData = {}
+    local espData = { Model = model, TargetPart = targetPart, IsItem = isItem }
     
-    -- Text (Nama, Health, Jarak)
-    local bg = Instance.new("BillboardGui", targetPart)
-    bg.Name = "ValtrixESP"
-    bg.Size = UDim2.new(0, 200, 0, 50)
-    bg.AlwaysOnTop = true
-    bg.StudsOffset = Vector3.new(0, isItem and 1 or 3, 0)
-    
-    local txt = Instance.new("TextLabel", bg)
-    txt.Size = UDim2.new(1, 0, 1, 0)
-    txt.BackgroundTransparency = 1
-    txt.TextStrokeTransparency = 0
-    txt.TextColor3 = color
-    txt.Font = Enum.Font.GothamBold
-    txt.TextSize = 12
-    
-    espData.BillBoard = bg
-    espData.TextLabel = txt
-    espData.Model = model
-    espData.TargetPart = targetPart
-    espData.IsItem = isItem
+    pcall(function()
+        local bg = Instance.new("BillboardGui", targetPart)
+        bg.Name = "ValtrixESP"
+        bg.Size = UDim2.new(0, 200, 0, 50)
+        bg.AlwaysOnTop = true
+        bg.StudsOffset = Vector3.new(0, isItem and 1.5 or 3.5, 0)
+        
+        local txt = Instance.new("TextLabel", bg)
+        txt.Size = UDim2.new(1, 0, 1, 0)
+        txt.BackgroundTransparency = 1
+        txt.TextStrokeTransparency = 0.5
+        txt.TextColor3 = color
+        txt.Font = Enum.Font.GothamBold
+        txt.TextSize = 11
+        espData.BillBoard = bg
+        espData.TextLabel = txt
 
-    -- Visualisasi Bounding
-    if isItem then
-        -- BOX 3D untuk Item
-        local box = Instance.new("BoxHandleAdornment", targetPart)
-        box.Adornee = targetPart
-        box.Size = targetPart.Size + Vector3.new(0.1, 0.1, 0.1)
-        box.ZIndex = 10
-        box.AlwaysOnTop = true
-        box.Transparency = 0.5
-        box.Color3 = color
-        espData.Box = box
-    else
-        -- Highlight untuk Karakter
-        local hl = Instance.new("Highlight", model)
-        hl.FillColor = color
-        hl.OutlineColor = Color3.new(1, 1, 1)
-        hl.FillTransparency = 0.6
-        espData.Highlight = hl
-    end
-
-    table.insert(ActiveESP, espData)
+        if isItem then
+            local box = Instance.new("BoxHandleAdornment", targetPart)
+            box.Adornee = targetPart
+            box.Size = targetPart.Size + Vector3.new(0.1, 0.1, 0.1)
+            box.ZIndex = 10
+            box.AlwaysOnTop = true
+            box.Transparency = 0.6
+            box.Color3 = color
+            espData.Box = box
+        else
+            local hl = Instance.new("Highlight", model)
+            hl.FillColor = color
+            hl.OutlineColor = Color3.new(1, 1, 1)
+            hl.FillTransparency = 0.7
+            espData.Highlight = hl
+        end
+        table.insert(ActiveESP, espData)
+    end)
 end
 
 -- ==========================================================
--- MAIN LOOPS
+-- MAIN LOOPS (Aman dari Crash)
 -- ==========================================================
 
--- Loop Logic Fisik & Farm
+-- Heartbeat Loop (Logika Fisik)
 table.insert(Connections, RunService.Heartbeat:Connect(function()
-    local char = LocalPlayer.Character
-    local root = char and char:FindFirstChild("HumanoidRootPart")
-    local hum = char and char:FindFirstChild("Humanoid")
+    if not IsScriptRunning then return end
+    pcall(function()
+        local char = LocalPlayer.Character
+        local root = char and char:FindFirstChild("HumanoidRootPart")
+        local hum = char and char:FindFirstChild("Humanoid")
+        if not char or not root or not hum then return end
 
-    if not char or not root or not hum then return end
+        if Values.Speed ~= 16 then hum.WalkSpeed = Values.Speed end
+        if Values.Jump ~= 50 then hum.JumpPower = Values.Jump hum.UseJumpPower = true end
 
-    -- SPEED & JUMP APPLY
-    if Values.Speed ~= 16 then hum.WalkSpeed = Values.Speed end
-    if Values.Jump ~= 50 then hum.JumpPower = Values.Jump hum.UseJumpPower = true end
-
-    -- AUTO REVIVE ALL
-    if Toggles.AutoRevive then
-        for _, p in pairs(Players:GetPlayers()) do
-            if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("Humanoid") then
-                local phum = p.Character.Humanoid
-                -- Asumsi game menandai player mati/down dengan health rendah atau nama state khusus
-                if phum.Health > 0 and phum.Health < 15 then -- Bisa disesuaikan dengan logic downed game
-                    EquipItem("bandage") or EquipItem("medkit")
-                    root.CFrame = p.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 1)
-                    -- Biasanya klik kiri untuk revive
-                    mouse1click() 
-                    task.wait(1)
-                    -- Setelah hidup, balik ke generator
-                    if phum.Health > 20 then
-                        for _, v in pairs(Workspace:GetDescendants()) do
-                            if string.find(string.lower(v.Name), "generator") then
-                                root.CFrame = v.CFrame * CFrame.new(0, 3, 0)
-                                break
-                            end
+        -- Auto Revive
+        if Toggles.AutoRevive then
+            for _, p in pairs(Players:GetPlayers()) do
+                if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("Humanoid") then
+                    local phum = p.Character.Humanoid
+                    if phum.Health > 0 and phum.Health < 15 then 
+                        local med = EquipItem("bandage") or EquipItem("medkit")
+                        if med then
+                            root.CFrame = p.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 1)
+                            med:Activate() -- Lebih aman dari mouse1click
                         end
                     end
                 end
             end
         end
-    end
 
-    -- AUTO KILL ZOMBIE
-    if Toggles.AutoKillZombie then
-        -- Cari senjata melee
-        local weapon = nil
-        for _, wName in pairs(MeleeWeapons) do
-            weapon = EquipItem(wName)
-            if weapon then break end
-        end
-        
-        if weapon then
-            for _, z in pairs(Workspace:GetDescendants()) do
-                if z:FindFirstChild("Humanoid") and z:FindFirstChild("HumanoidRootPart") and not Players:GetPlayerFromCharacter(z) then
-                    if z.Humanoid.Health > 0 then
-                        root.CFrame = z.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3) -- Teleport ke belakangnya
-                        weapon:Activate() -- Otomatis serang
-                        break
-                    end
-                end
+        -- Auto Kill Zombie
+        if Toggles.AutoKillZombie then
+            local weapon = nil
+            for _, wName in pairs(MeleeWeapons) do
+                weapon = EquipItem(wName)
+                if weapon then break end
             end
-        end
-    end
-
-    -- AUTO FARM GENERATOR (FUEL)
-    if Toggles.AutoFarmGen then
-        EquipItem("backpack") or EquipItem("ransel")
-        if Values.ItemFarmCount < 5 then -- Simulasi ambil 5 fuel sampai "Penuh"
-            for _, v in pairs(Workspace:GetDescendants()) do
-                if v:IsA("BasePart") and string.find(string.lower(v.Name), "fuel") then
-                    root.CFrame = v.CFrame
-                    Values.ItemFarmCount = Values.ItemFarmCount + 1
-                    task.wait(0.5)
-                    break
-                end
-            end
-        else
-            -- Drop ke Generator
-            for _, v in pairs(Workspace:GetDescendants()) do
-                if string.find(string.lower(v.Name), "generator") then
-                    root.CFrame = v.CFrame * CFrame.new(0, 3, 0)
-                    task.wait(1)
-                    -- Simulasi drop (Game specific, ini contoh lepas tools)
-                    for _, tool in pairs(char:GetChildren()) do if tool:IsA("Tool") then tool.Parent = Workspace end end
-                    Values.ItemFarmCount = 0
-                    break
-                end
-            end
-        end
-    end
-
-    -- AUTO FARM ITEM (CRAFTING)
-    if Toggles.AutoFarmItem then
-        EquipItem("backpack") or EquipItem("ransel")
-        if Values.ItemFarmCount < 5 then
-            for _, v in pairs(Workspace:GetDescendants()) do
-                if v:IsA("BasePart") and (string.find(string.lower(v.Name), "scrap") or string.find(string.lower(v.Name), "battery")) then
-                    root.CFrame = v.CFrame
-                    Values.ItemFarmCount = Values.ItemFarmCount + 1
-                    task.wait(0.5)
-                    break
-                end
-            end
-        else
-            -- Drop ke Crafting
-            for _, v in pairs(Workspace:GetDescendants()) do
-                if string.find(string.lower(v.Name), "crafting") or string.find(string.lower(v.Name), "workbench") then
-                    root.CFrame = v.CFrame * CFrame.new(0, 3, 0)
-                    task.wait(1)
-                    Values.ItemFarmCount = 0
-                    break
-                end
-            end
-        end
-    end
-
-    -- AUTO FARM AIRDROP
-    if Toggles.AutoFarmAirdrop then
-        for _, v in pairs(Workspace:GetDescendants()) do
-            if string.find(string.lower(v.Name), "airdrop") or string.find(string.lower(v.Name), "crate") then
-                root.CFrame = v.CFrame * CFrame.new(0, 2, 0)
-                task.wait(1)
-                break
-            end
-        end
-    end
-end))
-
--- Render ESP Update Loop
-table.insert(Connections, RunService.RenderStepped:Connect(function()
-    -- Clear Invalid ESPs
-    for i = #ActiveESP, 1, -1 do
-        local esp = ActiveESP[i]
-        if not esp.Model or not esp.Model.Parent then
-            if esp.BillBoard then esp.BillBoard:Destroy() end
-            if esp.Highlight then esp.Highlight:Destroy() end
-            if esp.Box then esp.Box:Destroy() end
-            table.remove(ActiveESP, i)
-        end
-    end
-
-    local myRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-
-    -- UPDATE ESP TEXT (Jarak & Health)
-    for _, esp in pairs(ActiveESP) do
-        if myRoot and esp.TargetPart then
-            local dist = math.floor((myRoot.Position - esp.TargetPart.Position).Magnitude)
-            
-            if esp.IsItem then
-                esp.TextLabel.Text = esp.Model.Name .. "\n[" .. dist .. "s]"
-            else
-                local hum = esp.Model:FindFirstChild("Humanoid")
-                local hp = hum and math.floor(hum.Health) or 0
-                local maxHp = hum and math.floor(hum.MaxHealth) or 100
-                esp.TextLabel.Text = esp.Model.Name .. "\nHP: " .. hp .. "/" .. maxHp .. " | [" .. dist .. "s]"
-            end
-        end
-    end
-
-    -- SCAN OBJECTS SETIAP 1 DETIK (Biar ga lag)
-    if tick() % 1 < 0.1 then
-        local currentESPModels = {}
-        for _, esp in pairs(ActiveESP) do currentESPModels[esp.Model] = true end
-
-        -- ESP Player
-        if Toggles.ESPPlayer then
-            for _, p in pairs(Players:GetPlayers()) do
-                if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("Head") and not currentESPModels[p.Character] then
-                    CreateEnhancedESP(p.Character.Head, p.Character, p.Name, Color3.fromRGB(0, 255, 0), false)
-                end
-            end
-        end
-
-        -- ESP Zombie / Item
-        if Toggles.ESPZombie or Toggles.ESPItem then
-            for _, v in pairs(Workspace:GetDescendants()) do
-                -- Filter Item
-                if Toggles.ESPItem and v:IsA("BasePart") and not currentESPModels[v] then
-                    local nameL = string.lower(v.Name)
-                    for _, valid in pairs(ValidItems) do
-                        if string.find(nameL, valid) then
-                            CreateEnhancedESP(v, v, v.Name, Color3.fromRGB(255, 255, 0), true)
+            if weapon then
+                for _, z in pairs(Workspace:GetDescendants()) do
+                    if z:FindFirstChild("Humanoid") and z:FindFirstChild("HumanoidRootPart") and not Players:GetPlayerFromCharacter(z) then
+                        if z.Humanoid.Health > 0 then
+                            root.CFrame = z.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
+                            weapon:Activate()
                             break
                         end
                     end
                 end
-                -- Filter Zombie
-                if Toggles.ESPZombie and v:FindFirstChild("Humanoid") and v:FindFirstChild("Head") and not Players:GetPlayerFromCharacter(v) and not currentESPModels[v] then
-                    CreateEnhancedESP(v.Head, v, "Zombie", Color3.fromRGB(255, 0, 0), false)
+            end
+        end
+    end)
+end))
+
+-- Task Spawn lambat untuk Farm & Pemindaian ESP (Mencegah Lag/Crash)
+task.spawn(function()
+    while task.wait(0.5) do
+        if not IsScriptRunning then break end
+        pcall(function()
+            local char = LocalPlayer.Character
+            local root = char and char:FindFirstChild("HumanoidRootPart")
+            if not root then return end
+
+            -- Auto Farm Gen
+            if Toggles.AutoFarmGen then
+                EquipItem("backpack") or EquipItem("ransel")
+                if Values.FarmCount < 5 then
+                    for _, v in pairs(Workspace:GetDescendants()) do
+                        if v:IsA("BasePart") and string.find(string.lower(v.Name), "fuel") then
+                            root.CFrame = v.CFrame
+                            Values.FarmCount = Values.FarmCount + 1
+                            break
+                        end
+                    end
+                else
+                    for _, v in pairs(Workspace:GetDescendants()) do
+                        if string.find(string.lower(v.Name), "generator") then
+                            root.CFrame = v.CFrame * CFrame.new(0, 3, 0)
+                            for _, tool in pairs(char:GetChildren()) do if tool:IsA("Tool") then tool.Parent = Workspace end end
+                            Values.FarmCount = 0
+                            break
+                        end
+                    end
+                end
+            end
+
+            -- Auto Farm Airdrop
+            if Toggles.AutoFarmAirdrop then
+                for _, v in pairs(Workspace:GetDescendants()) do
+                    if string.find(string.lower(v.Name), "airdrop") or string.find(string.lower(v.Name), "crate") then
+                        root.CFrame = v.CFrame * CFrame.new(0, 2, 0)
+                        break
+                    end
+                end
+            end
+        end)
+    end
+end)
+
+-- Task Spawn untuk Scan ESP (Terpisah dari RenderStepped)
+task.spawn(function()
+    while task.wait(1) do
+        if not IsScriptRunning then break end
+        pcall(function()
+            local currentESPModels = {}
+            for i = #ActiveESP, 1, -1 do
+                local esp = ActiveESP[i]
+                if not esp.Model or not esp.Model.Parent then
+                    if esp.BillBoard then esp.BillBoard:Destroy() end
+                    if esp.Highlight then esp.Highlight:Destroy() end
+                    if esp.Box then esp.Box:Destroy() end
+                    table.remove(ActiveESP, i)
+                else
+                    currentESPModels[esp.Model] = true
+                end
+            end
+
+            if Toggles.ESPPlayer then
+                for _, p in pairs(Players:GetPlayers()) do
+                    if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("Head") and not currentESPModels[p.Character] then
+                        CreateESP(p.Character.Head, p.Character, p.Name, Color3.fromRGB(0, 255, 0), false)
+                    end
+                end
+            end
+
+            if Toggles.ESPZombie or Toggles.ESPItem then
+                for _, v in pairs(Workspace:GetDescendants()) do
+                    if Toggles.ESPItem and v:IsA("BasePart") and not currentESPModels[v] then
+                        local nameL = string.lower(v.Name)
+                        for _, valid in pairs(ValidItems) do
+                            if string.find(nameL, valid) then
+                                CreateESP(v, v, v.Name, Color3.fromRGB(255, 255, 0), true)
+                                break
+                            end
+                        end
+                    end
+                    if Toggles.ESPZombie and v:FindFirstChild("Humanoid") and v:FindFirstChild("Head") and not Players:GetPlayerFromCharacter(v) and not currentESPModels[v] then
+                        CreateESP(v.Head, v, "Zombie", Color3.fromRGB(255, 0, 0), false)
+                    end
+                end
+            end
+        end)
+    end
+end)
+
+-- RenderStepped HANYA untuk update Text ESP (Sangat Ringan)
+table.insert(Connections, RunService.RenderStepped:Connect(function()
+    if not IsScriptRunning then return end
+    pcall(function()
+        local myRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if not myRoot then return end
+
+        for _, esp in pairs(ActiveESP) do
+            if esp.TargetPart and esp.TargetPart.Parent then
+                local dist = math.floor((myRoot.Position - esp.TargetPart.Position).Magnitude)
+                if esp.IsItem then
+                    esp.TextLabel.Text = string.upper(esp.Model.Name) .. "\n[" .. dist .. "m]"
+                else
+                    local hum = esp.Model:FindFirstChild("Humanoid")
+                    local hp = hum and math.floor(hum.Health) or 0
+                    esp.TextLabel.Text = (esp.Model.Name == "Zombie" and "ZOMBIE" or string.upper(esp.Model.Name)) .. "\nHP: " .. hp .. " | [" .. dist .. "m]"
                 end
             end
         end
-    end
+    end)
 end))
 
-print("Valtrix Chevion V2 Loaded!")
+print("Valtrix Chevion V3 - Executor Safe Version Loaded!")
