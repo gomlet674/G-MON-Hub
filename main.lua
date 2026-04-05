@@ -249,12 +249,12 @@ local function CheckLootValidity(obj)
 
     local n = obj.Name:lower()
     -- BLACKLIST
-    if n:find("torso") or n:find("cube") or n:find("tin can") or n:find("thin can") or n == "handle" or n == "baseplate" then 
+    if n:find("torso") or n:find("cube") or n:find("tin can") or n:find("thin can") or n == "handle" or n == "baseplate" or n == "main" then 
         return false, nil, nil 
     end
 
     -- ESSENTIALS (Kuning Emas)
-    local essentials = {"refined fuel", "gasoline", "screw", "bloxy cola", "battery", "chips", "mre", "ammo", "spatula", "soft scraps", "jerry can", "fuel", "fuel can", " gas can", "petrol can", "gasoline can", "fuel container", "beans", "chest", "scrap", "scraps", "airdrop", "uzi", "electrucal box"}
+    local essentials = {"refined fuel", "gasoline", "screw", "bloxy cola", "battery", "chips", "mre", "ammo", "spatula", "soft scraps", "jerry can", "fuel", "fuel can", " gas can", "petrol can", "gasoline can", "fuel container", "beans", "chest", "scrap", "scraps", "airdrop", "uzi", "ak47", "m4a1", "sniper"}
     for _, key in ipairs(essentials) do
         if n:find(key) then return true, "ESSENTIAL", Color3.new(1, 0.8, 0) end
     end
@@ -413,7 +413,7 @@ task.spawn(function()
                     local isValid, category, _ = CheckLootValidity(v)
                     if isValid then
                         local n = v.Name:lower()
-                        if _G.Toggles.AutoFarmGen and (n:find("revolver") or n:find("Chips") or n:find("battery") or n:find("Gasoline")) then
+                        if _G.Toggles.AutoFarmGen and (n:find("fuel") or n:find("chips") or n:find("battery") or n:find("scrap")) then
                             target = v break
                         elseif _G.Toggles.AutoFarmItem then
                             target = v break
