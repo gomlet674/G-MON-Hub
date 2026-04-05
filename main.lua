@@ -254,7 +254,7 @@ local function CheckLootValidity(obj)
     end
 
     -- ESSENTIALS (Kuning Emas)
-    local essentials = {"refined fuel", "gasoline", "screw", "bloxy cola", "battery", "chips", "mre", "ammo", "spatula", "soft scraps"}
+    local essentials = {"refined fuel", "gasoline", "screw", "bloxy cola", "battery", "chips", "mre", "ammo", "spatula", "soft scraps", "jerry can", "fuel", "fuel can", " gas can", "petrol can", "gasoline can", "fuel container", "beans", "chest", "scrap", "scraps", "airdrop", "uzi", "electrucal box"}
     for _, key in ipairs(essentials) do
         if n:find(key) then return true, "ESSENTIAL", Color3.new(1, 0.8, 0) end
     end
