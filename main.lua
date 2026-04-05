@@ -1,536 +1,455 @@
 --[[
-    VALTRIX CHEVION V5 - PREMIER EDITION (RGB)
-    Optimized for: Survive The Apocalypse
-    + NEW FEATURES:
-      • Auto Upgrade Generator (Fuel/Refined Fuel deposit → auto level up)
-      • Auto Place Turret (Cari turret di inventory → tempatkan otomatis di sekitar base/generator)
-      • Anti Zombie Night Mode (Deteksi malam otomatis via Lighting.ClockTime → agresif auto-kill zombie + speed boost)
+    VALTRIX CHEVION V22 - ALL-IN-ONE HUB
+    - FEATURE: 3 Separate ESPs (Player, Zombie, Item)
+    - FEATURE: Auto Farm synced with Item ESP Filter
+    - EXCLUDED: Torso, Cube, Tin Can, Thin Can, Baseplate
+    - INCLUDED: Fuel, Screw, Scrap, Battery, MRE, Ammo & Draggable
+    - FULL UI: Spectate, Tween, Kill Aura, RGB Engine
 ]]
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local CoreGui = game:GetService("CoreGui")
+local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
-local Lighting = game:GetService("Lighting")
 
 local LocalPlayer = Players.LocalPlayer
-local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+local Camera = Workspace.CurrentCamera
+_G.Toggles = {
+    Radius = 150,
+    Cooldown = 0.5
+}
+_G.SpecIndex = 1
+local TargetPlr = nil
 
--- =============================================
 -- [1] UI PROTECTOR & RGB ENGINE
--- =============================================
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "ValtrixRGB_Final"
+ScreenGui.Name = "Valtrix_V22_AllInOne"
 pcall(function() ScreenGui.Parent = gethui() or CoreGui end)
 
-local function MakeRGB(object)
+local function SyncRGB(object, flag)
     task.spawn(function()
         while object and object.Parent do
-            local hue = tick() % 5 / 5
-            local color = Color3.fromHSV(hue, 1, 1)
-            if object:IsA("UIStroke") then object.Color = color
-            elseif object:IsA("TextLabel") or object:IsA("TextButton") then
-                object.TextColor3 = color
+            if _G.Toggles[flag] then
+                local color = Color3.fromHSV(tick() % 5 / 5, 1, 1)
+                if object:IsA("UIStroke") then object.Color = color
+                elseif object:IsA("TextLabel") or object:IsA("TextButton") then object.TextColor3 = color end
+            else
+                local offColor = Color3.fromRGB(180, 180, 180)
+                if object:IsA("UIStroke") then object.Color = Color3.fromRGB(45, 45, 50)
+                elseif object:IsA("TextLabel") or object:IsA("TextButton") then object.TextColor3 = offColor end
             end
             RunService.RenderStepped:Wait()
         end
     end)
 end
 
--- =============================================
--- [2] MAIN FRAME + TAB SYSTEM + USER INFO
--- =============================================
+-- [2] MAIN FRAME
 local Main = Instance.new("Frame", ScreenGui)
-Main.Size = UDim2.new(0, 560, 0, 420)
-Main.Position = UDim2.new(0.5, -280, 0.5, -210)
-Main.BackgroundColor3 = Color3.fromRGB(10, 10, 12)
+Main.Size = UDim2.new(0, 600, 0, 550)
+Main.Position = UDim2.new(0.5, -300, 0.5, -275)
+Main.BackgroundColor3 = Color3.fromRGB(12, 12, 15)
 Main.BorderSizePixel = 0
 Main.Active = true
 Main.Draggable = true
 Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 12)
 
 local Border = Instance.new("UIStroke", Main)
-Border.Thickness = 2.5
-MakeRGB(Border)
+Border.Thickness = 3
+_G.Toggles["MainUI"] = true
+SyncRGB(Border, "MainUI")
 
-local Title = Instance.new("TextLabel", Main)
-Title.Size = UDim2.new(1, 0, 0, 45)
-Title.Text = "VALTRIX CHEVION V5 - SURVIVE THE APOCALYPSE"
-Title.BackgroundTransparency = 1
-Title.Font = Enum.Font.GothamBold
-Title.TextSize = 19
-Title.TextColor3 = Color3.new(1, 1, 1)
-MakeRGB(Title)
-
-local UserInfo = Instance.new("TextLabel", Main)
-UserInfo.Size = UDim2.new(0, 220, 0, 30)
-UserInfo.Position = UDim2.new(1, -230, 0, 8)
-UserInfo.BackgroundTransparency = 1
-UserInfo.Text = "👤 " .. LocalPlayer.DisplayName
-UserInfo.TextColor3 = Color3.fromRGB(255, 215, 0)
-UserInfo.Font = Enum.Font.GothamBold
-UserInfo.TextSize = 15
-UserInfo.TextXAlignment = Enum.TextXAlignment.Right
-MakeRGB(UserInfo)
-
-local TabBar = Instance.new("Frame", Main)
-TabBar.Size = UDim2.new(1, 0, 0, 40)
-TabBar.Position = UDim2.new(0, 0, 0, 45)
-TabBar.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
-Instance.new("UICorner", TabBar).CornerRadius = UDim.new(0, 8)
-
-local TabContainers = {}
-local function CreateTab(displayText)
-    local btn = Instance.new("TextButton", TabBar)
-    btn.Size = UDim2.new(0, 105, 1, -6)
-    btn.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
-    btn.Text = displayText
-    btn.Font = Enum.Font.GothamBold
-    btn.TextSize = 14
-    btn.TextColor3 = Color3.new(0.8, 0.8, 0.8)
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
-
-    local container = Instance.new("ScrollingFrame", Main)
-    container.Size = UDim2.new(1, -20, 1, -100)
-    container.Position = UDim2.new(0, 10, 0, 90)
-    container.BackgroundTransparency = 1
-    container.ScrollBarThickness = 3
-    container.Visible = false
-    container.CanvasSize = UDim2.new(0, 0, 0, 0)
-    Instance.new("UIListLayout", container).Padding = UDim.new(0, 8)
-
-    btn.MouseButton1Click:Connect(function()
-        for _, c in pairs(TabContainers) do c.Visible = false end
-        container.Visible = true
-    end)
-
-    table.insert(TabContainers, container)
-    return container
+local function CreateWinBtn(txt, pos, color, func)
+    local b = Instance.new("TextButton", Main)
+    b.Size = UDim2.new(0, 25, 0, 25)
+    b.Position = pos
+    b.Text = txt
+    b.BackgroundColor3 = color
+    b.TextColor3 = Color3.new(1,1,1)
+    b.Font = Enum.Font.GothamBold
+    Instance.new("UICorner", b)
+    b.MouseButton1Click:Connect(func)
+    return b
 end
 
-local MainTab   = CreateTab("MAIN")
-local VisualTab = CreateTab("VISUAL")
-local PlayerTab = CreateTab("PLAYER")
-local SpeedTab  = CreateTab("SPEED")
-local MiscTab   = CreateTab("MISC")
+CreateWinBtn("X", UDim2.new(1, -35, 0, 10), Color3.fromRGB(180, 50, 50), function() ScreenGui:Destroy() end)
+CreateWinBtn("—", UDim2.new(1, -65, 0, 10), Color3.fromRGB(60, 60, 70), function() Main.Visible = false end)
 
-MainTab.Visible = true
+-- Profile UI
+local Profile = Instance.new("Frame", Main)
+Profile.Size = UDim2.new(1, -20, 0, 60)
+Profile.Position = UDim2.new(0, 10, 0, 45)
+Profile.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+Instance.new("UICorner", Profile)
 
--- =============================================
--- [3] TOGGLE BUILDER
--- =============================================
-_G.Toggles = {}
-local function AddToggle(parent, text, flag, default)
-    default = default or false
-    _G.Toggles[flag] = default
+local Av = Instance.new("ImageLabel", Profile)
+Av.Size = UDim2.new(0, 50, 0, 50)
+Av.Position = UDim2.new(0, 5, 0, 5)
+Av.BackgroundTransparency = 1
+Instance.new("UICorner", Av).CornerRadius = UDim.new(1, 0)
+Av.Image = Players:GetUserThumbnailAsync(LocalPlayer.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size420x420)
 
-    local btn = Instance.new("TextButton", parent)
-    btn.Size = UDim2.new(1, 0, 0, 42)
-    btn.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
-    btn.Text = "  " .. text .. ": " .. (default and "ON" or "OFF")
-    btn.TextColor3 = default and Color3.new(1,1,1) or Color3.new(0.7,0.7,0.7)
-    btn.Font = Enum.Font.GothamBold
-    btn.TextSize = 14
-    btn.TextXAlignment = Enum.TextXAlignment.Left
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
+local Welcome = Instance.new("TextLabel", Profile)
+Welcome.Size = UDim2.new(1, -70, 1, 0)
+Welcome.Position = UDim2.new(0, 65, 0, 0)
+Welcome.Text = "LOGGED AS: " .. LocalPlayer.DisplayName:upper()
+Welcome.TextColor3 = Color3.new(1, 1, 1)
+Welcome.Font = Enum.Font.GothamBold
+Welcome.TextSize = 14
+Welcome.TextXAlignment = Enum.TextXAlignment.Left
+Welcome.BackgroundTransparency = 1
 
-    local stroke = Instance.new("UIStroke", btn)
-    stroke.Thickness = 1.5
-    stroke.Color = Color3.fromRGB(40, 40, 45)
+-- [3] SPECTATE PANEL (INDEPENDENT)
+local SpecPanel = Instance.new("Frame", Main)
+SpecPanel.Size = UDim2.new(0.38, -10, 0, 410)
+SpecPanel.Position = UDim2.new(0.62, 0, 0, 115)
+SpecPanel.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
+Instance.new("UICorner", SpecPanel)
 
-    btn.MouseButton1Click:Connect(function()
+local Viewport = Instance.new("ViewportFrame", SpecPanel)
+Viewport.Size = UDim2.new(1, 0, 0, 180)
+Viewport.BackgroundTransparency = 1
+
+local SpecName = Instance.new("TextLabel", SpecPanel)
+SpecName.Size = UDim2.new(1, 0, 0, 25)
+SpecName.Position = UDim2.new(0, 0, 0, 185)
+SpecName.Text = "Target: None"
+SpecName.TextColor3 = Color3.new(0, 1, 1)
+SpecName.Font = Enum.Font.GothamBold
+SpecName.BackgroundTransparency = 1
+
+local function UpdateViewport(plr)
+    Viewport:ClearAllChildren()
+    if not plr or not plr.Character then return end
+    plr.Character.Archivable = true
+    local clone = plr.Character:Clone()
+    clone.Parent = Viewport
+    local vCam = Instance.new("Camera")
+    vCam.CFrame = CFrame.new(clone.HumanoidRootPart.Position + clone.HumanoidRootPart.CFrame.LookVector * 6 + Vector3.new(0,2,0), clone.HumanoidRootPart.Position)
+    Viewport.CurrentCamera = vCam
+    vCam.Parent = Viewport
+    SpecName.Text = plr.DisplayName
+end
+
+local function CreateSpecBtn(txt, pos, color)
+    local b = Instance.new("TextButton", SpecPanel)
+    b.Size = UDim2.new(1, -20, 0, 32)
+    b.Position = pos
+    b.Text = txt
+    b.BackgroundColor3 = color
+    b.TextColor3 = Color3.new(1,1,1)
+    b.Font = Enum.Font.GothamBold
+    b.TextSize = 11
+    Instance.new("UICorner", b)
+    return b
+end
+
+local NextBtn = CreateSpecBtn("NEXT PLAYER", UDim2.new(0, 10, 0, 220), Color3.fromRGB(40, 40, 50))
+local RefreshBtn = CreateSpecBtn("REFRESH LIST", UDim2.new(0, 10, 0, 257), Color3.fromRGB(40, 40, 50))
+local SpecToggleBtn = CreateSpecBtn("SPECTATE: OFF", UDim2.new(0, 10, 0, 294), Color3.fromRGB(60, 40, 40))
+local TweenPlrBtn = CreateSpecBtn("TWEEN TO PLAYER", UDim2.new(0, 10, 0, 331), Color3.fromRGB(40, 60, 40))
+
+NextBtn.MouseButton1Click:Connect(function()
+    local plrs = Players:GetPlayers()
+    _G.SpecIndex = _G.SpecIndex + 1
+    if _G.SpecIndex > #plrs then _G.SpecIndex = 1 end
+    TargetPlr = plrs[_G.SpecIndex]
+    if TargetPlr == LocalPlayer then _G.SpecIndex = _G.SpecIndex + 1 TargetPlr = plrs[_G.SpecIndex] end
+    UpdateViewport(TargetPlr)
+end)
+
+RefreshBtn.MouseButton1Click:Connect(function()
+    _G.SpecIndex = 1
+    TargetPlr = nil
+    SpecName.Text = "Refreshing..."
+    task.wait(0.5)
+    UpdateViewport(Players:GetPlayers()[1])
+end)
+
+SpecToggleBtn.MouseButton1Click:Connect(function()
+    _G.Toggles.Spectate = not _G.Toggles.Spectate
+    SpecToggleBtn.Text = "SPECTATE: " .. (_G.Toggles.Spectate and "ON" or "OFF")
+    SpecToggleBtn.BackgroundColor3 = _G.Toggles.Spectate and Color3.fromRGB(40, 60, 40) or Color3.fromRGB(60, 40, 40)
+    if _G.Toggles.Spectate and TargetPlr and TargetPlr.Character then Camera.CameraSubject = TargetPlr.Character.Humanoid else Camera.CameraSubject = LocalPlayer.Character.Humanoid end
+end)
+
+-- [4] UI TOGGLES & INPUTS
+local Container = Instance.new("ScrollingFrame", Main)
+Container.Size = UDim2.new(0.6, 0, 1, -125)
+Container.Position = UDim2.new(0, 10, 0, 115)
+Container.BackgroundTransparency = 1
+Container.ScrollBarThickness = 2
+Instance.new("UIListLayout", Container).Padding = UDim.new(0, 6)
+
+local function AddToggle(text, flag)
+    local b = Instance.new("TextButton", Container)
+    b.Size = UDim2.new(1, -10, 0, 40)
+    b.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+    b.Text = "  " .. text .. ": OFF"
+    b.TextColor3 = Color3.new(0.7, 0.7, 0.7)
+    b.Font = Enum.Font.GothamBold
+    b.TextSize = 12
+    b.TextXAlignment = Enum.TextXAlignment.Left
+    Instance.new("UICorner", b)
+    local s = Instance.new("UIStroke", b)
+    s.Thickness = 1.5
+    s.Color = Color3.fromRGB(45, 45, 50)
+    SyncRGB(s, flag)
+    SyncRGB(b, flag)
+    b.MouseButton1Click:Connect(function()
         _G.Toggles[flag] = not _G.Toggles[flag]
-        btn.Text = "  " .. text .. ": " .. (_G.Toggles[flag] and "ON" or "OFF")
-        if _G.Toggles[flag] then
-            MakeRGB(stroke)
-            btn.TextColor3 = Color3.new(1, 1, 1)
-        else
-            stroke.Color = Color3.fromRGB(40, 40, 45)
-            btn.TextColor3 = Color3.new(0.7, 0.7, 0.7)
-        end
+        b.Text = "  " .. text .. ": " .. (_G.Toggles[flag] and "ON" or "OFF")
     end)
 end
 
--- =============================================
--- [4] DETECTION FUNCTIONS
--- =============================================
-local FarmableKeywords = {"fuel", "battery", "bloxy cola", "chips", "beans", "spatula", "ak47", "uzi", "m4a1", "revolver", "knife", "grenade", "molotov", "screws"}
+local function AddInput(text, flag, min, max, default)
+    local Frame = Instance.new("Frame", Container)
+    Frame.Size = UDim2.new(1, -10, 0, 40)
+    Frame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+    Instance.new("UICorner", Frame)
 
-local function IsFarmableItem(v)
-    if not v or (v.Transparency and v.Transparency >= 1) then return false end
-    local name = v.Name:lower()
-    for _, kw in ipairs(FarmableKeywords) do
-        if name:find(kw) then return true end
-    end
-    return false
-end
+    local Lbl = Instance.new("TextLabel", Frame)
+    Lbl.Size = UDim2.new(0.6, 0, 1, 0)
+    Lbl.Position = UDim2.new(0, 10, 0, 0)
+    Lbl.Text = text
+    Lbl.TextColor3 = Color3.new(1,1,1)
+    Lbl.Font = Enum.Font.GothamBold
+    Lbl.TextSize = 12
+    Lbl.BackgroundTransparency = 1
+    Lbl.TextXAlignment = Enum.TextXAlignment.Left
 
-local function IsFuelItem(v) -- termasuk Refined Fuel untuk upgrade tinggi
-    if not v or (v.Transparency and v.Transparency >= 1) then return false end
-    local name = v.Name:lower()
-    return name:find("fuel") or name:find("gas") or name:find("gasoline") or name:find("can") or name:find("refined")
-end
+    local Box = Instance.new("TextBox", Frame)
+    Box.Size = UDim2.new(0.3, 0, 0.7, 0)
+    Box.Position = UDim2.new(0.65, 0, 0.15, 0)
+    Box.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+    Box.TextColor3 = Color3.new(0, 1, 0.5)
+    Box.Font = Enum.Font.GothamBold
+    Box.Text = tostring(default)
+    Instance.new("UICorner", Box)
 
-local function IsTurretItem(v)
-    if not v or not v:IsA("Tool") then return false end
-    local name = v.Name:lower()
-    return name:find("turret")
-end
-
-local RepairableKeywords = {"wall", "fence", "gate", "door", "turret", "generator", "craft", "bench", "barricade"}
-
-local function IsRepairableBase(part)
-    if not part or not part:IsA("BasePart") or part.Transparency >= 1 then return false end
-    local name = part.Name:lower()
-    for _, kw in ipairs(RepairableKeywords) do
-        if name:find(kw) then return true end
-    end
-    return false
-end
-
-local function HasTool(keyword)
-    local char = LocalPlayer.Character
-    local bp = LocalPlayer:FindFirstChild("Backpack")
-    for _, container in ipairs({char, bp}) do
-        if container then
-            for _, tool in ipairs(container:GetChildren()) do
-                if tool:IsA("Tool") and tool.Name:lower():find(keyword) then
-                    return tool
-                end
-            end
-        end
-    end
-    return nil
-end
-
--- =============================================
--- [5] BACKPACK + DROP + NIGHT DETECTION
--- =============================================
-_G.BackpackSlots = 20
-
-local function GetBackpackCount()
-    local count = 0
-    local bp = LocalPlayer:FindFirstChild("Backpack")
-    local char = LocalPlayer.Character
-    if bp then count += #bp:GetChildren() end
-    if char then
-        for _, v in ipairs(char:GetChildren()) do if v:IsA("Tool") then count += 1 end end
-    end
-    return count
-end
-
-local function IsBackpackFull() return GetBackpackCount() >= _G.BackpackSlots end
-
-local function DropAllItems()
-    pcall(function()
-        local char = LocalPlayer.Character
-        local bp = LocalPlayer:FindFirstChild("Backpack")
-        for _, cont in ipairs({char, bp}) do
-            if cont then
-                for _, t in ipairs(cont:GetChildren()) do
-                    if t:IsA("Tool") then t.Parent = Workspace end
-                end
-            end
-        end
+    Box.FocusLost:Connect(function()
+        local val = tonumber(Box.Text)
+        if val then val = math.clamp(val, min, max) _G.Toggles[flag] = val Box.Text = tostring(val) end
     end)
 end
 
-local function IsNight()
-    local time = Lighting.ClockTime
-    return time >= 18 or time <= 6
+AddToggle("Auto Fuel Generator (Fuel)", "AutoFarmGen")
+AddToggle("Auto Farm All Loot", "AutoFarmItem")
+AddToggle("Kill Aura (Fast Hit)", "KillAura")
+AddToggle("ESP Players", "ESPPlayer")
+AddToggle("ESP Zombies", "ESPZombie")
+AddToggle("ESP Loot Items", "ESPItem")
+AddInput("ESP Radius Limit (m)", "Radius", 5, 5000, 150)
+AddInput("Scan Cooldown (s)", "Cooldown", 0.1, 5, 0.5)
+
+-- [5] SMART LOOT FILTER
+local function CheckLootValidity(obj)
+    -- Cegah anggota tubuh zombie terdeteksi sebagai item
+    if obj.Parent and obj.Parent:FindFirstChild("Humanoid") then return false, nil, nil end
+
+    local n = obj.Name:lower()
+    -- BLACKLIST
+    if n:find("torso") or n:find("cube") or n:find("tin can") or n:find("thin can") or n == "handle" or n == "baseplate" then 
+        return false, nil, nil 
+    end
+
+    -- ESSENTIALS (Kuning Emas)
+    local essentials = {"refined fuel", "gasoline", "screw", "bloxy cola", "battery", "chips", "mre", "ammo", "spatula", "soft scraps"}
+    for _, key in ipairs(essentials) do
+        if n:find(key) then return true, "ESSENTIAL", Color3.new(1, 0.8, 0) end
+    end
+
+    -- DRAGGABLES (Hijau Cyan)
+    if obj:FindFirstChildOfClass("ProximityPrompt") or obj:FindFirstChildOfClass("ClickDetector") or obj:IsA("Tool") then
+        return true, "LOOT", Color3.new(0, 1, 0.7)
+    end
+
+    return false, nil, nil
 end
 
--- =============================================
--- [6] ESP (sama seperti sebelumnya)
--- =============================================
-local function CreateESP(part, name, color, isItem)
-    if part:FindFirstChild("VTag") then return end
-    local bg = Instance.new("BillboardGui", part)
-    bg.Name = "VTag"
-    bg.Size = UDim2.new(0, 160, 0, 55)
-    bg.AlwaysOnTop = true
-    bg.StudsOffset = Vector3.new(0, 2.5, 0)
+-- [6] 3-WAY ESP ENGINE
+local function ApplyESP(obj, name, color, category)
+    if obj:FindFirstChild("ValtrixESP") then return end
 
-    local tl = Instance.new("TextLabel", bg)
-    tl.Size = UDim2.new(1, 0, 1, 0)
-    tl.BackgroundTransparency = 1
-    tl.TextColor3 = color
-    tl.Font = Enum.Font.GothamBold
-    tl.TextSize = 12
-    tl.TextStrokeTransparency = 0
+    local bGui = Instance.new("BillboardGui", obj)
+    bGui.Name = "ValtrixESP"
+    bGui.Size = UDim2.new(0, 120, 0, 40)
+    bGui.AlwaysOnTop = true
+    
+    local label = Instance.new("TextLabel", bGui)
+    label.Size = UDim2.new(1, 0, 1, 0)
+    label.BackgroundTransparency = 1
+    label.TextColor3 = color
+    label.TextStrokeTransparency = 0.5
+    label.Font = Enum.Font.GothamBold
+    label.TextSize = 11
 
-    local box = Instance.new("SelectionBox", part)
-    box.Adornee = part
-    box.LineThickness = 0.08
+    local box = Instance.new("SelectionBox", obj)
+    box.Name = "ValtrixBox"
+    box.Adornee = obj
     box.Color3 = color
-    box.Transparency = 0.4
+    box.LineThickness = 0.05
+    box.Transparency = 0.5
 
     task.spawn(function()
-        while part and part.Parent and ScreenGui.Parent do
-            local root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-            if root then
-                local dist = math.floor((root.Position - part.Position).Magnitude)
-                local info = name .. "\n[" .. dist .. "m]"
-                if not isItem then
-                    local hum = part.Parent:FindFirstChild("Humanoid")
-                    if hum then info = name .. "\nHP: " .. math.floor(hum.Health) .. " [" .. dist .. "m]" end
+        while obj and obj.Parent do
+            local enabled = false
+            -- Pengecekan kategori ESP
+            if category == "Player" and _G.Toggles.ESPPlayer then enabled = true
+            elseif category == "Zombie" and _G.Toggles.ESPZombie then enabled = true
+            elseif category == "Item" and _G.Toggles.ESPItem then enabled = true end
+
+            local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+            if hrp and enabled then
+                local dist = (hrp.Position - obj.Position).Magnitude
+                if dist <= _G.Toggles.Radius then
+                    label.Visible = true
+                    box.Visible = true
+                    label.Text = name:upper() .. "\n[" .. math.floor(dist) .. "m]"
+                else
+                    label.Visible = false
+                    box.Visible = false
                 end
-                tl.Text = info
-
-                local visible = false
-                if isItem and _G.Toggles.ESPItem then visible = true
-                elseif name == "ZOMBIE" and _G.Toggles.ESPZombie then visible = true
-                elseif not isItem and name \~= "ZOMBIE" and _G.Toggles.ESPPlayer then visible = true end
-
-                tl.Visible = visible
-                box.Visible = visible
+            else
+                label.Visible = false
+                box.Visible = false
             end
-            task.wait(0.15)
+            task.wait(_G.Toggles.Cooldown)
         end
     end)
 end
 
--- =============================================
--- [7] MAIN ENGINE: AUTO FARM + AUTO UPGRADE + AUTO TURRET + ANTI NIGHT
--- =============================================
-local AvailableFarmItems = {}
-local lastTeleport = 0
-local TELEPORT_COOLDOWN = 0.85
-local lastRepair = 0
-local REPAIR_COOLDOWN = 1.3
-local lastTurretPlace = 0
-local TURRET_COOLDOWN = 8 -- cooldown antar penempatan turret
-
--- Smart Scanner
 task.spawn(function()
-    while task.wait(2) do
-        if not ScreenGui.Parent then break end
-        AvailableFarmItems = {}
-        for _, v in ipairs(Workspace:GetDescendants()) do
-            if IsFarmableItem(v) then
-                local handle = v:IsA("Tool") and (v:FindFirstChild("Handle") or v:FindFirstChildWhichIsA("BasePart")) or v
-                if handle then table.insert(AvailableFarmItems, handle) end
+    while true do
+        pcall(function()
+            -- 1. Scan Players
+            for _, p in pairs(Players:GetPlayers()) do
+                if not (p == LocalPlayer) and p.Character then
+                    local hrp = p.Character:FindFirstChild("HumanoidRootPart")
+                    if hrp then ApplyESP(hrp, p.DisplayName, Color3.new(0, 1, 1), "Player") end
+                end
+            end
+            
+            -- 2. Scan Zombies & Items
+            for _, v in pairs(Workspace:GetDescendants()) do
+                -- Cek apakah dia Zombie
+                if v:IsA("Humanoid") and not Players:GetPlayerFromCharacter(v.Parent) then
+                    local zhrp = v.Parent:FindFirstChild("HumanoidRootPart")
+                    if zhrp then ApplyESP(zhrp, "ZOMBIE", Color3.new(1, 0, 0), "Zombie") end
+                else
+                    -- Jika bukan Zombie, cek apakah dia Item Valid
+                    local isValid, cat, color = CheckLootValidity(v)
+                    if isValid then
+                        local root = v:IsA("BasePart") and v or v:FindFirstChildWhichIsA("BasePart")
+                        if root then ApplyESP(root, v.Name, color, "Item") end
+                    end
+                end
+            end
+        end)
+        task.wait(_G.Toggles.Cooldown * 3)
+    end
+end)
+
+-- [7] TWEEN ENGINE
+local function SmoothTween(targetCF, speed)
+    local char = LocalPlayer.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+    local dist = (char.HumanoidRootPart.Position - targetCF.Position).Magnitude
+    local tInfo = TweenInfo.new(dist/(speed or 50), Enum.EasingStyle.Linear)
+    local tween = TweenService:Create(char.HumanoidRootPart, tInfo, {CFrame = targetCF})
+    
+    local nc = RunService.Stepped:Connect(function()
+        if LocalPlayer.Character then
+            for _, v in pairs(LocalPlayer.Character:GetDescendants()) do
+                if v:IsA("BasePart") then v.CanCollide = false end
             end
         end
-    end
-end)
-
-task.spawn(function()
-    while task.wait(0.4) do
-        if not ScreenGui.Parent then break end
-        pcall(function()
-            local root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-            if not root then return end
-
-            -- === AUTO UPGRADE GENERATOR (Fuel deposit = upgrade) ===
-            if _G.Toggles.AutoUpgradeGenerator then
-                local fuelFound = false
-                for _, item in ipairs(AvailableFarmItems) do
-                    if item and item.Parent and IsFuelItem(item) then
-                        if tick() - lastTeleport >= TELEPORT_COOLDOWN then
-                            local offset = CFrame.new(math.random(-1,1), 3, math.random(-1,1))
-                            root.CFrame = item.CFrame * offset
-                            lastTeleport = tick()
-                            fuelFound = true
-                            task.wait(0.35)
-                            break
-                        end
-                    end
-                end
-
-                if (IsBackpackFull() or not fuelFound) and tick() - lastTeleport >= 2 then
-                    local generator = nil
-                    for _, v in ipairs(Workspace:GetDescendants()) do
-                        if v.Name:lower():find("generator") then
-                            generator = v
-                            break
-                        end
-                    end
-                    if generator then
-                        root.CFrame = generator.CFrame * CFrame.new(0, 4, 2)
-                        task.wait(0.6)
-                        DropAllItems() -- deposit fuel = auto upgrade level
-                        print("⚡ Auto Upgrade Generator: Fuel deposited → Level up!")
-                        task.wait(1.2)
-                    end
-                end
-            end
-
-            -- === AUTO PLACE TURRET ===
-            if _G.Toggles.AutoPlaceTurret and tick() - lastTurretPlace >= TURRET_COOLDOWN then
-                local turretTool = HasTool("turret")
-                if turretTool then
-                    local generator = nil
-                    for _, v in ipairs(Workspace:GetDescendants()) do
-                        if v.Name:lower():find("generator") then generator = v break end
-                    end
-                    if generator then
-                        -- 4 posisi aman di sekitar generator (elevated tower style)
-                        local positions = {
-                            generator.CFrame * CFrame.new(12, 5, 0),
-                            generator.CFrame * CFrame.new(-12, 5, 0),
-                            generator.CFrame * CFrame.new(0, 5, 12),
-                            generator.CFrame * CFrame.new(0, 5, -12)
-                        }
-                        for _, pos in ipairs(positions) do
-                            root.CFrame = pos
-                            task.wait(0.3)
-                            if turretTool.Parent \~= LocalPlayer.Character then
-                                turretTool.Parent = LocalPlayer.Character
-                                task.wait(0.2)
-                            end
-                            turretTool:Activate()
-                            print("🛡️ Auto Place Turret: Placed at safe spot")
-                            lastTurretPlace = tick()
-                            task.wait(2)
-                            break
-                        end
-                    end
-                end
-            end
-
-            -- === ANTI ZOMBIE NIGHT MODE ===
-            if _G.Toggles.AntiZombieNight and IsNight() then
-                -- Agresif auto-kill zombie + speed boost malam
-                _G.SpeedValue = 80 -- boost malam
-                local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid")
-                if hum then hum.WalkSpeed = 80 end
-
-                -- Teleport ke zombie terdekat & serang (melee)
-                local closestZombie = nil
-                local minDist = math.huge
-                for _, v in ipairs(Workspace:GetDescendants()) do
-                    if v:IsA("Humanoid") and not Players:GetPlayerFromCharacter(v.Parent) then
-                        local hrp = v.Parent:FindFirstChild("HumanoidRootPart")
-                        if hrp then
-                            local dist = (root.Position - hrp.Position).Magnitude
-                            if dist < minDist and dist < 80 then
-                                minDist = dist
-                                closestZombie = hrp
-                            end
-                        end
-                    end
-                end
-                if closestZombie and tick() - lastTeleport >= 0.6 then
-                    root.CFrame = closestZombie.CFrame * CFrame.new(0, 0, -3)
-                    lastTeleport = tick()
-                    -- Simulasi serang melee (jika ada tool melee)
-                    local melee = HasTool("knife") or HasTool("melee")
-                    if melee then
-                        melee.Parent = LocalPlayer.Character
-                        melee:Activate()
-                    end
-                    task.wait(0.4)
-                end
-            else
-                if _G.SpeedValue == 80 then _G.SpeedValue = 50 end -- reset speed
-            end
-
-            -- AUTO FARM BIASA + AUTO REPAIR (tetap berjalan)
-            if _G.Toggles.AutoFarmGen or _G.Toggles.AutoFarmItem then
-                -- (kode lama AutoFarm tetap sama, saya ringkas di sini)
-            end
-
-            if _G.Toggles.AutoRepairBase then
-                -- (kode repair lama tetap sama)
-            end
-        end)
-    end
-end)
-
--- ESP Scanner (sama seperti sebelumnya)
-task.spawn(function()
-    while task.wait(1.4) do
-        if not ScreenGui.Parent then break end
-        pcall(function()
-            for _, p in ipairs(Players:GetPlayers()) do
-                if p \~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-                    CreateESP(p.Character.HumanoidRootPart, p.DisplayName, Color3.fromRGB(0, 255, 120), false)
-                end
-            end
-            for _, v in ipairs(Workspace:GetDescendants()) do
-                if v:IsA("Humanoid") and not Players:GetPlayerFromCharacter(v.Parent) then
-                    local hrp = v.Parent:FindFirstChild("HumanoidRootPart")
-                    if hrp then CreateESP(hrp, "ZOMBIE", Color3.fromRGB(255, 50, 50), false) end
-                end
-                if IsFarmableItem(v) then
-                    local part = v:IsA("Tool") and (v:FindFirstChild("Handle") or v:FindFirstChildWhichIsA("BasePart")) or v
-                    if part then CreateESP(part, v.Name:upper(), Color3.fromRGB(255, 240, 80), true) end
-                end
-            end
-        end)
-    end
-end)
-
--- =============================================
--- [8] TOGGLES BARU
--- =============================================
-AddToggle(MainTab, "⚡ Auto Upgrade Generator (Fuel → Level Up)", "AutoUpgradeGenerator")
-AddToggle(MainTab, "Auto Farm Items → Crafting", "AutoFarmItem")
-AddToggle(MainTab, "Auto Farm Generator Mode", "AutoFarmGen")
-AddToggle(MainTab, "Auto Farm Airdrop", "AutoFarmAirdrop")
-
-AddToggle(VisualTab, "ESP Player", "ESPPlayer", true)
-AddToggle(VisualTab, "ESP Zombie", "ESPZombie", true)
-AddToggle(VisualTab, "ESP All Items", "ESPItem", true)
-
-AddToggle(MiscTab, "🛡️ Auto Place Turret (Around Base)", "AutoPlaceTurret")
-AddToggle(MiscTab, "🌙 Anti Zombie Night Mode (Auto Kill + Boost)", "AntiZombieNight")
-AddToggle(MiscTab, "🔧 Auto Repair Base (Hammer)", "AutoRepairBase")
-
--- Speed Tab, Unload Button, dll (sama seperti sebelumnya)
-local speedBox = Instance.new("TextBox", SpeedTab)
-speedBox.Size = UDim2.new(1, -20, 0, 40)
-speedBox.Position = UDim2.new(0, 10, 0, 10)
-speedBox.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
-speedBox.Text = "50"
-speedBox.Font = Enum.Font.Gotham
-speedBox.TextSize = 16
-speedBox.TextColor3 = Color3.new(1,1,1)
-Instance.new("UICorner", speedBox).CornerRadius = UDim.new(0, 8)
-speedBox.FocusLost:Connect(function() _G.SpeedValue = tonumber(speedBox.Text) or 50 end)
-
-local unloadBtn = Instance.new("TextButton", MiscTab)
-unloadBtn.Size = UDim2.new(1, -20, 0, 50)
-unloadBtn.Position = UDim2.new(0, 10, 1, -70)
-unloadBtn.BackgroundColor3 = Color3.fromRGB(170, 0, 0)
-unloadBtn.Text = "🚪 UNLOAD SCRIPT"
-unloadBtn.Font = Enum.Font.GothamBold
-unloadBtn.TextSize = 16
-unloadBtn.TextColor3 = Color3.new(1,1,1)
-Instance.new("UICorner", unloadBtn).CornerRadius = UDim.new(0, 10)
-unloadBtn.MouseButton1Click:Connect(function()
-    ScreenGui:Destroy()
-    print("VALTRIX CHEVION V5 UNLOADED!")
-end)
-
--- =============================================
--- [9] SPEED + CHARACTER HANDLER
--- =============================================
-RunService.Stepped:Connect(function()
-    pcall(function()
-        local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid")
-        if hum and _G.SpeedValue then hum.WalkSpeed = _G.SpeedValue end
     end)
+    tween:Play()
+    tween.Completed:Wait()
+    nc:Disconnect()
+end
+
+TweenPlrBtn.MouseButton1Click:Connect(function()
+    if TargetPlr and TargetPlr.Character then SmoothTween(TargetPlr.Character.HumanoidRootPart.CFrame, 80) end
 end)
 
-LocalPlayer.CharacterAdded:Connect(function(newChar)
-    Character = newChar
-    task.wait(1)
+-- [8] AUTO FARM & KILL AURA LOOP
+task.spawn(function()
+    while task.wait(0.1) do
+        pcall(function()
+            local char = LocalPlayer.Character
+            local hum = char:FindFirstChild("Humanoid")
+            
+            -- KILL AURA
+            if _G.Toggles.KillAura then
+                local weapon = nil
+                local wList = {"Fire Axe", "Spear", "Spiked Bat", "Crowbar", "Bat", "Knife", "Uzi"}
+                for _, n in ipairs(wList) do 
+                    weapon = LocalPlayer.Backpack:FindFirstChild(n) or char:FindFirstChild(n)
+                    if weapon then break end
+                end
+                
+                for _, v in pairs(Workspace:GetDescendants()) do
+                    if v:IsA("Humanoid") and v.Health > 0 and not Players:GetPlayerFromCharacter(v.Parent) then
+                        local zhrp = v.Parent:FindFirstChild("HumanoidRootPart")
+                        if zhrp and (zhrp.Position - char.HumanoidRootPart.Position).Magnitude < 100 then
+                            hum:EquipTool(weapon)
+                            char.HumanoidRootPart.CFrame = zhrp.CFrame * CFrame.new(0, 0, 3)
+                            if weapon then weapon:Activate() end
+                            break
+                        end
+                    end
+                end
+            end
+
+            -- SYNCED AUTO FARM (Hanya Farm Item yang Valid di Filter)
+            if _G.Toggles.AutoFarmItem or _G.Toggles.AutoFarmGen then
+                local bag = char:FindFirstChild("Bag") or char:FindFirstChild("Backpack") or LocalPlayer.Backpack:FindFirstChild("Bag") or LocalPlayer.Backpack:FindFirstChild("Backpack")
+                if bag then hum:EquipTool(bag) end
+                
+                local target = nil
+                for _, v in pairs(Workspace:GetDescendants()) do
+                    local isValid, category, _ = CheckLootValidity(v)
+                    if isValid then
+                        local n = v.Name:lower()
+                        if _G.Toggles.AutoFarmGen and (n:find("revolver") or n:find("Chips") or n:find("battery") or n:find("Gasoline")) then
+                            target = v break
+                        elseif _G.Toggles.AutoFarmItem then
+                            target = v break
+                        end
+                    end
+                end
+
+                if target then
+                    local handle = target:IsA("BasePart") and target or target:FindFirstChildWhichIsA("BasePart")
+                    if handle then
+                        SmoothTween(handle.CFrame, 60)
+                        task.wait(0.2)
+                        if bag then bag:Activate() end
+                    end
+                end
+            end
+        end)
+    end
 end)
 
--- =============================================
--- [10] FINAL INIT
--- =============================================
-print("🚀 VALTRIX CHEVION V5 + AUTO UPGRADE GENERATOR + AUTO TURRET + ANTI NIGHT LOADED!")
-print("   ✅ Auto Upgrade: Deposit fuel → Generator level up otomatis")
-print("   ✅ Auto Turret: Tempatkan turret aman di sekitar base")
-print("   ✅ Anti Night: Deteksi malam → auto kill zombie + speed boost")
+-- [9] TOGGLE "V" BUTTON
+local VBtn = Instance.new("TextButton", ScreenGui)
+VBtn.Size = UDim2.new(0, 50, 0, 50)
+VBtn.Position = UDim2.new(0, 20, 0.5, 0)
+VBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+VBtn.Text = "V"
+VBtn.Font = Enum.Font.GothamBold
+VBtn.TextSize = 20
+VBtn.Active = true
+VBtn.Draggable = true
+Instance.new("UICorner", VBtn).CornerRadius = UDim.new(1, 0)
+local VStroke = Instance.new("UIStroke", VBtn)
+VStroke.Thickness = 2
+_G.Toggles["VBtn"] = true
+SyncRGB(VStroke, "VBtn")
+SyncRGB(VBtn, "VBtn")
+VBtn.MouseButton1Click:Connect(function() Main.Visible = not Main.Visible end)
 
-_G.Toggles.AutoUpgradeGenerator = false
-_G.Toggles.AutoPlaceTurret = false
-_G.Toggles.AntiZombieNight = false
-_G.Toggles.ESPPlayer = true
-_G.Toggles.ESPZombie = true
-_G.Toggles.ESPItem = true
-_G.SpeedValue = 50
+print("VALTRIX V22 - ALL-IN-ONE HUB LOADED!")
