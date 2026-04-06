@@ -13,8 +13,8 @@ local BLOX_FRUIT_UNIVERSE_ID = {"275391552, 4442272183, 7449925010"}
 local SURVIVE_APOCALYPSE_IDS = {"90148635862803"}
 
 local Scripts = {
-    ["Blox Fruits"] = "loadstring(game:HttpGet("https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/Blox fruit.lua"))()",
-    ["Survive the Apocalypse"] = "loadstring(game:HttpGet("https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/Survive the apocalypse.lua"))()"
+    ["Blox Fruits"] = "loadstring(game:HttpGet("https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/Blox20%fruit.lua"))()",
+    ["Survive the Apocalypse"] = "loadstring(game:HttpGet("https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/Survive20%the20%apocalypse.lua"))()"
 }
 
 -- =========================
