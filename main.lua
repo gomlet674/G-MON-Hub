@@ -1,18 +1,16 @@
--- [[ G-MON HUB UNIVERSAL LOADER ]] --
--- Auto Detect: Blox Fruits & Survive the Apocalypse
+-- [[ G-MON HUB UNIVERSAL LOADER - FIXED ]] --
 
 local Players = game:GetService("Players")
-local HttpService = game:GetService("HttpService")
 local StarterGui = game:GetService("StarterGui")
 
 -- =========================
 -- CONFIGURATION
 -- =========================
 
--- ID Game Blox Fruits (Sea 1, 2, 3, dan Pro)
-local BloxFruitsIDs = {275391552, 4442272183, 7449925010, 15302685710} 
+-- Menggunakan UniverseId lebih stabil karena tidak berubah antar Sea
+local BLOX_FRUIT_UNIVERSE_ID = 110991616 
 -- ID Game Survive the Apocalypse
-local SurviveApocalypseIDs = {9098570654} -- Ganti/Tambah ID jika ada map lain
+local SURVIVE_APOCALYPSE_IDS = {9098570654, 15302685710}
 
 local Scripts = {
     ["Blox Fruits"] = "https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/Blox%20fruit.lua",
@@ -34,24 +32,36 @@ local function Notify(title, text)
     end)
 end
 
-local function getHttpRequest()
-    return (syn and syn.request) or (http and http.request) or http_request or request or (game and game.HttpGet)
-end
-
+-- Fungsi HTTP yang lebih kuat
 local function safeHttpGet(url)
-    local req = getHttpRequest()
-    if not req then return nil end
-    
     local success, result
-    if type(req) == "function" and req == game.HttpGet then
-        success, result = pcall(function() return game:HttpGet(url) end)
-    else
+    
+    -- Coba berbagai metode request yang didukung executor
+    local requestFunc = (syn and syn.request) or (http and http.request) or http_request or request
+    
+    if requestFunc then
         success, result = pcall(function()
-            local res = req({Url = url, Method = "GET"})
-            return res.Body
+            local response = requestFunc({
+                Url = url,
+                Method = "GET"
+            })
+            return response.Body
         end)
     end
-    return success and result or nil
+    
+    -- Jika gagal atau bukan executor premium, gunakan game:HttpGet
+    if not success or not result then
+        success, result = pcall(function()
+            return game:HttpGet(url)
+        end)
+    end
+    
+    -- Validasi hasil (Cek jika 404 atau kosong)
+    if success and result and not result:find("404: Not Found") and #result > 0 then
+        return result
+    end
+    
+    return nil
 end
 
 -- =========================
@@ -59,15 +69,14 @@ end
 -- =========================
 
 local function detectGame()
-    local currentId = game.PlaceId
-    
-    -- Cek Blox Fruits
-    for _, id in ipairs(BloxFruitsIDs) do
-        if currentId == id then return "Blox Fruits" end
+    -- Cek via UniverseId (Sangat Akurat untuk Blox Fruits)
+    if game.GameId == BLOX_FRUIT_UNIVERSE_ID then
+        return "Blox Fruits"
     end
     
-    -- Cek Survive the Apocalypse
-    for _, id in ipairs(SurviveApocalypseIDs) do
+    -- Cek via PlaceId (Untuk Survive the Apocalypse)
+    local currentId = game.PlaceId
+    for _, id in ipairs(SURVIVE_APOCALYPSE_IDS) do
         if currentId == id then return "Survive the Apocalypse" end
     end
     
@@ -82,9 +91,10 @@ local detectedGameName = detectGame()
 
 if detectedGameName then
     Notify("DETECTED!", "Game: " .. detectedGameName)
-    Notify("LOADING", "Tunggu sebentar, sedang mengambil script...")
     
     local scriptUrl = Scripts[detectedGameName]
+    print("[DEBUG] Fetching URL: " .. scriptUrl) -- Muncul di pencet F9 (Console)
+    
     local source = safeHttpGet(scriptUrl)
     
     if source then
@@ -93,23 +103,27 @@ if detectedGameName then
             local success, err = pcall(function()
                 local executed = load(source)
                 if type(executed) == "function" then
-                    executed()
+                    -- Jalankan script di thread baru agar tidak mengganggu loader
+                    task.spawn(executed)
+                else
+                    error("Script GitHub tidak mengembalikan fungsi yang valid.")
                 end
             end)
             
             if success then
-                Notify("SUCCESS", detectedGameName .. " Script Loaded!")
+                Notify("SUCCESS", detectedGameName .. " Loaded!")
             else
-                warn("Error executing script:", err)
-                Notify("ERROR", "Gagal menjalankan script.")
+                warn("Execution Error:", err)
+                Notify("ERROR", "Gagal menjalankan script: " .. tostring(err))
             end
         else
-            Notify("ERROR", "Executor tidak mendukung loadstring.")
+            Notify("ERROR", "Executor Anda tidak mendukung Loadstring.")
         end
     else
-        Notify("ERROR", "Gagal mengambil data dari GitHub.")
+        -- Jika gagal ambil data
+        warn("[G-MON] Gagal mengambil data dari URL. Pastikan Link Raw benar.")
+        Notify("ERROR", "Gagal mengambil data dari GitHub (Check Console/F9)")
     end
 else
-    Notify("UNKNOWN GAME", "Game tidak terdaftar di G-MON Hub.")
-    print("PlaceId Anda:", game.PlaceId)
+    Notify("UNKNOWN GAME", "Game tidak terdaftar. ID: " .. game.PlaceId)
 end
