@@ -13,7 +13,7 @@ local httprequest = (syn and syn.request) or (http and http.request) or http_req
 
 -- CONFIG
 local SAVED_KEYFILE   = "gmon_hub_key.txt"
-local GET_KEY_URL     = "https://key-system-production-5986.up.railway.app/start"
+local GET_KEY_URL     = "https://lootdest.org/s?Rz0xk547"
 local VERIFY_KEY_URL  = "https://key-system-production-5986.up.railway.app/verify"
 local MAIN_SCRIPT_URL = "https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/main.lua"
 
