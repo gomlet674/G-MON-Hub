@@ -2,26 +2,34 @@
 
 repeat task.wait() until game:IsLoaded()
 
--- Layanan Roblox
-local Players    = game:GetService("Players")
-local StarterGui = game:GetService("StarterGui")
+-- Layanan Roblox & Executor HTTP
+local Players     = game:GetService("Players")
+local StarterGui  = game:GetService("StarterGui")
 local HttpService = game:GetService("HttpService")
 
--- Pengaturan Key
-local VALID_KEY     = "GmonHub311851f3c742a8f78dce99e56992555609d23497928e9b33802e7127610c2e"
-local SAVED_KEYFILE = "gmon_key.txt"
-local GET_KEY_URL   = "https://linkvertise.com/1209226/get-key-gmon-hub-script"
+-- Mendukung berbagai macam Executor (Delta, Fluxus, Synapse, Krnl, dll)
+local httprequest = (syn and syn.request) or (http and http.request) or http_request or (fluxus and fluxus.request) or request
 
--- URL script utama
+-- Pengaturan Sistem
+local SAVED_KEYFILE   = "gmon_key.txt"
+local GET_KEY_URL     = "https://key-system-production-5986.up.railway.app/start"
+local VERIFY_KEY_URL  = "https://key-system-production-5986.up.railway.app/verify"
 local MAIN_SCRIPT_URL = "https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/main.lua"
 
 -- Notifikasi
 local function showNotification(title, text, duration)
-    StarterGui:SetCore("SendNotification", {
-        Title = title,
-        Text = text,
-        Duration = duration or 3,
-    })
+    pcall(function()
+        StarterGui:SetCore("SendNotification", {
+            Title = title,
+            Text = text,
+            Duration = duration or 3,
+        })
+    end)
+end
+
+if not httprequest then
+    showNotification("GMON Hub", "Executor Anda tidak support HTTP Request!", 5)
+    return
 end
 
 -- Fungsi load script utama
@@ -32,29 +40,34 @@ local function loadMainScript()
 
     if not ok then
         warn("GMON Loader: gagal load main.lua")
+        showNotification("Error", "Gagal memuat script utama.", 3)
         return
     end
 
-    if type(Main) ~= "table" then
-        warn("GMON Loader: main.lua tidak return table")
+    if type(Main) ~= "table" or type(Main.Start) ~= "function" then
+        warn("GMON Loader: Struktur main.lua tidak valid")
         return
     end
 
-    if type(Main.Start) ~= "function" then
-        warn("GMON Loader: Start() tidak ditemukan di main.lua")
-        return
-    end
-
-    -- 🔥 AMAN 100%
     Main.Start()
 end
 
--- GUI Key
+-- GUI Key System
+local CoreGui = game:GetService("CoreGui")
 local loaderGui = Instance.new("ScreenGui")
-loaderGui.Name           = "GMON_Loader"
+loaderGui.Name           = "GMON_Loader_Secure"
 loaderGui.ResetOnSpawn   = false
 loaderGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-loaderGui.Parent         = game:GetService("CoreGui")
+
+-- Proteksi agar tidak mudah dideteksi anticheat
+if gethui then
+    loaderGui.Parent = gethui()
+elseif syn and syn.protect_gui then
+    syn.protect_gui(loaderGui)
+    loaderGui.Parent = CoreGui
+else
+    loaderGui.Parent = CoreGui
+end
 
 -- Background anime
 local bg = Instance.new("ImageLabel", loaderGui)
@@ -104,6 +117,8 @@ KeyBox.Position         = UDim2.new(0.05,0,0.35,0)
 KeyBox.BackgroundColor3 = Color3.fromRGB(40,40,40)
 KeyBox.Font             = Enum.Font.Gotham
 KeyBox.TextColor3       = Color3.new(1,1,1)
+KeyBox.TextXAlignment   = Enum.TextXAlignment.Center
+KeyBox.ClearTextOnFocus = false
 Instance.new("UICorner", KeyBox).CornerRadius = UDim.new(0,8)
 
 -- Tombol Submit
@@ -126,42 +141,84 @@ GetKey.Font             = Enum.Font.GothamSemibold
 GetKey.TextColor3       = Color3.new(1,1,1)
 Instance.new("UICorner", GetKey).CornerRadius = UDim.new(0,8)
 
--- Fungsi validasi
-local function submitKey(key)
-    if key == VALID_KEY then
-        writefile(SAVED_KEYFILE, key)
-        showNotification("Key Valid", "Loading G-Mon Hub…", 2)
-        task.wait(0.5)
-        loaderGui:Destroy()
-        loadMainScript()
-        return true
+-- Fungsi Verifikasi ke API Server
+local function verifyKeyServer(key)
+    if key == "" then return false end
+    
+    local success, response = pcall(function()
+        return httprequest({
+            Url = VERIFY_KEY_URL,
+            Method = "POST",
+            Headers = {
+                ["Content-Type"] = "application/json"
+            },
+            Body = HttpService:JSONEncode({key = key})
+        })
+    end)
+
+    if success and response.StatusCode == 200 then
+        local data = HttpService:JSONDecode(response.Body)
+        return data.valid == true
     end
+    
     return false
+end
+
+-- Fungsi eksekusi setelah valid
+local function onKeyValid(key)
+    writefile(SAVED_KEYFILE, key)
+    showNotification("Key Valid", "Loading G-Mon Hub…", 2)
+    Submit.Text = "Verified!"
+    Submit.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+    task.wait(0.5)
+    loaderGui:Destroy()
+    loadMainScript()
 end
 
 -- Auto-submit jika key tersimpan
 if isfile(SAVED_KEYFILE) then
-    local saved = readfile(SAVED_KEYFILE)
-    if submitKey(saved) then return end
+    local savedKey = readfile(SAVED_KEYFILE)
+    if savedKey and savedKey ~= "" then
+        Submit.Text = "Checking Saved Key..."
+        if verifyKeyServer(savedKey) then
+            onKeyValid(savedKey)
+            return -- Hentikan eksekusi UI lebih lanjut karena sudah valid
+        else
+            Submit.Text = "Saved Key Expired"
+            task.wait(1.5)
+            Submit.Text = "Submit"
+        end
+    end
 end
 
--- Event tombol
+-- Event tombol Get Key
 GetKey.MouseButton1Click:Connect(function()
     setclipboard(GET_KEY_URL)
-    showNotification("G-Mon Hub", "Get Key link copied!", 2)
+    showNotification("G-Mon Hub", "Link Get Key disalin ke clipboard!", 3)
 end)
 
+-- Event tombol Submit
 Submit.MouseButton1Click:Connect(function()
-    local k = KeyBox.Text or ""
-    if k == "" then
-        Submit.Text = "Enter Key"
-        task.wait(2)
+    local inputKey = KeyBox.Text:gsub("%s+", "") -- Hapus spasi
+    
+    if inputKey == "" then
+        Submit.Text = "Key cannot be empty!"
+        Submit.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+        task.wait(1.5)
         Submit.Text = "Submit"
+        Submit.BackgroundColor3 = Color3.fromRGB(0,170,127)
         return
     end
-    if not submitKey(k) then
-        Submit.Text = "Invalid!"
-        task.wait(2)
+
+    Submit.Text = "Verifying..."
+    
+    if verifyKeyServer(inputKey) then
+        onKeyValid(inputKey)
+    else
+        Submit.Text = "Invalid / Expired!"
+        Submit.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+        task.wait(1.5)
         Submit.Text = "Submit"
+        Submit.BackgroundColor3 = Color3.fromRGB(0,170,127)
     end
 end)
