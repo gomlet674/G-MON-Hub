@@ -12,7 +12,7 @@ local StarterGui = game:GetService("StarterGui")
 -- ID Game Blox Fruits (Sea 1, 2, 3, dan Pro)
 local BloxFruitsIDs = {275391552, 4442272183, 7449925010, 15302685710} 
 -- ID Game Survive the Apocalypse
-local SurviveApocalypseIDs = {15302685710} -- Ganti/Tambah ID jika ada map lain
+local SurviveApocalypseIDs = {9098570654} -- Ganti/Tambah ID jika ada map lain
 
 local Scripts = {
     ["Blox Fruits"] = "https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/Blox%20fruit.lua",
