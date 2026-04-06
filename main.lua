@@ -1,10 +1,12 @@
 --[[
     VALTRIX CHEVION V22 - ALL-IN-ONE HUB
     - FEATURE: 3 Separate ESPs (Player, Zombie, Item)
-    - FEATURE: Auto Farm synced with Item ESP Filter
+    - FEATURE: Auto Farm synced with Item ESP Filter (Fuel Generator & Loots)
+    - NEW FEATURES: Auto Revive, No Recoil, Inf Ammo, Full Bright, No Fog, Fly
     - EXCLUDED: Torso, Cube, Tin Can, Thin Can, Baseplate
     - INCLUDED: Fuel, Screw, Scrap, Battery, MRE, Ammo & Draggable
-    - FULL UI: Spectate, Tween, Kill Aura, RGB Engine
+    - FULL UI: Spectate, Tween, Kill Aura, RGB Engine, Credits & Playtime
+    - UPDATE: April 5, 2026
 ]]
 
 local Players = game:GetService("Players")
@@ -12,19 +14,24 @@ local RunService = game:GetService("RunService")
 local CoreGui = game:GetService("CoreGui")
 local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
+local Lighting = game:GetService("Lighting")
+local UserInputService = game:GetService("UserInputService")
 
 local LocalPlayer = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
 _G.Toggles = {
     Radius = 150,
-    Cooldown = 0.5
+    Cooldown = 0.5,
+    FlySpeed = 50
 }
 _G.SpecIndex = 1
 local TargetPlr = nil
+local SessionTime = 0
 
 -- [1] UI PROTECTOR & RGB ENGINE
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "Valtrix_V22_AllInOne"
+ScreenGui.Name = "Valtrix_Chevion_V22"
+ScreenGui.ResetOnSpawn = false
 pcall(function() ScreenGui.Parent = gethui() or CoreGui end)
 
 local function SyncRGB(object, flag)
@@ -59,6 +66,17 @@ Border.Thickness = 3
 _G.Toggles["MainUI"] = true
 SyncRGB(Border, "MainUI")
 
+local Title = Instance.new("TextLabel", Main)
+Title.Size = UDim2.new(1, -100, 0, 30)
+Title.Position = UDim2.new(0, 15, 0, 5)
+Title.Text = "VALTRIX CHEVION V22"
+Title.TextColor3 = Color3.new(1, 1, 1)
+Title.Font = Enum.Font.GothamBlack
+Title.TextSize = 18
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.BackgroundTransparency = 1
+SyncRGB(Title, "MainUI")
+
 local function CreateWinBtn(txt, pos, color, func)
     local b = Instance.new("TextButton", Main)
     b.Size = UDim2.new(0, 25, 0, 25)
@@ -87,7 +105,7 @@ Av.Size = UDim2.new(0, 50, 0, 50)
 Av.Position = UDim2.new(0, 5, 0, 5)
 Av.BackgroundTransparency = 1
 Instance.new("UICorner", Av).CornerRadius = UDim.new(1, 0)
-Av.Image = Players:GetUserThumbnailAsync(LocalPlayer.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size420x420)
+pcall(function() Av.Image = Players:GetUserThumbnailAsync(LocalPlayer.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size420x420) end)
 
 local Welcome = Instance.new("TextLabel", Profile)
 Welcome.Size = UDim2.new(1, -70, 1, 0)
@@ -119,16 +137,18 @@ SpecName.Font = Enum.Font.GothamBold
 SpecName.BackgroundTransparency = 1
 
 local function UpdateViewport(plr)
-    Viewport:ClearAllChildren()
-    if not plr or not plr.Character then return end
-    plr.Character.Archivable = true
-    local clone = plr.Character:Clone()
-    clone.Parent = Viewport
-    local vCam = Instance.new("Camera")
-    vCam.CFrame = CFrame.new(clone.HumanoidRootPart.Position + clone.HumanoidRootPart.CFrame.LookVector * 6 + Vector3.new(0,2,0), clone.HumanoidRootPart.Position)
-    Viewport.CurrentCamera = vCam
-    vCam.Parent = Viewport
-    SpecName.Text = plr.DisplayName
+    pcall(function()
+        Viewport:ClearAllChildren()
+        if not plr or not plr.Character then return end
+        plr.Character.Archivable = true
+        local clone = plr.Character:Clone()
+        clone.Parent = Viewport
+        local vCam = Instance.new("Camera")
+        vCam.CFrame = CFrame.new(clone.HumanoidRootPart.Position + clone.HumanoidRootPart.CFrame.LookVector * 6 + Vector3.new(0,2,0), clone.HumanoidRootPart.Position)
+        Viewport.CurrentCamera = vCam
+        vCam.Parent = Viewport
+        SpecName.Text = plr.DisplayName
+    end)
 end
 
 local function CreateSpecBtn(txt, pos, color)
@@ -170,7 +190,9 @@ SpecToggleBtn.MouseButton1Click:Connect(function()
     _G.Toggles.Spectate = not _G.Toggles.Spectate
     SpecToggleBtn.Text = "SPECTATE: " .. (_G.Toggles.Spectate and "ON" or "OFF")
     SpecToggleBtn.BackgroundColor3 = _G.Toggles.Spectate and Color3.fromRGB(40, 60, 40) or Color3.fromRGB(60, 40, 40)
-    if _G.Toggles.Spectate and TargetPlr and TargetPlr.Character then Camera.CameraSubject = TargetPlr.Character.Humanoid else Camera.CameraSubject = LocalPlayer.Character.Humanoid end
+    pcall(function()
+        if _G.Toggles.Spectate and TargetPlr and TargetPlr.Character then Camera.CameraSubject = TargetPlr.Character.Humanoid else Camera.CameraSubject = LocalPlayer.Character.Humanoid end
+    end)
 end)
 
 -- [4] UI TOGGLES & INPUTS
@@ -178,8 +200,13 @@ local Container = Instance.new("ScrollingFrame", Main)
 Container.Size = UDim2.new(0.6, 0, 1, -125)
 Container.Position = UDim2.new(0, 10, 0, 115)
 Container.BackgroundTransparency = 1
-Container.ScrollBarThickness = 2
-Instance.new("UIListLayout", Container).Padding = UDim.new(0, 6)
+Container.ScrollBarThickness = 4
+Container.AutomaticCanvasSize = Enum.AutomaticSize.Y
+local layout = Instance.new("UIListLayout", Container)
+layout.Padding = UDim.new(0, 6)
+layout.SortOrder = Enum.SortOrder.LayoutOrder
+
+local LayoutCounter = 1
 
 local function AddToggle(text, flag)
     local b = Instance.new("TextButton", Container)
@@ -190,6 +217,8 @@ local function AddToggle(text, flag)
     b.Font = Enum.Font.GothamBold
     b.TextSize = 12
     b.TextXAlignment = Enum.TextXAlignment.Left
+    b.LayoutOrder = LayoutCounter
+    LayoutCounter = LayoutCounter + 1
     Instance.new("UICorner", b)
     local s = Instance.new("UIStroke", b)
     s.Thickness = 1.5
@@ -206,6 +235,8 @@ local function AddInput(text, flag, min, max, default)
     local Frame = Instance.new("Frame", Container)
     Frame.Size = UDim2.new(1, -10, 0, 40)
     Frame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+    Frame.LayoutOrder = LayoutCounter
+    LayoutCounter = LayoutCounter + 1
     Instance.new("UICorner", Frame)
 
     local Lbl = Instance.new("TextLabel", Frame)
@@ -233,18 +264,98 @@ local function AddInput(text, flag, min, max, default)
     end)
 end
 
-AddToggle("Auto Fuel Generator (Fuel)", "AutoFarmGen")
 AddToggle("Auto Farm All Loot", "AutoFarmItem")
+AddToggle("Auto Fuel Generator", "AutoFarmGen")
 AddToggle("Kill Aura (Fast Hit)", "KillAura")
 AddToggle("ESP Players", "ESPPlayer")
 AddToggle("ESP Zombies", "ESPZombie")
 AddToggle("ESP Loot Items", "ESPItem")
+
+-- New Features Toggles
+AddToggle("Auto Revive Player", "AutoRevive")
+AddToggle("No Recoil (Guns)", "NoRecoil")
+AddToggle("Infinity Ammo", "InfAmmo")
+AddToggle("Full Brightness", "FullBright")
+AddToggle("No Fog / Clear Vision", "NoFog")
+AddToggle("Fly Mode", "FlyMode")
+
 AddInput("ESP Radius Limit (m)", "Radius", 5, 5000, 150)
 AddInput("Scan Cooldown (s)", "Cooldown", 0.1, 5, 0.5)
+AddInput("Fly Speed", "FlySpeed", 10, 500, 50)
 
--- [5] SMART LOOT FILTER
+-- [5] CREDITS & PLAYTIME SECTION
+local CreditFrame = Instance.new("Frame", Container)
+CreditFrame.Size = UDim2.new(1, -10, 0, 110)
+CreditFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
+CreditFrame.LayoutOrder = 9999 -- Pastikan selalu di paling bawah
+Instance.new("UICorner", CreditFrame)
+local cs = Instance.new("UIStroke", CreditFrame)
+cs.Thickness = 1.5
+cs.Color = Color3.fromRGB(0, 255, 200)
+
+local CTitle = Instance.new("TextLabel", CreditFrame)
+CTitle.Size = UDim2.new(1, 0, 0, 20)
+CTitle.Position = UDim2.new(0, 0, 0, 5)
+CTitle.Text = "- CREDITS -"
+CTitle.TextColor3 = Color3.fromRGB(0, 255, 200)
+CTitle.Font = Enum.Font.GothamBlack
+CTitle.BackgroundTransparency = 1
+
+local CName = Instance.new("TextLabel", CreditFrame)
+CName.Size = UDim2.new(1, -60, 0, 20)
+CName.Position = UDim2.new(0, 60, 0, 25)
+CName.Text = "Script: Valtrix Chevion"
+CName.TextColor3 = Color3.new(1,1,1)
+CName.Font = Enum.Font.GothamBold
+CName.TextSize = 11
+CName.TextXAlignment = Enum.TextXAlignment.Left
+CName.BackgroundTransparency = 1
+
+local CInfo1 = Instance.new("TextLabel", CreditFrame)
+CInfo1.Size = UDim2.new(1, -60, 0, 20)
+CInfo1.Position = UDim2.new(0, 60, 0, 45)
+CInfo1.Text = "Dev Time: 10 Days | Updated: April 5, 2026"
+CInfo1.TextColor3 = Color3.new(0.8, 0.8, 0.8)
+CInfo1.Font = Enum.Font.GothamBold
+CInfo1.TextSize = 10
+CInfo1.TextXAlignment = Enum.TextXAlignment.Left
+CInfo1.BackgroundTransparency = 1
+
+local PlaytimeLbl = Instance.new("TextLabel", CreditFrame)
+PlaytimeLbl.Size = UDim2.new(1, -60, 0, 20)
+PlaytimeLbl.Position = UDim2.new(0, 60, 0, 65)
+PlaytimeLbl.Text = "Playtime: 00:00:00"
+PlaytimeLbl.TextColor3 = Color3.fromRGB(255, 255, 0)
+PlaytimeLbl.Font = Enum.Font.GothamBold
+PlaytimeLbl.TextSize = 11
+PlaytimeLbl.TextXAlignment = Enum.TextXAlignment.Left
+PlaytimeLbl.BackgroundTransparency = 1
+
+local GomletAv = Instance.new("ImageLabel", CreditFrame)
+GomletAv.Size = UDim2.new(0, 45, 0, 45)
+GomletAv.Position = UDim2.new(0, 10, 0, 35)
+GomletAv.BackgroundTransparency = 1
+Instance.new("UICorner", GomletAv).CornerRadius = UDim.new(1, 0)
+task.spawn(function()
+    pcall(function()
+        local userId = Players:GetUserIdFromNameAsync("Gomlet_golin")
+        GomletAv.Image = Players:GetUserThumbnailAsync(userId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size420x420)
+    end)
+end)
+
+-- Playtime Tracker Loop
+task.spawn(function()
+    while task.wait(1) do
+        SessionTime = SessionTime + 1
+        local h = math.floor(SessionTime / 3600)
+        local m = math.floor((SessionTime % 3600) / 60)
+        local s = SessionTime % 60
+        PlaytimeLbl.Text = string.format("Playtime: %02d:%02d:%02d", h, m, s)
+    end
+end)
+
+-- [6] SMART LOOT FILTER (Updated for all fuels)
 local function CheckLootValidity(obj)
-    -- Cegah anggota tubuh zombie terdeteksi sebagai item
     if obj.Parent and obj.Parent:FindFirstChild("Humanoid") then return false, nil, nil end
 
     local n = obj.Name:lower()
@@ -253,13 +364,19 @@ local function CheckLootValidity(obj)
         return false, nil, nil 
     end
 
-    -- ESSENTIALS (Kuning Emas)
-    local essentials = {"refined fuel", "gasoline", "screw", "bloxy cola", "battery", "chips", "mre", "ammo", "spatula", "soft scraps", "jerry can", "fuel", "fuel can", " gas can", "petrol can", "gasoline can", "fuel container", "beans", "chest", "scrap", "scraps", "airdrop", "uzi", "ak47", "m4a1", "sniper"}
+    -- FUEL LOGIC
+    local fuels = {"refined fuel", "gasoline", "jerry can", "fuel", "fuel can", " gas can", "petrol can", "gasoline can", "fuel container"}
+    for _, f in ipairs(fuels) do
+        if n:find(f) then return true, "FUEL", Color3.fromRGB(255, 100, 0) end
+    end
+
+    -- ESSENTIALS
+    local essentials = {"screw", "bloxy cola", "battery", "chips", "mre", "ammo", "spatula", "soft scraps", "beans", "chest", "scrap", "scraps", "airdrop", "uzi", "ak47", "m4a1", "sniper"}
     for _, key in ipairs(essentials) do
         if n:find(key) then return true, "ESSENTIAL", Color3.new(1, 0.8, 0) end
     end
 
-    -- DRAGGABLES (Hijau Cyan)
+    -- DRAGGABLES
     if obj:FindFirstChildOfClass("ProximityPrompt") or obj:FindFirstChildOfClass("ClickDetector") or obj:IsA("Tool") then
         return true, "LOOT", Color3.new(0, 1, 0.7)
     end
@@ -267,7 +384,7 @@ local function CheckLootValidity(obj)
     return false, nil, nil
 end
 
--- [6] 3-WAY ESP ENGINE
+-- [7] 3-WAY ESP ENGINE
 local function ApplyESP(obj, name, color, category)
     if obj:FindFirstChild("ValtrixESP") then return end
 
@@ -294,7 +411,6 @@ local function ApplyESP(obj, name, color, category)
     task.spawn(function()
         while obj and obj.Parent do
             local enabled = false
-            -- Pengecekan kategori ESP
             if category == "Player" and _G.Toggles.ESPPlayer then enabled = true
             elseif category == "Zombie" and _G.Toggles.ESPZombie then enabled = true
             elseif category == "Item" and _G.Toggles.ESPItem then enabled = true end
@@ -322,22 +438,17 @@ end
 task.spawn(function()
     while true do
         pcall(function()
-            -- 1. Scan Players
             for _, p in pairs(Players:GetPlayers()) do
                 if not (p == LocalPlayer) and p.Character then
                     local hrp = p.Character:FindFirstChild("HumanoidRootPart")
                     if hrp then ApplyESP(hrp, p.DisplayName, Color3.new(0, 1, 1), "Player") end
                 end
             end
-            
-            -- 2. Scan Zombies & Items
             for _, v in pairs(Workspace:GetDescendants()) do
-                -- Cek apakah dia Zombie
                 if v:IsA("Humanoid") and not Players:GetPlayerFromCharacter(v.Parent) then
                     local zhrp = v.Parent:FindFirstChild("HumanoidRootPart")
                     if zhrp then ApplyESP(zhrp, "ZOMBIE", Color3.new(1, 0, 0), "Zombie") end
                 else
-                    -- Jika bukan Zombie, cek apakah dia Item Valid
                     local isValid, cat, color = CheckLootValidity(v)
                     if isValid then
                         local root = v:IsA("BasePart") and v or v:FindFirstChildWhichIsA("BasePart")
@@ -350,7 +461,7 @@ task.spawn(function()
     end
 end)
 
--- [7] TWEEN ENGINE
+-- [8] TWEEN ENGINE
 local function SmoothTween(targetCF, speed)
     local char = LocalPlayer.Character
     if not char or not char:FindFirstChild("HumanoidRootPart") then return end
@@ -359,11 +470,13 @@ local function SmoothTween(targetCF, speed)
     local tween = TweenService:Create(char.HumanoidRootPart, tInfo, {CFrame = targetCF})
     
     local nc = RunService.Stepped:Connect(function()
-        if LocalPlayer.Character then
-            for _, v in pairs(LocalPlayer.Character:GetDescendants()) do
-                if v:IsA("BasePart") then v.CanCollide = false end
+        pcall(function()
+            if LocalPlayer.Character then
+                for _, v in pairs(LocalPlayer.Character:GetDescendants()) do
+                    if v:IsA("BasePart") then v.CanCollide = false end
+                end
             end
-        end
+        end)
     end)
     tween:Play()
     tween.Completed:Wait()
@@ -374,28 +487,30 @@ TweenPlrBtn.MouseButton1Click:Connect(function()
     if TargetPlr and TargetPlr.Character then SmoothTween(TargetPlr.Character.HumanoidRootPart.CFrame, 80) end
 end)
 
--- [8] AUTO FARM & KILL AURA LOOP
+-- [9] MAIN LOOP: FARM, AURA, REVIVE, AMMO/RECOIL
 task.spawn(function()
     while task.wait(0.1) do
         pcall(function()
             local char = LocalPlayer.Character
+            if not char then return end
             local hum = char:FindFirstChild("Humanoid")
+            if not hum then return end
+            local hrp = char:FindFirstChild("HumanoidRootPart")
             
             -- KILL AURA
-            if _G.Toggles.KillAura then
+            if _G.Toggles.KillAura and hrp then
                 local weapon = nil
                 local wList = {"Fire Axe", "Spear", "Spiked Bat", "Crowbar", "Bat", "Knife", "Uzi"}
                 for _, n in ipairs(wList) do 
                     weapon = LocalPlayer.Backpack:FindFirstChild(n) or char:FindFirstChild(n)
                     if weapon then break end
                 end
-                
                 for _, v in pairs(Workspace:GetDescendants()) do
                     if v:IsA("Humanoid") and v.Health > 0 and not Players:GetPlayerFromCharacter(v.Parent) then
                         local zhrp = v.Parent:FindFirstChild("HumanoidRootPart")
-                        if zhrp and (zhrp.Position - char.HumanoidRootPart.Position).Magnitude < 100 then
+                        if zhrp and (zhrp.Position - hrp.Position).Magnitude < 100 then
                             hum:EquipTool(weapon)
-                            char.HumanoidRootPart.CFrame = zhrp.CFrame * CFrame.new(0, 0, 3)
+                            hrp.CFrame = zhrp.CFrame * CFrame.new(0, 0, 3)
                             if weapon then weapon:Activate() end
                             break
                         end
@@ -403,7 +518,7 @@ task.spawn(function()
                 end
             end
 
-            -- SYNCED AUTO FARM (Hanya Farm Item yang Valid di Filter)
+            -- SYNCED AUTO FARM (Fuel & Items)
             if _G.Toggles.AutoFarmItem or _G.Toggles.AutoFarmGen then
                 local bag = char:FindFirstChild("Bag") or char:FindFirstChild("Backpack") or LocalPlayer.Backpack:FindFirstChild("Bag") or LocalPlayer.Backpack:FindFirstChild("Backpack")
                 if bag then hum:EquipTool(bag) end
@@ -412,10 +527,9 @@ task.spawn(function()
                 for _, v in pairs(Workspace:GetDescendants()) do
                     local isValid, category, _ = CheckLootValidity(v)
                     if isValid then
-                        local n = v.Name:lower()
-                        if _G.Toggles.AutoFarmGen and (n:find("fuel") or n:find("chips") or n:find("battery") or n:find("scrap")) then
+                        if _G.Toggles.AutoFarmGen and category == "FUEL" then
                             target = v break
-                        elseif _G.Toggles.AutoFarmItem then
+                        elseif _G.Toggles.AutoFarmItem and category ~= "FUEL" then
                             target = v break
                         end
                     end
@@ -427,14 +541,107 @@ task.spawn(function()
                         SmoothTween(handle.CFrame, 60)
                         task.wait(0.2)
                         if bag then bag:Activate() end
+                        if fireproximityprompt then
+                            local prompt = target:FindFirstChildOfClass("ProximityPrompt") or handle:FindFirstChildOfClass("ProximityPrompt")
+                            if prompt then fireproximityprompt(prompt, 1) end
+                        end
                     end
                 end
+            end
+
+            -- AUTO REVIVE
+            if _G.Toggles.AutoRevive and hrp and fireproximityprompt then
+                for _, v in pairs(Workspace:GetDescendants()) do
+                    if v:IsA("ProximityPrompt") and (v.Name:lower():match("revive") or v.ActionText:lower():match("revive")) then
+                        if v.Parent and v.Parent:IsA("BasePart") and (v.Parent.Position - hrp.Position).Magnitude <= (v.MaxActivationDistance + 5) then
+                            fireproximityprompt(v, 1)
+                        end
+                    end
+                end
+            end
+
+            -- INF AMMO & NO RECOIL (Generic Method)
+            if _G.Toggles.InfAmmo or _G.Toggles.NoRecoil then
+                local tool = char:FindFirstChildOfClass("Tool")
+                if tool then
+                    for _, val in pairs(tool:GetDescendants()) do
+                        if val:IsA("NumberValue") or val:IsA("IntValue") then
+                            local n = val.Name:lower()
+                            if _G.Toggles.InfAmmo and (n:match("ammo") or n:match("clip") or n:match("mag")) then
+                                val.Value = 999
+                            end
+                            if _G.Toggles.NoRecoil and (n:match("recoil") or n:match("spread") or n:match("kick")) then
+                                val.Value = 0
+                            end
+                        end
+                    end
+                end
+            end
+            
+        end)
+    end
+end)
+
+-- [10] LIGHTING (FULLBRIGHT & NO FOG)
+task.spawn(function()
+    while task.wait(0.5) do
+        pcall(function()
+            if _G.Toggles.FullBright then
+                Lighting.Brightness = 2
+                Lighting.ClockTime = 14
+                Lighting.GlobalShadows = false
+                Lighting.Ambient = Color3.fromRGB(255, 255, 255)
+            end
+            if _G.Toggles.NoFog then
+                Lighting.FogEnd = 100000
+                local atmosphere = Lighting:FindFirstChildOfClass("Atmosphere")
+                if atmosphere then atmosphere.Density = 0 end
             end
         end)
     end
 end)
 
--- [9] TOGGLE "V" BUTTON
+-- [11] FLY ENGINE
+local FlyBV, FlyBG
+task.spawn(function()
+    RunService.RenderStepped:Connect(function()
+        pcall(function()
+            local char = LocalPlayer.Character
+            if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+            local hrp = char.HumanoidRootPart
+            local hum = char:FindFirstChild("Humanoid")
+            
+            if _G.Toggles.FlyMode then
+                hum.PlatformStand = true
+                if not FlyBV then
+                    FlyBV = Instance.new("BodyVelocity", hrp)
+                    FlyBV.Velocity = Vector3.new(0, 0, 0)
+                    FlyBV.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+                end
+                if not FlyBG then
+                    FlyBG = Instance.new("BodyGyro", hrp)
+                    FlyBG.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+                    FlyBG.CFrame = Camera.CFrame
+                end
+                
+                FlyBG.CFrame = Camera.CFrame
+                local MoveDir = Vector3.new(0,0,0)
+                if UserInputService:IsKeyDown(Enum.KeyCode.W) then MoveDir = MoveDir + Camera.CFrame.LookVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.S) then MoveDir = MoveDir - Camera.CFrame.LookVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.A) then MoveDir = MoveDir - Camera.CFrame.RightVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.D) then MoveDir = MoveDir + Camera.CFrame.RightVector end
+                
+                FlyBV.Velocity = MoveDir * _G.Toggles.FlySpeed
+            else
+                if hum then hum.PlatformStand = false end
+                if FlyBV then FlyBV:Destroy() FlyBV = nil end
+                if FlyBG then FlyBG:Destroy() FlyBG = nil end
+            end
+        end)
+    end)
+end)
+
+-- [12] TOGGLE "V" BUTTON
 local VBtn = Instance.new("TextButton", ScreenGui)
 VBtn.Size = UDim2.new(0, 50, 0, 50)
 VBtn.Position = UDim2.new(0, 20, 0.5, 0)
@@ -452,4 +659,4 @@ SyncRGB(VStroke, "VBtn")
 SyncRGB(VBtn, "VBtn")
 VBtn.MouseButton1Click:Connect(function() Main.Visible = not Main.Visible end)
 
-print("VALTRIX V22 - ALL-IN-ONE HUB LOADED!")
+print("VALTRIX CHEVION V22 - LOADED SUCCESSFULLY! (ANTI-ERROR APPLIED)")
