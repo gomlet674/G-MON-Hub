@@ -8,9 +8,9 @@ local StarterGui = game:GetService("StarterGui")
 -- =========================
 
 -- Menggunakan UniverseId lebih stabil karena tidak berubah antar Sea
-local BLOX_FRUIT_UNIVERSE_ID = {"110991616"}
+local BLOX_FRUIT_UNIVERSE_ID = {"275391552, 4442272183, 7449925010"}
 -- ID Game Survive the Apocalypse
-local SURVIVE_APOCALYPSE_IDS = {"9098570654"}
+local SURVIVE_APOCALYPSE_IDS = {"90148635862803"}
 
 local Scripts = {
     ["Blox Fruits"] = "loadstring(game:HttpGet("https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/Blox fruit.lua"))()",
