@@ -13,8 +13,8 @@ local BLOX_FRUIT_UNIVERSE_ID = 110991616
 local SURVIVE_APOCALYPSE_IDS = {9098570654, 15302685710}
 
 local Scripts = {
-    ["Blox Fruits"] = "https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/Blox%20fruit.lua",
-    ["Survive the Apocalypse"] = "https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/Survive%20the%20apocalypse.lua"
+    ["Blox Fruits"] = "https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/Blox fruit.lua",
+    ["Survive the Apocalypse"] = "https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/Survive the apocalypse.lua"
 }
 
 -- =========================
@@ -121,9 +121,9 @@ if detectedGameName then
         end
     else
         -- Jika gagal ambil data
-        warn("[G-MON] Gagal mengambil data dari URL. Pastikan Link Raw benar.")
-        Notify("ERROR", "Gagal mengambil data dari GitHub (Check Console/F9)")
+        warn("[Valtrix] Failed to acces the game.")
+        Notify("ERROR", "failed connect with GitHub (Check Console/F9)")
     end
 else
-    Notify("UNKNOWN GAME", "Game tidak terdaftar. ID: " .. game.PlaceId)
+    Notify("UNKNOWN GAME", "Game not Added. ID: " .. game.PlaceId)
 end
