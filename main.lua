@@ -10,7 +10,7 @@ local LocalPlayer = Players.LocalPlayer
 -- =========================
 local CONFIG = {
     ["Blox Fruits"] = {
-        Ids = {944707959, 15302685710, 9014863586}, 
+        Ids = {2753915549, 4442272183, 7449423635, 15302685710}, 
         Type = "UniverseId",
         ScriptURL = "https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/Blox-Fruit.lua"
     },
