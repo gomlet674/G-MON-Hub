@@ -1,4 +1,4 @@
--- [[ VALTRIX HUB - PREMIUM LOADER FIXED 100% ]] --
+-- [[ VALTRIX HUB - PREMIUM LOADER FIXED ]] --
 
 local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
@@ -98,18 +98,17 @@ local function FadeUI(target)
 end
 
 local function DetectGame()
-    -- Cek Survive the Apocalypse DULU (PlaceId) biar tidak ketabrak UniverseId Blox Fruits
+    -- Cek Blox Fruits
+    if game.GameId == CONFIG["Blox Fruits"].UniverseId then
+        return "Blox Fruits", CONFIG["Blox Fruits"].ScriptURL
+    end
+    
+    -- Cek Survive the Apocalypse
     for _, id in ipairs(CONFIG["Survive the Apocalypse"].PlaceIds) do
         if game.PlaceId == id then
             return "Survive the Apocalypse", CONFIG["Survive the Apocalypse"].ScriptURL
         end
     end
-    
-    -- Cek Blox Fruits (UniverseId)
-    if table.find(CONFIG["Blox Fruits"].UniverseId, game.GameId) then
-        return "Blox Fruits", CONFIG["Blox Fruits"].ScriptURL
-    end
-    
     return nil, nil
 end
 
@@ -135,10 +134,17 @@ task.spawn(function()
             StatusLabel.Text = "Menjalankan loadstring..."
             task.wait(0.5)
             
-            -- LOADSTRING LENGKAP & FIXED (support SEMUA executor, no error)
-            local ok, executionError = pcall(function()
-                loadstring(game:HttpGet(scriptUrl))()
-            end)
+            -- INI ADALAH BAGIAN LOADSTRING NYA
+            local function RunScript()
+                local loaded, err = loadstring(source)
+                if loaded then
+                    loaded() -- Menjalankan script yang sudah di-load
+                else
+                    error(err)
+                end
+            end
+
+            local ok, executionError = pcall(RunScript)
 
             if ok then
                 StatusLabel.Text = "Berhasil!"
