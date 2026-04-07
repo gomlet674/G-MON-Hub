@@ -11,12 +11,12 @@ local StarterGui = game:GetService("StarterGui")
 local BLOX_FRUIT_UNIVERSE_ID = 110991616
 
 -- ID Game Survive the Apocalypse (Gunakan angka, jangan string)
-local SURVIVE_APOCALYPSE_IDS = {90148635862803, 15302685710}
+local SURVIVE_APOCALYPSE_IDS = {9098570654}
 
 -- HANYA MASUKKAN LINK RAW SAJA DI SINI
 local Scripts = {
-    ["Blox Fruits"] = "https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/Blox%20fruit.lua",
-    ["Survive the Apocalypse"] = "https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/Survive%20the%20apocalypse.lua"
+    ["Blox Fruits"] = "loadstring(game:HttpGet("https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/Blox%20fruit.lua"))()",
+    ["Survive the Apocalypse"] = "loadstring(game:HttpGet("https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/Survive%20the%20apocalypse.lua"))()"
 }
 
 -- =========================
