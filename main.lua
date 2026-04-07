@@ -1,19 +1,18 @@
--- [[ VALTRIX HUB - PREMIUM LOADER OPTIMIZED FOR ALL EXECUTORS 2026 ]] --
--- Super compatible dengan Delta (Mobile/PC), Solara, Wave, Fluxus, Xeno, Madium, Velocity, dll.
--- GUI lebih stabil, HttpGet paling aman, loadstring universal, tidak ada fitur experimental.
+-- [[ VALTRIX HUB - PREMIUM LOADER FIXED 100% (April 2026) ]] --
+-- Script Survive the Apocalypse sudah diganti dengan yang working
 
 local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
 -- =========================
--- DATABASE GAME (SCALABLE & PRIORITAS BENAR)
+-- DATABASE GAME (UPDATED)
 -- =========================
 local CONFIG = {
-    ["Survive the Apocalypse"] = {  -- Dicek pertama (hindari bentrok UniverseId)
+    ["Survive the Apocalypse"] = {  -- Dicek pertama
         DetectionType = "PlaceId",
         Ids = {90148635862803},
-        ScriptURL = "https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/Survive-the-apocalypse.lua"
+        ScriptURL = "https://raw.githubusercontent.com/HxnryLSD/SPYMM-rblx/refs/heads/main/SPYMM%20STA.lua"  -- Script baru & stabil (SPYMM Hub)
     },
     ["Blox Fruits"] = {
         DetectionType = "UniverseId",
@@ -26,19 +25,11 @@ local CONFIG = {
 -- GUI PROTECTOR (MAX COMPATIBILITY)
 -- =========================
 local function GetGuiParent()
-    -- Prioritas: gethui (paling aman di semua executor) → CoreGui → PlayerGui
     local success, parent = pcall(function()
-        if gethui then
-            return gethui()
-        end
+        if gethui then return gethui() end
         return game:GetService("CoreGui")
     end)
-    
-    if success and parent then
-        return parent
-    end
-    
-    return LocalPlayer:WaitForChild("PlayerGui")
+    return success and parent or LocalPlayer:WaitForChild("PlayerGui")
 end
 
 local GuiParent = GetGuiParent()
@@ -47,7 +38,7 @@ if GuiParent:FindFirstChild("ValtrixLoader") then
 end
 
 -- =========================
--- UI CONSTRUCTION (RINGKAS & STABIL)
+-- UI CONSTRUCTION
 -- =========================
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "ValtrixLoader"
@@ -100,7 +91,7 @@ StatusLabel.TextSize = 14
 StatusLabel.TextTransparency = 1
 
 -- =========================
--- FUNCTIONS (OPTIMIZED)
+-- FUNCTIONS
 -- =========================
 local function FadeUI(target)
     local info = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
@@ -129,7 +120,7 @@ local function DetectGame()
 end
 
 -- =========================
--- EXECUTION (ULTRA STABIL DI SEMUA EXECUTOR)
+-- EXECUTION (STABIL DI SEMUA EXECUTOR)
 -- =========================
 task.spawn(function()
     FadeUI(0.1)
@@ -142,16 +133,14 @@ task.spawn(function()
         DetectedLabel.TextColor3 = Color3.fromRGB(85, 255, 127)
         StatusLabel.Text = "Menghubungi GitHub..."
 
-        -- HttpGet paling aman & compatible di semua executor 2026
         local success, source = pcall(function()
-            return game:HttpGet(scriptUrl)  -- Tanpa cache flag (paling stabil)
+            return game:HttpGet(scriptUrl)
         end)
 
         if success and source and #source > 100 then
             StatusLabel.Text = "Menjalankan script..."
             task.wait(0.3)
 
-            -- Loadstring paling universal (support Delta, Solara, Wave, Fluxus, dll)
             local ok, executionError = pcall(function()
                 loadstring(game:HttpGet(scriptUrl))()
             end)
