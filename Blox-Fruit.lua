@@ -1,4 +1,7 @@
 -- [[ VALTRIX HUB - ALL EXECUTOR SUPPORT ]] --
+repeat task.wait() until game:IsLoaded()
+repeat task.wait() until game.Players.LocalPlayer
+repeat task.wait() until game.Players.LocalPlayer.Character
 
 local OrionLib = loadstring(game:HttpGet(('https://raw.githubusercontent.com/shlexware/Orion/main/source')))()
 local Window = OrionLib:MakeWindow({Name = "VALTRIX HUB 🚀 | Blox Fruits", HidePremium = false, SaveConfig = true, ConfigFolder = "ValtrixConfig"})
