@@ -1,14 +1,3 @@
---[[
-    VALTRIX CHEVION V22 - ALL-IN-ONE HUB
-    - FEATURE: 3 Separate ESPs (Player, Zombie, Item)
-    - FEATURE: Auto Farm synced with Item ESP Filter (Fuel Generator & Loots)
-    - NEW FEATURES: Auto Revive, No Recoil, Inf Ammo, Full Bright, No Fog, Fly
-    - EXCLUDED: Torso, Cube, Tin Can, Thin Can, Baseplate
-    - INCLUDED: Fuel, Screw, Scrap, Battery, MRE, Ammo & Draggable
-    - FULL UI: Spectate, Tween, Kill Aura, RGB Engine, Credits & Playtime
-    - UPDATE: April 5, 2026
-]]
-
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local CoreGui = game:GetService("CoreGui")
