@@ -9,21 +9,19 @@ local StarterGui = game:GetService("StarterGui")
 -- =========================
 
 -- Blox Fruits Universe ID
-local BLOX_FRUIT_UNIVERSE = {
-       [110991616] = true, 
-       [90148635862803] = true, -- Pastikan ID ini benar
-       [15302685710] = true
-}
+local BLOX_FRUIT_UNIVERSE = 110991616
 
 -- Daftar Place ID untuk Survive the Apocalypse (Gunakan angka asli)
 local SURVIVE_IDS = {
-       [9098570654] = true
+    [90148635862803] = true, -- Pastikan ID ini benar
+    [15302685710] = true,
+    [9098570654] = true
 }
 
 -- URL Script (HANYA URL, jangan pakai loadstring di dalam sini)
 local SCRIPTS_URL = {
-    ["Blox Fruits"] = "https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/Blox%20fruit.lua",
-    ["Survive the Apocalypse"] = "https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/Survive%20the%20apocalypse.lua"
+    ["Blox Fruits"] = "https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/Blox fruit.lua",
+    ["Survive the Apocalypse"] = "https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/Survive the apocalypse.lua"
 }
 
 -- =========================
