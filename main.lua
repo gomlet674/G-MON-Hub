@@ -99,7 +99,7 @@ end
 
 local function DetectGame()
     -- Cek Blox Fruits
-    if game.GameId == CONFIG["Blox Fruits"].UniverseId then
+    if table.find(CONFIG["Blox Fruits"].UniverseId, game.GameId) then
         return "Blox Fruits", CONFIG["Blox Fruits"].ScriptURL
     end
     
@@ -138,7 +138,7 @@ task.spawn(function()
             local function RunScript()
                 local loaded, err = loadstring(source)
                 if loaded then
-                    loaded() -- Menjalankan script yang sudah di-load
+                    loaded() -- Menjalankan script yang sudah di-loaded
                 else
                     error(err)
                 end
