@@ -1,4 +1,5 @@
--- [[ G-MON HUB UNIVERSAL LOADER - REFIXED ]] --
+-- [[ G-MON HUB DEBUG LOADER ]] --
+print("Checking G-MON Loader...") -- Ini akan muncul di F9 jika script jalan
 
 local Players = game:GetService("Players")
 local StarterGui = game:GetService("StarterGui")
@@ -7,111 +8,99 @@ local StarterGui = game:GetService("StarterGui")
 -- CONFIGURATION
 -- =========================
 
--- Blox Fruits Universe ID (Satu ID untuk semua Sea)
-local BLOX_FRUIT_UNIVERSE_ID = 110991616
+-- Blox Fruits Universe ID
+local BLOX_FRUIT_UNIVERSE = {
+       [110991616] = true, 
+       [90148635862803] = true, -- Pastikan ID ini benar
+       [15302685710] = true
+}
 
--- ID Game Survive the Apocalypse (Gunakan angka, jangan string)
-local SURVIVE_APOCALYPSE_IDS = {9098570654}
+-- Daftar Place ID untuk Survive the Apocalypse (Gunakan angka asli)
+local SURVIVE_IDS = {
+       [9098570654] = true
+}
 
--- HANYA MASUKKAN LINK RAW SAJA DI SINI
-local Scripts = {
-    ["Blox Fruits"] = "loadstring(game:HttpGet("https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/Blox%20fruit.lua"))()",
-    ["Survive the Apocalypse"] = "loadstring(game:HttpGet("https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/Survive%20the%20apocalypse.lua"))()"
+-- URL Script (HANYA URL, jangan pakai loadstring di dalam sini)
+local SCRIPTS_URL = {
+    ["Blox Fruits"] = "https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/Blox%20fruit.lua",
+    ["Survive the Apocalypse"] = "https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/Survive%20the%20apocalypse.lua"
 }
 
 -- =========================
--- HELPER FUNCTIONS
+-- SYSTEM FUNCTIONS
 -- =========================
 
-local function Notify(title, text)
-    print("[G-MON HUB] " .. title .. ": " .. text)
-    pcall(function()
-        StarterGui:SetCore("SendNotification", {
-            Title = title,
-            Text = text,
-            Duration = 5
-        })
+local function SendNotification(title, msg)
+    print("[G-MON] " .. title .. ": " .. msg)
+    -- Tunggu sampai game siap kirim notifikasi
+    task.spawn(function()
+        local success = false
+        local retry = 0
+        while not success and retry < 5 do
+            success = pcall(function()
+                StarterGui:SetCore("SendNotification", {
+                    Title = title,
+                    Text = msg,
+                    Duration = 5
+                })
+            end)
+            if not success then 
+                retry = retry + 1
+                task.wait(1) 
+            end
+        end
     end)
 end
 
-local function safeHttpGet(url)
-    local success, result
-    local requestFunc = (syn and syn.request) or (http and http.request) or http_request or request
-    
-    if requestFunc then
-        success, result = pcall(function()
-            return requestFunc({Url = url, Method = "GET"}).Body
-        end)
+local function GetSource(url)
+    print("Attempting to download: " .. url)
+    local success, result = pcall(function()
+        return game:HttpGet(url)
+    end)
+    if success and result and #result > 0 and not result:find("404") then
+        return result
     end
-    
-    if not success or not result then
-        success, result = pcall(function()
-            return game:HttpGet(url)
-        end)
-    end
-    
-    return (success and result and #result > 0) and result or nil
-end
-
--- =========================
--- DETECTION LOGIC
--- =========================
-
-local function detectGame()
-    -- Cek Blox Fruits via UniverseId
-    if game.GameId == BLOX_FRUIT_UNIVERSE_ID then
-        return "Blox Fruits"
-    end
-    
-    -- Cek Survive the Apocalypse via PlaceId
-    for _, id in ipairs(SURVIVE_APOCALYPSE_IDS) do
-        if game.PlaceId == id then 
-            return "Survive the Apocalypse" 
-        end
-    end
-    
     return nil
 end
 
 -- =========================
--- MAIN EXECUTION
+-- MAIN LOGIC
 -- =========================
 
-local detectedGameName = detectGame()
+print("Detecting Game...")
 
-if detectedGameName then
-    Notify("DETECTED!", "Game: " .. detectedGameName)
+local gameName = nil
+
+-- Cek Blox Fruits
+if game.GameId == BLOX_FRUIT_UNIVERSE then
+    gameName = "Blox Fruits"
+-- Cek Survive the Apocalypse
+elseif SURVIVE_IDS[game.PlaceId] then
+    gameName = "Survive the Apocalypse"
+end
+
+if gameName then
+    SendNotification("DETECTED", "Game: " .. gameName)
     
-    local scriptUrl = Scripts[detectedGameName]
-    local source = safeHttpGet(scriptUrl)
+    local source = GetSource(SCRIPTS_URL[gameName])
     
     if source then
+        SendNotification("LOADING", "Menjalankan Lua...")
         local load = loadstring or load
-        if load then
-            local success, err = pcall(function()
-                local executed = load(source)
-                if type(executed) == "function" then
-                    task.spawn(executed)
-                else
-                    error("Script GitHub tidak valid.")
-                end
-            end)
-            
-            if success then
-                Notify("SUCCESS", detectedGameName .. " Loaded!")
-            else
-                warn("Execution Error:", err)
-                Notify("ERROR", "Script Error! Cek F9")
-            end
+        local func, err = load(source)
+        
+        if func then
+            task.spawn(func)
+            SendNotification("SUCCESS", "Script Berhasil Terbuka!")
         else
-            Notify("ERROR", "Executor tidak support loadstring.")
+            warn("Load Error: " .. tostring(err))
+            SendNotification("ERROR", "Script di GitHub ada yang salah (Syntax Error)")
         end
     else
-        warn("[G-MON] Gagal mengambil data dari GitHub.")
-        Notify("ERROR", "Gagal menyambung ke GitHub.")
+        SendNotification("ERROR", "Link GitHub salah atau File tidak ada!")
     end
 else
-    -- Jika game tidak dikenal, tetap munculkan notifikasi agar kamu tahu script berjalan
-    Notify("UNKNOWN GAME", "Game tidak terdaftar. ID: " .. game.PlaceId)
-    print("DEBUG: PlaceId anda adalah " .. game.PlaceId)
+    -- Jika game tidak ada di daftar
+    SendNotification("UNKNOWN", "ID Tidak Terdaftar: " .. tostring(game.PlaceId))
+    print("Salin ID ini ke script: " .. tostring(game.PlaceId))
 end
