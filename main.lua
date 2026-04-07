@@ -16,7 +16,7 @@ local Main = {} -- Table yang akan dipanggil oleh Loader
 local CONFIG = {
     ["Survive the Apocalypse"] = {
         -- Ganti angka di bawah ini dengan PlaceId yang benar dari game-nya
-        PlaceIds = {106132712, 9014863586}, 
+        PlaceIds = {9098570654}, 
         URL = "https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/Survive-the-apocalypse.lua"
     },
     ["Blox Fruits"] = {
