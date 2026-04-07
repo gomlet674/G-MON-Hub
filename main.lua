@@ -1,185 +1,213 @@
--- [[ VALTRIX HUB - PREMIUM LOADER FIXED 100% ANTI-ERROR ]] --
+-- [[ VALTRIX HUB - ULTRA STABLE LOADER (FINAL FIXED) ]] --
 
 local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
 -- =========================
--- DATABASE GAME & SCRIPT
+-- LOCK SYSTEM (ANTI DOUBLE LOAD)
+-- =========================
+if _G.__VALTRIX_LOADED then
+    warn("[VALTRIX] Sudah dijalankan, skip.")
+    return
+end
+_G.__VALTRIX_LOADED = true
+
+-- =========================
+-- CONFIG
 -- =========================
 local CONFIG = {
-    ["Blox Fruits"] = {
+    ["BLOX"] = {
+        Name = "Blox Fruits",
         UniverseId = {9098570654, 15302685710, 9014863586},
-        ScriptURL = "https://raw.githubusercontent.com/gomlet674/G-MON-Hub/refs/heads/main/Blox-Fruit.lua"
+        URL = "https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/Blox-Fruit.lua"
     },
-    ["Survive the Apocalypse"] = {
-        PlaceIds = {90148635862803}, 
-        ScriptURL = "https://raw.githubusercontent.com/gomlet674/G-MON-Hub/refs/heads/main/Survive-the-apocalypse.lua"
+    ["SURVIVE"] = {
+        Name = "Survive the Apocalypse",
+        PlaceIds = {90148635862803},
+        URL = "https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/Survive-the-apocalypse.lua"
     }
 }
 
 -- =========================
--- SYSTEM & GUI PROTECTOR
+-- SAFE GUI
 -- =========================
 local function GetGuiParent()
-    local success, parent = pcall(function()
-        return (gethui and gethui()) or game:GetService("CoreGui")
+    if typeof(gethui) == "function" then
+        local ok, res = pcall(gethui)
+        if ok and res then return res end
+    end
+
+    local ok, core = pcall(function()
+        return game:GetService("CoreGui")
     end)
-    return success and parent or LocalPlayer:WaitForChild("PlayerGui")
+    if ok then return core end
+
+    return LocalPlayer:WaitForChild("PlayerGui")
 end
 
 local GuiParent = GetGuiParent()
-if GuiParent:FindFirstChild("ValtrixLoader") then
-    GuiParent.ValtrixLoader:Destroy()
-end
+
+pcall(function()
+    local old = GuiParent:FindFirstChild("ValtrixLoader")
+    if old then old:Destroy() end
+end)
 
 -- =========================
--- UI CONSTRUCTION
+-- UI
 -- =========================
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "ValtrixLoader"
-ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = GuiParent
 
 local MainFrame = Instance.new("Frame", ScreenGui)
 MainFrame.Size = UDim2.new(0, 320, 0, 160)
 MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
 MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
-MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
+MainFrame.BackgroundColor3 = Color3.fromRGB(15,15,18)
 MainFrame.BackgroundTransparency = 1
-Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 12)
+Instance.new("UICorner", MainFrame)
 
-local UIStroke = Instance.new("UIStroke", MainFrame)
-UIStroke.Color = Color3.fromRGB(138, 43, 226)
-UIStroke.Thickness = 2
-UIStroke.Transparency = 1
+local Title = Instance.new("TextLabel", MainFrame)
+Title.Size = UDim2.new(1,0,0,40)
+Title.Position = UDim2.new(0,0,0,10)
+Title.BackgroundTransparency = 1
+Title.Font = Enum.Font.GothamBlack
+Title.Text = "VALTRIX"
+Title.TextSize = 28
+Title.TextTransparency = 1
+Title.TextColor3 = Color3.fromRGB(138,43,226)
 
-local TitleLabel = Instance.new("TextLabel", MainFrame)
-TitleLabel.Size = UDim2.new(1, 0, 0, 40)
-TitleLabel.Position = UDim2.new(0, 0, 0, 10)
-TitleLabel.BackgroundTransparency = 1
-TitleLabel.Font = Enum.Font.GothamBlack
-TitleLabel.Text = "VALTRIX"
-TitleLabel.TextColor3 = Color3.fromRGB(138, 43, 226)
-TitleLabel.TextSize = 28
-TitleLabel.TextTransparency = 1
-
-local DetectedLabel = Instance.new("TextLabel", MainFrame)
-DetectedLabel.Size = UDim2.new(1, 0, 0, 30)
-DetectedLabel.Position = UDim2.new(0, 0, 0, 55)
-DetectedLabel.BackgroundTransparency = 1
-DetectedLabel.Font = Enum.Font.GothamMedium
-DetectedLabel.Text = "Detecting Game..."
-DetectedLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-DetectedLabel.TextSize = 16
-DetectedLabel.TextTransparency = 1
-
-local StatusLabel = Instance.new("TextLabel", MainFrame)
-StatusLabel.Size = UDim2.new(1, 0, 0, 30)
-StatusLabel.Position = UDim2.new(0, 0, 0, 110)
-StatusLabel.BackgroundTransparency = 1
-StatusLabel.Font = Enum.Font.Gotham
-StatusLabel.Text = "Memulai sistem..."
-StatusLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
-StatusLabel.TextSize = 14
-StatusLabel.TextTransparency = 1
+local Status = Instance.new("TextLabel", MainFrame)
+Status.Size = UDim2.new(1,0,0,30)
+Status.Position = UDim2.new(0,0,0,80)
+Status.BackgroundTransparency = 1
+Status.Font = Enum.Font.Gotham
+Status.Text = "Initializing..."
+Status.TextSize = 14
+Status.TextTransparency = 1
 
 -- =========================
--- FUNCTIONS
+-- FADE
 -- =========================
-local function FadeUI(target)
-    local info = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-    TweenService:Create(MainFrame, info, {BackgroundTransparency = target}):Play()
-    TweenService:Create(UIStroke, info, {Transparency = target}):Play()
-    TweenService:Create(TitleLabel, info, {TextTransparency = target}):Play()
-    TweenService:Create(DetectedLabel, info, {TextTransparency = target}):Play()
-    TweenService:Create(StatusLabel, info, {TextTransparency = target}):Play()
+local function Fade(val)
+    for _,v in pairs({MainFrame, Title, Status}) do
+        pcall(function()
+            TweenService:Create(v, TweenInfo.new(0.5), {
+                TextTransparency = val,
+                BackgroundTransparency = val
+            }):Play()
+        end)
+    end
 end
 
+-- =========================
+-- DETECT GAME (HARD LOCK)
+-- =========================
 local function DetectGame()
-    -- Cek Survive dulu (agar tidak salah jadi Blox Fruits)
-    for _, id in ipairs(CONFIG["Survive the Apocalypse"].PlaceIds) do
+    -- PRIORITAS: Survive
+    for _,id in ipairs(CONFIG.SURVIVE.PlaceIds) do
         if game.PlaceId == id then
-            return "Survive the Apocalypse", CONFIG["Survive the Apocalypse"].ScriptURL
+            return CONFIG.SURVIVE
         end
     end
-    
-    -- Cek Blox Fruits (fix table comparison)
-    if table.find(CONFIG["Blox Fruits"].UniverseId, game.GameId) then
-        return "Blox Fruits", CONFIG["Blox Fruits"].ScriptURL
+
+    -- Blox Fruits
+    for _,id in ipairs(CONFIG.BLOX.UniverseId) do
+        if game.GameId == id then
+            return CONFIG.BLOX
+        end
     end
-    return nil, nil
+
+    return nil
 end
 
 -- =========================
--- ANTI-ERROR + RETRY HTTPGET
+-- SAFE HTTP
 -- =========================
-local function SafeHttpGet(url)
-    for attempt = 1, 3 do  -- retry 3 kali kalau gagal koneksi
-        local success, result = pcall(function()
+local function SafeGet(url)
+    for i = 1,3 do
+        local ok,res = pcall(function()
             return game:HttpGet(url)
         end)
-        if success and result and #result > 100 then
-            return true, result
+
+        if ok and type(res) == "string" then
+            if #res > 100 and not res:lower():find("<html") then
+                return res
+            end
         end
-        task.wait(0.8) -- tunggu sebentar sebelum retry
+
+        task.wait(1)
     end
-    return false, nil
+    return nil
 end
 
 -- =========================
--- EXECUTION (100% ANTI CRASH)
+-- SAFE EXEC
+-- =========================
+local function Execute(source)
+    if not source then
+        return false, "Source kosong"
+    end
+
+    local fn, err = loadstring(source)
+    if not fn then
+        return false, "COMPILE:\n"..err
+    end
+
+    local ok, err2 = pcall(fn)
+    if not ok then
+        return false, "RUNTIME:\n"..err2
+    end
+
+    return true
+end
+
+-- =========================
+-- MAIN
 -- =========================
 task.spawn(function()
-    local successAll, errAll = pcall(function()
-        FadeUI(0.1)
-        task.wait(1)
 
-        local gameName, scriptUrl = DetectGame()
+    Fade(0.1)
+    task.wait(1)
 
-        if gameName then
-            DetectedLabel.Text = "Game Detected: " .. gameName
-            DetectedLabel.TextColor3 = Color3.fromRGB(85, 255, 127)
-            StatusLabel.Text = "Menghubungi GitHub..."
+    local gameData = DetectGame()
 
-            local httpSuccess, source = SafeHttpGet(scriptUrl)
+    if not gameData then
+        Status.Text = "Game tidak didukung"
+        return
+    end
 
-            if httpSuccess and source then
-                StatusLabel.Text = "Menjalankan loadstring..."
-                task.wait(0.5)
-                
-                -- Loadstring paling stabil & anti-error
-                local ok, executionError = pcall(function()
-                    loadstring(game:HttpGet(scriptUrl))()
-                end)
+    Status.Text = "Game: "..gameData.Name
 
-                if ok then
-                    StatusLabel.Text = "Berhasil!"
-                    StatusLabel.TextColor3 = Color3.fromRGB(85, 255, 127)
-                else
-                    StatusLabel.Text = "Script Rusak (Cek F9)"
-                    StatusLabel.TextColor3 = Color3.fromRGB(255, 85, 85)
-                    warn("[VALTRIX ERROR]: " .. tostring(executionError))
-                end
-            else
-                StatusLabel.Text = "Gagal Koneksi GitHub (Coba Lagi)"
-                StatusLabel.TextColor3 = Color3.fromRGB(255, 85, 85)
-            end
-        else
-            DetectedLabel.Text = "Game Tidak Terdaftar"
-            StatusLabel.Text = "ID: " .. game.PlaceId
-        end
-    end)
+    task.wait(0.5)
 
-    -- Anti-crash total: GUI tetap hilang meski ada error besar
-    if not successAll then
-        warn("[VALTRIX CRITICAL ERROR]: " .. tostring(errAll))
+    Status.Text = "Mengambil script..."
+
+    local src = SafeGet(gameData.URL)
+
+    if not src then
+        Status.Text = "Gagal koneksi"
+        return
+    end
+
+    Status.Text = "Menjalankan..."
+
+    local ok, err = Execute(src)
+
+    if ok then
+        Status.Text = "Berhasil!"
+    else
+        Status.Text = "Script Error"
+        warn("[VALTRIX ERROR]:\n"..err)
     end
 
     task.wait(3)
-    FadeUI(1)
-    task.wait(0.6)
-    if ScreenGui and ScreenGui.Parent then
+    Fade(1)
+    task.wait(0.5)
+
+    pcall(function()
         ScreenGui:Destroy()
-    end
+    end)
+
 end)
