@@ -25,13 +25,23 @@ end
 if not httprequest then return game.Players.LocalPlayer:Kick("Executor Not Supported.") end
 
 local function loadMainScript()
-    local ok, Main = pcall(function() return loadstring(game:HttpGet(MAIN_SCRIPT_URL, true))() end)
+    -- Script dieksekusi di baris ini
+    local ok, Main = pcall(function() 
+        return loadstring(game:HttpGet(MAIN_SCRIPT_URL, true))() 
+    end)
+    
+    -- Jika script berjalan lancar DAN mengembalikan table dengan fungsi Start()
     if ok and type(Main) == "table" and type(Main.Start) == "function" then
-        Main.Start()
-    else
-        -- Jika main script bukan table, coba load langsung (beberapa script hanya loadstring biasa)
-        pcall(function() loadstring(game:HttpGet(MAIN_SCRIPT_URL, true))() end)
+        local startOk, startErr = pcall(Main.Start)
+        if not startOk then
+            warn("[G-MON] Error starting script:", startErr)
+        end
+    elseif not ok then
+        -- Jika script gagal berjalan/error dari GitHub
+        warn("[G-MON] Failed to load main script:", tostring(Main))
     end
+    -- CATATAN: Jika script berhasil (ok = true) tapi bukan berupa table, 
+    -- script tersebut sudah selesai dieksekusi di pcall pertama, jadi tidak perlu diulang.
 end
 
 -- ===================== MODERN GUI BUILDER =====================
