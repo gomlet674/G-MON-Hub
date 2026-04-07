@@ -20,7 +20,7 @@ local CONFIG = {
         ScriptURL = "https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/Blox-Fruit.lua"
     },
     ["Survive the Apocalypse"] = {
-        Ids = {90148635862803, 106132712},
+        Ids = {90148635862803},
         Type = "PlaceId",
         ScriptURL = "https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/Survive-the-apocalypse.lua"
     },
