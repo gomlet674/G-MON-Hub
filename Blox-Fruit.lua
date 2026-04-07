@@ -1,14 +1,18 @@
 -- G-MON Hub - main_with_bloxbaru.lua (Merged & Fixed) -- Integrated improved "Blox Fruit Baru" module (replaces original Blox module) -- Preserves Car / Boat / Haruka modules and Rayfield fallback
 
--- BOOTSTRAP repeat task.wait() until game:IsLoaded() local Players = game:GetService("Players") local RunService = game:GetService("RunService") local UIS = game:GetService("UserInputService") local VirtualUser = game:GetService("VirtualUser") local Workspace = workspace local TextService = game:GetService("TextService") local TweenService = game:GetService("TweenService") local ReplicatedStorage = game:GetService("ReplicatedStorage") local LP = Players.LocalPlayer
+-- BOOTSTRAP 
+repeat task.wait() until game:IsLoaded() local Players = game:GetService("Players") local RunService = game:GetService("RunService") local UIS = game:GetService("UserInputService") local VirtualUser = game:GetService("VirtualUser") local Workspace = workspace local TextService = game:GetService("TextService") local TweenService = game:GetService("TweenService") local ReplicatedStorage = game:GetService("ReplicatedStorage") local LP = Players.LocalPlayer
 
--- SAFE helpers local function SAFE_CALL(fn, ...) if type(fn) ~= "function" then return false end local ok, res = pcall(fn, ...) if not ok then warn("[G-MON] SAFE_CALL error:", res) end return ok, res end
+-- SAFE helpers 
+local function SAFE_CALL(fn, ...) if type(fn) ~= "function" then return false end local ok, res = pcall(fn, ...) if not ok then warn("[G-MON] SAFE_CALL error:", res) end return ok, res end
 
 local function SAFE_WAIT(sec) sec = tonumber(sec) or 0.15 if sec < 0.05 then sec = 0.05 end if sec > 5 then sec = 5 end task.wait(sec) end
 
--- STATE local STATE = { GAME = "UNKNOWN", StartTime = os.time(), Modules = {}, Rayfield = nil, Window = nil, Tabs = {}, Status = nil, Flags = {}, LastAction = "Idle" }
+-- STATE 
+local STATE = { GAME = "UNKNOWN", StartTime = os.time(), Modules = {}, Rayfield = nil, Window = nil, Tabs = {}, Status = nil, Flags = {}, LastAction = "Idle" }
 
--- UTILS & DETECTION local Utils = {}
+-- UTILS & DETECTION 
+local Utils = {}
 
 function Utils.SafeChar() local ok, c = pcall(function() return LP and LP.Character end) if not ok or not c then return nil end if c:FindFirstChild("HumanoidRootPart") and c:FindFirstChild("Humanoid") then return c end return nil end
 
@@ -42,7 +46,8 @@ function Utils.ShortLabelForGame(g) if g == "BLOX_FRUIT" then return "Blox Fruit
 
 STATE.Modules.Utils = Utils
 
--- ===== BLOX FRUIT BARU MODULE (REPLACED & FIXED) ===== -- Improved, safer AutoFarm + AutoStats + equips + attack fallback do local M = {} M.config = { attack_delay = 0.35, range = 10, long_range = false, fast_attack = false } M.running = false M._task = nil
+-- ===== BLOX FRUIT BARU MODULE (REPLACED & FIXED) ===== -- Improved, safer AutoFarm + AutoStats + equips + attack 
+fallback do local M = {} M.config = { attack_delay = 0.35, range = 10, long_range = false, fast_attack = false } M.running = false M._task = nil
 
 -- Internal: tween controller (single active tween)
 local CurrentTween = nil
@@ -111,7 +116,9 @@ local function EquipWeaponByName(name)
     end
 end
 
--- AttemptAttack: prefer server remote if available, else Local fallback damage
+-- AttemptAttack: prefer server remote 
+    if available, 
+else Local fallback damage
 local function AttemptAttackBetter(target)
     if not target or not target.Parent then return end
     -- Try server remote conventions
@@ -359,12 +366,15 @@ end)
 
 end
 
--- Apply Game (set status indicators and notify) local function ApplyGame(gameKey) STATE.GAME = gameKey or Utils.FlexibleDetectByAliases() SAFE_CALL(function() STATE.Status.SetIndicator("bf", STATE.GAME=="BLOX_FRUIT", (STATE.GAME=="BLOX_FRUIT") and "Blox: Available" or "Blox: N/A") STATE.Status.SetIndicator("car", STATE.GAME=="CAR_TYCOON", (STATE.GAME=="CAR_TYCOON") and "Car: Available" or "Car: N/A") STATE.Status.SetIndicator("boat", STATE.GAME=="BUILD_A_BOAT", (STATE.GAME=="BUILD_A_BOAT") and "Boat: Available" or "Boat: N/A") if STATE.Rayfield and STATE.Rayfield.Notify then STATE.Rayfield:Notify({Title="G-MON", Content="Detected: "..Utils.ShortLabelForGame(STATE.GAME), Duration=3}) end end) end
+-- Apply Game (set status indicators and notify) 
+local function ApplyGame(gameKey) STATE.GAME = gameKey or Utils.FlexibleDetectByAliases() SAFE_CALL(function() STATE.Status.SetIndicator("bf", STATE.GAME=="BLOX_FRUIT", (STATE.GAME=="BLOX_FRUIT") and "Blox: Available" or "Blox: N/A") STATE.Status.SetIndicator("car", STATE.GAME=="CAR_TYCOON", (STATE.GAME=="CAR_TYCOON") and "Car: Available" or "Car: N/A") STATE.Status.SetIndicator("boat", STATE.GAME=="BUILD_A_BOAT", (STATE.GAME=="BUILD_A_BOAT") and "Boat: Available" or "Boat: N/A") if STATE.Rayfield and STATE.Rayfield.Notify then STATE.Rayfield:Notify({Title="G-MON", Content="Detected: "..Utils.ShortLabelForGame(STATE.GAME), Duration=3}) end end) end
 
--- STATUS UPDATER task.spawn(function() while true do SAFE_WAIT(1) SAFE_CALL(function() if STATE.Status and STATE.Status.UpdateRuntime then STATE.Status.UpdateRuntime() end if STATE.Status and STATE.Status.SetIndicator then STATE.Status.SetIndicator("last", false, "Last: "..(STATE.LastAction or "Idle")) end end) end end)
+-- STATUS UPDATER 
+task.spawn(function() while true do SAFE_WAIT(1) SAFE_CALL(function() if STATE.Status and STATE.Status.UpdateRuntime then STATE.Status.UpdateRuntime() end if STATE.Status and STATE.Status.SetIndicator then STATE.Status.SetIndicator("last", false, "Last: "..(STATE.LastAction or "Idle")) end end) end end)
 
 -- INITIALIZATION (lazy) - do not auto-start modules, user toggles them local Main = {}
 
 function Main.Start() SAFE_CALL(function() -- build UI once (includes Scripts tab) buildUI() -- detect & apply game local det = Utils.FlexibleDetectByAliases() STATE.GAME = det ApplyGame(STATE.GAME) Utils.AntiAFK() -- notify ready if STATE.Rayfield and STATE.Rayfield.Notify then STATE.Rayfield:Notify({Title="G-MON Hub", Content="Loaded — use tabs to control modules (Scripts tab contains Haruka features)", Duration=5}) end print("[G-MON] main.lua started. Detected game:", STATE.GAME) end) return true end
 
--- Return Main table for loader compatibility return Main
+-- Return Main table for loader compatibility 
+    return Main
