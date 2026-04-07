@@ -11,11 +11,11 @@ local LocalPlayer = Players.LocalPlayer
 -- =========================
 local CONFIG = {
     ["Blox Fruits"] = {
-        UniverseId = 110991616, -- Berlaku untuk Sea 1, 2, 3
+        UniverseId = {15302685710}, -- Berlaku untuk Sea 1, 2, 3
         ScriptURL = "https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/Blox%20fruit.lua"
     },
     ["Survive the Apocalypse"] = {
-        PlaceIds = {9098570654, 15302685710}, -- ID Game Bertahan dari kiamat
+        PlaceIds = {90148635862803}, -- ID Game Bertahan dari kiamat
         ScriptURL = "https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/Survive%20the%20apocalypse.lua"
     }
 }
