@@ -1,11 +1,26 @@
 -- [[ VALTRIX HUB / G-MON HUB - ULTIMATE STABLE BUILD ]] --
--- Fix: Anti-Cache, Auto-Retry, Dynamic ID Detection, Loader Sync
+-- Fix: Ultra Safe-Load (Blox Fruits Sea 2/3), Anti-Crash, Support All Executors
+
+-- =========================
+-- SYSTEM WAIT (CRITICAL FIX)
+-- =========================
+-- Jangan lakukan apapun sebelum game benar-benar termuat 100%
+if not game:IsLoaded() then
+    game.Loaded:Wait()
+end
+task.wait(2) -- Jeda ekstra untuk memastikan aset game berat (seperti Sea 2) selesai dimuat
 
 local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local CoreGui = game:GetService("CoreGui")
 local LocalPlayer = Players.LocalPlayer
+
+-- Pastikan LocalPlayer sudah ada sebelum melanjutkan
+while not LocalPlayer do
+    Players.PlayerAdded:Wait()
+    LocalPlayer = Players.LocalPlayer
+end
 
 local Main = {} -- Tabel wajib agar terhubung dengan Loader
 
@@ -14,13 +29,12 @@ local Main = {} -- Tabel wajib agar terhubung dengan Loader
 -- =========================
 local CONFIG = {
     ["Blox Fruits"] = {
-        -- Menggunakan PlaceId agar 100% akurat (Sea 1, Sea 2, Sea 3, Dungeon)
         Ids = {2753915549, 4442272183, 7449423635, 15302685710}, 
         Type = "PlaceId",
         ScriptURL = "https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/Blox-Fruit.lua"
     },
     ["Survive the Apocalypse"] = {
-        Ids = {90148635862803},
+        Ids = {90148635862803, 106132712},
         Type = "PlaceId",
         ScriptURL = "https://raw.githubusercontent.com/gomlet674/G-MON-Hub/main/Survive-the-apocalypse.lua"
     },
@@ -47,8 +61,10 @@ local function GetGuiParent()
 end
 
 local function Fade(obj, target)
+    if not obj then return end -- Anti-Crash jika UI tiba-tiba hilang
     local prop = obj:IsA("Frame") and "BackgroundTransparency" or (obj:IsA("UIStroke") and "Transparency" or "TextTransparency")
-    TweenService:Create(obj, TweenInfo.new(0.6), {[prop] = target}):Play()
+    local tween = TweenService:Create(obj, TweenInfo.new(0.6), {[prop] = target})
+    tween:Play()
 end
 
 local function IdentifyGame()
@@ -66,8 +82,9 @@ end
 -- MAIN EXECUTION (DIPANGGIL LOADER)
 -- =========================
 function Main.Start()
-    -- Cleanup UI Lama
-    local oldUI = GetGuiParent():FindFirstChild("ValtrixLoader")
+    -- Cleanup UI Lama dengan aman
+    local guiParent = GetGuiParent()
+    local oldUI = guiParent:FindFirstChild("ValtrixLoader")
     if oldUI then oldUI:Destroy() end
 
     -- =========================
@@ -76,7 +93,8 @@ function Main.Start()
     local ScreenGui = Instance.new("ScreenGui")
     ScreenGui.Name = "ValtrixLoader"
     ScreenGui.IgnoreGuiInset = true
-    ScreenGui.Parent = GetGuiParent()
+    ScreenGui.ResetOnSpawn = false -- Jangan reset saat karakter mati
+    ScreenGui.Parent = guiParent
 
     local MainFrame = Instance.new("Frame", ScreenGui)
     MainFrame.Size = UDim2.new(0, 320, 0, 160)
@@ -84,7 +102,7 @@ function Main.Start()
     MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
     MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
     MainFrame.BorderSizePixel = 0
-    MainFrame.BackgroundTransparency = 1 -- Start Hidden
+    MainFrame.BackgroundTransparency = 1 
 
     local Corner = Instance.new("UICorner", MainFrame)
     Corner.CornerRadius = UDim.new(0, 12)
@@ -92,7 +110,7 @@ function Main.Start()
     local Stroke = Instance.new("UIStroke", MainFrame)
     Stroke.Color = Color3.fromRGB(138, 43, 226)
     Stroke.Thickness = 2
-    Stroke.Transparency = 1 -- Start Hidden
+    Stroke.Transparency = 1 
 
     local Title = Instance.new("TextLabel", MainFrame)
     Title.Size = UDim2.new(1, 0, 0, 40)
@@ -102,27 +120,28 @@ function Main.Start()
     Title.Text = "VALTRIX HUB"
     Title.TextColor3 = Color3.fromRGB(138, 43, 226)
     Title.TextSize = 26
-    Title.TextTransparency = 1 -- Start Hidden
+    Title.TextTransparency = 1 
 
     local StatusLabel = Instance.new("TextLabel", MainFrame)
     StatusLabel.Size = UDim2.new(1, -40, 0, 20)
     StatusLabel.Position = UDim2.new(0, 20, 0, 70)
     StatusLabel.BackgroundTransparency = 1
     StatusLabel.Font = Enum.Font.GothamMedium
-    StatusLabel.Text = "Initializing..."
+    StatusLabel.Text = "Verifying Environment..."
     StatusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
     StatusLabel.TextSize = 14
-    StatusLabel.TextTransparency = 1 -- Start Hidden
+    StatusLabel.TextTransparency = 1 
 
     local ProgressBar = Instance.new("Frame", MainFrame)
     ProgressBar.Size = UDim2.new(0, 0, 0, 4)
     ProgressBar.Position = UDim2.new(0, 20, 0, 105)
     ProgressBar.BackgroundColor3 = Color3.fromRGB(138, 43, 226)
     ProgressBar.BorderSizePixel = 0
-    ProgressBar.BackgroundTransparency = 1 -- Start Hidden
+    ProgressBar.BackgroundTransparency = 1 
     Instance.new("UICorner", ProgressBar)
 
     local function UpdateStatus(txt, color)
+        if not StatusLabel then return end
         StatusLabel.Text = txt
         if color then StatusLabel.TextColor3 = color end
     end
@@ -140,12 +159,13 @@ function Main.Start()
                 return game:HttpGet(finalURL)
             end)
             
-            if success and result and #result > 100 and not result:find("404: Not Found") then
+            -- Pastikan bukan error 404 dari github
+            if success and result and #result > 100 and not string.find(result, "404: Not Found") then
                 return true, result
             end
             task.wait(2)
         end
-        return false, "Failed to download script."
+        return false, "Failed to download script. Cek koneksi atau link GitHub."
     end
 
     -- =========================
@@ -158,7 +178,7 @@ function Main.Start()
         Fade(Title, 0)
         Fade(StatusLabel, 0)
         TweenService:Create(ProgressBar, TweenInfo.new(0.6), {BackgroundTransparency = 0}):Play()
-        task.wait(0.8)
+        task.wait(1)
 
         -- Step 1: Detect Game
         UpdateStatus("Detecting Game...", nil)
@@ -170,8 +190,8 @@ function Main.Start()
             task.wait(3)
         else
             UpdateStatus("Target: " .. gameName, Color3.fromRGB(80, 255, 150))
-            TweenService:Create(ProgressBar, TweenInfo.new(1), {Size = UDim2.new(0, 280, 0, 4)}):Play()
-            task.wait(1.2)
+            TweenService:Create(ProgressBar, TweenInfo.new(1.5), {Size = UDim2.new(0, 280, 0, 4)}):Play()
+            task.wait(1.5)
 
             -- Step 2: Download
             local ok, content = DownloadScript(scriptURL)
@@ -180,19 +200,24 @@ function Main.Start()
                 UpdateStatus("Executing...", Color3.fromRGB(138, 43, 226))
                 task.wait(0.5)
                 
-                -- Step 3: Run Script
+                -- Step 3: Run Script (Safe Execution)
                 local func, err = loadstring(content)
                 if func then
-                    local runOk, runErr = pcall(func)
+                    -- Bungkus eksekusi dengan pcall untuk mencegah crash di executor
+                    local runOk, runErr = pcall(function()
+                        func()
+                    end)
+                    
                     if runOk then
                         UpdateStatus("Success! Enjoy.", Color3.fromRGB(80, 255, 150))
                     else
                         UpdateStatus("Runtime Error!", Color3.fromRGB(255, 80, 80))
-                        warn("VALTRIX RUNTIME ERR: " .. tostring(runErr))
+                        warn("[G-MON HUB] Target Script Error: " .. tostring(runErr))
+                        -- Jika error di sini, masalahnya ada di dalam file Blox-Fruit.lua kamu
                     end
                 else
                     UpdateStatus("Compile Error!", Color3.fromRGB(255, 80, 80))
-                    warn("VALTRIX COMPILE ERR: " .. tostring(err))
+                    warn("[G-MON HUB] Kode GitHub Error: " .. tostring(err))
                 end
             else
                 UpdateStatus("Download Failed!", Color3.fromRGB(255, 80, 80))
@@ -200,16 +225,18 @@ function Main.Start()
         end
 
         -- Exit Animation
-        task.wait(2)
+        task.wait(2.5)
         Fade(MainFrame, 1)
         Fade(Stroke, 1)
         Fade(Title, 1)
         Fade(StatusLabel, 1)
-        TweenService:Create(ProgressBar, TweenInfo.new(0.5), {BackgroundTransparency = 1}):Play()
+        if ProgressBar then
+            TweenService:Create(ProgressBar, TweenInfo.new(0.5), {BackgroundTransparency = 1}):Play()
+        end
         
         task.wait(0.6)
-        ScreenGui:Destroy()
+        if ScreenGui then ScreenGui:Destroy() end
     end)
 end
 
-return Main -- PENTING UNTUK LOADER
+return Main
